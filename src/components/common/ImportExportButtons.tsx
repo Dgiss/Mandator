@@ -56,7 +56,7 @@ const ImportExportButtons: React.FC<ImportExportButtonsProps> = ({
     }
     
     try {
-      const success = await importModuleData(moduleName, selectedFile);
+      const success = await importModuleData(moduleName, 'csv', selectedFile);
       
       if (success && onImportComplete) {
         onImportComplete();

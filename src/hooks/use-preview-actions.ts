@@ -35,10 +35,7 @@ export const usePreviewActions = ({
     setIsActionInProgress(true);
     
     try {
-      await printModuleData(moduleName, {
-        columns: columns,
-        title: title || `Aperçu - ${moduleName}`
-      });
+      await printModuleData(moduleName, data);
       toast.success("Document envoyé à l'impression", {
         description: "Votre document a été envoyé à l'imprimante."
       });
@@ -76,10 +73,7 @@ export const usePreviewActions = ({
     setIsActionInProgress(true);
     
     try {
-      await exportModuleData(moduleName, 'pdf', data, {
-        title: title || `Rapport - ${moduleName}`,
-        columns: columns
-      });
+      await exportModuleData(moduleName, 'pdf', data);
       toast.success("PDF généré avec succès", {
         description: "Le document a été téléchargé."
       });

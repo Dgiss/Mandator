@@ -32,7 +32,7 @@ const GuadeloupeSpecificCrops = () => {
 
   const handleExportData = async (format: 'csv' | 'pdf' = 'csv') => {
     console.log(`Export en cours au format ${format}...`);
-    const success = await exportModuleData('cultures', format);
+    const success = await exportModuleData('cultures', format, culturesData);
     
     if (success) {
       console.log(`Les données des cultures ont été exportées en ${format.toUpperCase()}`);
@@ -49,7 +49,7 @@ const GuadeloupeSpecificCrops = () => {
     const file = e.target.files?.[0];
     if (file) {
       console.log(`Import ${file.name} en cours...`);
-      const success = await importModuleData('cultures', file);
+      const success = await importModuleData('cultures', 'csv', file);
       
       if (success) {
         console.log("Import réussi - Les données des cultures ont été mises à jour");

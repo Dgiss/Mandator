@@ -8,7 +8,7 @@ type CRMProviderProps = {
 type CRMContextType = {
   exportModuleData: (moduleName: string, format: string, data?: any[]) => Promise<boolean>;
   importModuleData: (moduleName: string, format: string, data: any) => Promise<boolean>;
-  getModuleData: (moduleName: string) => Promise<any[]>;
+  getModuleData: (moduleName: string) => any;
   printModuleData: (moduleName: string, data?: any[]) => Promise<boolean>;
 };
 
@@ -33,10 +33,21 @@ export function CRMProvider({ children }: CRMProviderProps) {
     return true;
   };
 
-  const getModuleData = async (moduleName: string): Promise<any[]> => {
+  const getModuleData = (moduleName: string): any => {
     console.log(`Getting data for module ${moduleName}`);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return [];
+    
+    // Simulate module data
+    const mockData = {
+      cultures: {
+        items: [
+          { id: 1, nom: "Canne à Sucre", variete: "R579", dateDebut: "2023-03-15", dateFin: "2024-03-15" },
+          { id: 2, nom: "Banane", variete: "Grande Naine", dateDebut: "2023-02-10", dateFin: "2023-12-10" },
+          { id: 3, nom: "Ananas", variete: "MD-2", dateDebut: "2023-05-05", dateFin: "2024-06-01" }
+        ]
+      }
+    };
+    
+    return mockData[moduleName as keyof typeof mockData] || { items: [] };
   };
 
   const printModuleData = async (moduleName: string, data?: any[]): Promise<boolean> => {

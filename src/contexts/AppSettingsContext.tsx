@@ -4,22 +4,32 @@ import React, { createContext, useContext, useState } from 'react';
 export type AppSettings = {
   darkMode: boolean;
   locale: string;
+};
+
+type AppSettingsContextType = {
+  settings: AppSettings;
   toggleDarkMode: () => void;
   setLocale: (locale: string) => void;
 };
 
-const AppSettingsContext = createContext<AppSettings | undefined>(undefined);
+const AppSettingsContext = createContext<AppSettingsContextType | undefined>(undefined);
 
 export function AppSettingsProvider({ children }: { children: React.ReactNode }) {
-  const [darkMode, setDarkMode] = useState(false);
-  const [locale, setLocale] = useState('fr-FR');
+  const [settings, setSettings] = useState<AppSettings>({
+    darkMode: false,
+    locale: 'fr-FR'
+  });
 
   const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
+    setSettings(prev => ({ ...prev, darkMode: !prev.darkMode }));
+  };
+
+  const setLocale = (locale: string) => {
+    setSettings(prev => ({ ...prev, locale }));
   };
 
   return (
-    <AppSettingsContext.Provider value={{ darkMode, locale, toggleDarkMode, setLocale }}>
+    <AppSettingsContext.Provider value={{ settings, toggleDarkMode, setLocale }}>
       {children}
     </AppSettingsContext.Provider>
   );

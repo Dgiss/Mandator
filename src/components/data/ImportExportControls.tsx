@@ -36,7 +36,7 @@ const ImportExportControls: React.FC<ImportExportControlsProps> = ({
     }
     
     try {
-      const success = await importModuleData(moduleName, selectedFile);
+      const success = await importModuleData(moduleName, 'csv', selectedFile);
       
       if (success && onImportComplete) {
         onImportComplete();
