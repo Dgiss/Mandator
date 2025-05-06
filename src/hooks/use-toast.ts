@@ -66,4 +66,3 @@ export function useToast() {
 
 // Pour permettre l'import direct depuis d'autres fichiers
 export { useToast as toast };
-
