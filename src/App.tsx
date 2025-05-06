@@ -2,6 +2,8 @@
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "@/components/ui/sonner";
+
 import Index from "./pages/Index";
 import ParcelsPage from "./pages/ParcelsPage";
 import ParcelsDetailsPage from "./pages/ParcelsDetailsPage";
@@ -9,7 +11,13 @@ import CropsPage from "./pages/CropsPage";
 import InventoryPage from "./pages/InventoryPage";
 import FinancePage from "./pages/FinancePage";
 import StatsPage from "./pages/StatsPage";
+import LoginPage from "./pages/LoginPage";
+import DashboardPage from "./pages/DashboardPage";
+import MarketCreationPage from "./pages/MarketCreationPage";
+import FormsPage from "./pages/FormsPage";
+import ClientsPage from "./pages/ClientsPage";
 import NotFound from "./pages/NotFound";
+
 import { useEffect } from "react";
 import { CRMProvider } from "./contexts/CRMContext";
 import { StatisticsProvider } from "./contexts/StatisticsContext";
@@ -19,6 +27,11 @@ import { trackPageView } from "./utils/analytics";
 // Define routes configuration with redirects
 const routes = [
   { path: "/", element: <Index /> },
+  { path: "/login", element: <LoginPage /> },
+  { path: "/dashboard", element: <DashboardPage /> },
+  { path: "/marches/creation", element: <MarketCreationPage /> },
+  { path: "/formulaires", element: <FormsPage /> },
+  { path: "/clients", element: <ClientsPage /> },
   { path: "/parcelles", element: <ParcelsPage /> },
   { path: "/parcelles/:id", element: <ParcelsDetailsPage /> },
   { path: "/cultures", element: <CropsPage /> },
@@ -27,7 +40,8 @@ const routes = [
   { path: "/statistiques", element: <StatisticsProvider><StatsPage /></StatisticsProvider> },
   { path: "/rapports", element: <Navigate to="/statistiques" replace /> },
   { path: "/parametres", element: <Navigate to="/" replace /> },
-  { path: "/dashboard", element: <Navigate to="/" replace /> },
+  { path: "/connexion", element: <Navigate to="/login" replace /> },
+  { path: "/secteurs/collectivites", element: <ClientsPage /> },
   { path: "*", element: <NotFound /> }
 ];
 
@@ -76,6 +90,7 @@ const App = () => {
                   />
                 ))}
               </Routes>
+              <Toaster />
             </TooltipProvider>
           </BrowserRouter>
         </CRMProvider>

@@ -1,0 +1,260 @@
+
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import PageLayout from '@/components/layout/PageLayout';
+import PageHeader from '@/components/layout/PageHeader';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useToast } from '@/hooks/use-toast';
+import useFormOperations from '@/hooks/use-form-operations';
+import { z } from 'zod';
+
+export default function MarketCreationPage() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  React.useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      toast({
+        title: "Accès non autorisé",
+        description: "Veuillez vous connecter pour accéder à cette page",
+        variant: "destructive"
+      });
+      navigate('/login');
+    }
+  }, [navigate, toast]);
+
+  const marketFormSchema = {
+    title: {
+      required: true,
+      minLength: 5,
+      errorMessage: "Le titre est requis et doit comporter au moins 5 caractères"
+    },
+    reference: {
+      required: true,
+      errorMessage: "La référence est requise"
+    },
+    client: {
+      required: true,
+      errorMessage: "Le client est requis"
+    },
+    budget: {
+      required: true,
+      isNumber: true,
+      min: 1000,
+      errorMessage: "Le budget doit être un nombre supérieur à 1000"
+    },
+    startDate: {
+      required: true,
+      errorMessage: "La date de début est requise"
+    },
+    endDate: {
+      required: false
+    },
+    description: {
+      required: true,
+      minLength: 20,
+      errorMessage: "La description est requise et doit comporter au moins 20 caractères"
+    }
+  };
+
+  const { 
+    values, 
+    errors, 
+    handleChange, 
+    handleSubmit, 
+    isSubmitting,
+    setFieldValue
+  } = useFormOperations({
+    title: '',
+    reference: '',
+    client: '',
+    budget: '',
+    startDate: '',
+    endDate: '',
+    description: '',
+    hasAttachments: false,
+    isPublic: false
+  }, marketFormSchema);
+
+  const onSubmit = async (data: any) => {
+    try {
+      console.log('Données du marché soumises:', data);
+      
+      // Simulation de l'envoi à une API
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      toast({
+        title: "Marché créé avec succès",
+        description: "Le marché a été enregistré dans le système",
+        variant: "success"
+      });
+      
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Erreur lors de la création du marché:', error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur s'est produite lors de la création du marché",
+        variant: "destructive"
+      });
+    }
+  };
+
+  return (
+    <PageLayout>
+      <PageHeader 
+        title="Créer un nouveau marché" 
+        description="Remplissez le formulaire pour créer un nouveau marché public"
+      >
+        <Button variant="outline" onClick={() => navigate(-1)}>
+          Retour
+        </Button>
+      </PageHeader>
+
+      <Card>
+        <CardContent className="pt-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label htmlFor="title" className="text-sm font-medium">Titre du marché*</label>
+                <Input
+                  id="title"
+                  name="title"
+                  value={values.title}
+                  onChange={handleChange}
+                  placeholder="Ex: Construction d'une école primaire"
+                  className={errors.title ? "border-red-500" : ""}
+                />
+                {errors.title && <p className="text-sm text-red-500">{errors.title}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="reference" className="text-sm font-medium">Référence*</label>
+                <Input
+                  id="reference"
+                  name="reference"
+                  value={values.reference}
+                  onChange={handleChange}
+                  placeholder="Ex: MP-2023-045"
+                  className={errors.reference ? "border-red-500" : ""}
+                />
+                {errors.reference && <p className="text-sm text-red-500">{errors.reference}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="client" className="text-sm font-medium">Client*</label>
+                <Input
+                  id="client"
+                  name="client"
+                  value={values.client}
+                  onChange={handleChange}
+                  placeholder="Ex: Mairie de Lyon"
+                  className={errors.client ? "border-red-500" : ""}
+                />
+                {errors.client && <p className="text-sm text-red-500">{errors.client}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="budget" className="text-sm font-medium">Budget (€)*</label>
+                <Input
+                  id="budget"
+                  name="budget"
+                  type="number"
+                  value={values.budget}
+                  onChange={handleChange}
+                  placeholder="Ex: 250000"
+                  className={errors.budget ? "border-red-500" : ""}
+                />
+                {errors.budget && <p className="text-sm text-red-500">{errors.budget}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="startDate" className="text-sm font-medium">Date de début*</label>
+                <Input
+                  id="startDate"
+                  name="startDate"
+                  type="date"
+                  value={values.startDate}
+                  onChange={handleChange}
+                  className={errors.startDate ? "border-red-500" : ""}
+                />
+                {errors.startDate && <p className="text-sm text-red-500">{errors.startDate}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="endDate" className="text-sm font-medium">Date de fin (estimée)</label>
+                <Input
+                  id="endDate"
+                  name="endDate"
+                  type="date"
+                  value={values.endDate}
+                  onChange={handleChange}
+                  className={errors.endDate ? "border-red-500" : ""}
+                />
+                {errors.endDate && <p className="text-sm text-red-500">{errors.endDate}</p>}
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <label htmlFor="description" className="text-sm font-medium">Description du marché*</label>
+                <Textarea
+                  id="description"
+                  name="description"
+                  value={values.description}
+                  onChange={handleChange}
+                  placeholder="Description détaillée du marché public..."
+                  rows={5}
+                  className={errors.description ? "border-red-500" : ""}
+                />
+                {errors.description && <p className="text-sm text-red-500">{errors.description}</p>}
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="hasAttachments" 
+                  checked={values.hasAttachments} 
+                  onCheckedChange={(checked) => setFieldValue('hasAttachments', checked)}
+                />
+                <label 
+                  htmlFor="hasAttachments"
+                  className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Ce marché comporte des pièces jointes
+                </label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="isPublic" 
+                  checked={values.isPublic} 
+                  onCheckedChange={(checked) => setFieldValue('isPublic', checked)}
+                />
+                <label 
+                  htmlFor="isPublic"
+                  className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Marché public accessible à tous
+                </label>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <Button variant="outline" onClick={() => navigate('/dashboard')}>
+                Annuler
+              </Button>
+              <Button type="submit" variant="btpPrimary" disabled={isSubmitting}>
+                {isSubmitting ? "Enregistrement..." : "Créer le marché"}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </PageLayout>
+  );
+}
