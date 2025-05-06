@@ -1,70 +1,44 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
 
-interface AppSettings {
-  darkMode: boolean;
-  locale: string;
-  // Add other settings here
-}
+import React, { createContext, useContext, useState } from 'react';
 
-interface AppSettingsContextType {
-  settings: AppSettings;
-  updateSetting: (key: string, value: any) => void;
-  updateNestedSetting: (section: string, key: string, value: any) => void;
-}
-
-const defaultSettings: AppSettings = {
-  darkMode: false,
-  locale: 'fr-FR',
-  // Default values for other settings
+type AppSettingsProviderProps = {
+  children: React.ReactNode;
 };
 
-const AppSettingsContext = createContext<AppSettingsContextType>({
-  settings: defaultSettings,
-  updateSetting: () => {},
-  updateNestedSetting: () => {},
-});
+type AppSettings = {
+  theme: 'light' | 'dark';
+};
 
-export const useAppSettings = () => useContext(AppSettingsContext);
+type AppSettingsContextType = {
+  settings: AppSettings;
+  updateSettings: (settings: Partial<AppSettings>) => void;
+};
 
-interface AppSettingsProviderProps {
-  children: ReactNode;
-}
+const AppSettingsContext = createContext<AppSettingsContextType | undefined>(undefined);
 
-export const AppSettingsProvider: React.FC<AppSettingsProviderProps> = ({ children }) => {
-  const [settings, setSettings] = useState<AppSettings>(defaultSettings);
+export function AppSettingsProvider({ children }: AppSettingsProviderProps) {
+  const [settings, setSettings] = useState<AppSettings>({
+    theme: 'light',
+  });
 
-  const updateSetting = (key: string, value: any) => {
+  const updateSettings = (newSettings: Partial<AppSettings>) => {
     setSettings(prevSettings => ({
       ...prevSettings,
-      [key]: value,
+      ...newSettings,
     }));
   };
 
-  // Fix the updateNestedSetting function with proper typing
-  const updateNestedSetting = (section: string, key: string, value: any) => {
-    setSettings((prevSettings) => {
-      // Create a copy of the current settings
-      const updatedSettings = { ...prevSettings };
-      
-      // Safely handle the nested section
-      const sectionData = updatedSettings[section] as Record<string, any>;
-      
-      // If the section exists, update it
-      if (sectionData) {
-        // Create a new object for the section to avoid direct mutation
-        updatedSettings[section] = {
-          ...sectionData,
-          [key]: value
-        };
-      }
-      
-      return updatedSettings;
-    });
-  };
-
   return (
-    <AppSettingsContext.Provider value={{ settings, updateSetting, updateNestedSetting }}>
+    <AppSettingsContext.Provider value={{ settings, updateSettings }}>
       {children}
     </AppSettingsContext.Provider>
   );
-};
+}
+
+export function useAppSettings() {
+  const context = useContext(AppSettingsContext);
+  if (context === undefined) {
+    throw new Error('useAppSettings must be used within an AppSettingsProvider');
+  }
+  return context;
+}

@@ -1,35 +1,28 @@
 
-import React from 'react';
-import PageLayout from '../components/layout/PageLayout';
-import PageHeader from '../components/layout/PageHeader';
-import GuadeloupeParcelDetail from '../components/GuadeloupeParcelDetail';
-import usePageMetadata from '../hooks/use-page-metadata';
+import React from 'react'
+import Navbar from '../components/layout/Navbar'
+import Footer from '../components/layout/Footer'
+import { Button } from '../components/ui/button'
+import { Link } from 'react-router-dom'
 
-const ParcelsDetailsPage = () => {
-  const { 
-    title, 
-    description, 
-    handleTitleChange, 
-    handleDescriptionChange 
-  } = usePageMetadata({
-    defaultTitle: 'Gestion des Parcelles en Guadeloupe',
-    defaultDescription: 'Gérez, surveillez et optimisez vos parcelles agricoles à travers tout l\'archipel'
-  });
-
+export default function ParcelsDetailsPage() {
   return (
-    <PageLayout>
-      <div className="p-6 animate-enter">
-        <PageHeader 
-          title={title}
-          description={description}
-          onTitleChange={handleTitleChange}
-          onDescriptionChange={handleDescriptionChange}
-        />
-
-        <GuadeloupeParcelDetail />
-      </div>
-    </PageLayout>
-  );
-};
-
-export default ParcelsDetailsPage;
+    <div className="min-h-screen flex flex-col">
+      <Navbar />
+      
+      <main className="flex-grow flex items-center justify-center py-16">
+        <div className="container-custom text-center">
+          <h1 className="text-3xl font-bold text-btp-navy mb-4">Page en cours de développement</h1>
+          <p className="max-w-md mx-auto text-btp-gray mb-8">
+            Cette fonctionnalité sera disponible prochainement.
+          </p>
+          <Button variant="btpPrimary" asChild>
+            <Link to="/">Retour à l'accueil</Link>
+          </Button>
+        </div>
+      </main>
+      
+      <Footer />
+    </div>
+  )
+}

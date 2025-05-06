@@ -1,48 +1,40 @@
 
-import React, { createContext, useContext, ReactNode } from 'react';
-import useCRMContext from '../hooks/use-crm-context';
+import React, { createContext, useContext, useState } from 'react';
 
-// Création du contexte avec les types appropriés
-interface CRMContextType {
-  lastSync: Date;
-  isRefreshing: boolean;
-  companyName: string;
-  activeModules: string[];
-  syncDataAcrossCRM: () => void;
-  updateModuleData: (moduleName: string, data: any) => void;
-  getModuleData: (moduleName: string) => any;
-  exportModuleData: (moduleName: string, format: 'csv' | 'excel' | 'pdf', customData?: any[]) => Promise<boolean>;
-  importModuleData: (moduleName: string, file: File) => Promise<boolean>;
-  printModuleData: (moduleName: string, options?: any) => Promise<boolean>;
-}
+type CRMProviderProps = {
+  children: React.ReactNode;
+};
+
+type CRMContextType = {
+  exportModuleData: (moduleName: string, format: string, data?: any[]) => Promise<boolean>;
+};
 
 const CRMContext = createContext<CRMContextType | undefined>(undefined);
 
-// Props pour le provider
-interface CRMProviderProps {
-  children: ReactNode;
-}
+export function CRMProvider({ children }: CRMProviderProps) {
+  const exportModuleData = async (moduleName: string, format: string, data?: any[]): Promise<boolean> => {
+    // Cette fonction simule l'exportation de données
+    // Dans une implémentation réelle, elle appellerait une API pour générer un fichier
+    console.log(`Exporting ${moduleName} data in ${format} format`, data);
+    
+    // Simuler un délai pour l'exportation
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Simuler un téléchargement de fichier
+    return true;
+  };
 
-// Provider qui va envelopper notre application
-export const CRMProvider: React.FC<CRMProviderProps> = ({ children }) => {
-  const crmContext = useCRMContext();
-  
   return (
-    <CRMContext.Provider value={crmContext}>
+    <CRMContext.Provider value={{ exportModuleData }}>
       {children}
     </CRMContext.Provider>
   );
-};
+}
 
-// Hook personnalisé pour utiliser le contexte
-export const useCRM = () => {
+export function useCRM() {
   const context = useContext(CRMContext);
-  
   if (context === undefined) {
-    throw new Error('useCRM doit être utilisé à l\'intérieur d\'un CRMProvider');
+    throw new Error('useCRM must be used within a CRMProvider');
   }
-  
   return context;
-};
-
-export default CRMContext;
+}
