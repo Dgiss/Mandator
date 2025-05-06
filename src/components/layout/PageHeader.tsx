@@ -5,9 +5,17 @@ interface PageHeaderProps {
   title: string;
   description?: string;
   children?: React.ReactNode;
+  onTitleChange?: (value: any) => void;
+  onDescriptionChange?: (value: any) => void;
 }
 
-export default function PageHeader({ title, description, children }: PageHeaderProps) {
+export default function PageHeader({ 
+  title, 
+  description, 
+  children,
+  onTitleChange,
+  onDescriptionChange
+}: PageHeaderProps) {
   return (
     <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
       <div>

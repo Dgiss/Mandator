@@ -20,3 +20,10 @@ export const formatCurrency = (amount: number): string => {
     currency: 'EUR'
   }).format(amount)
 }
+
+// Pour la cohérence avec le formatage de date attendu dans les composants date
+export const formatDateForInput = (date: Date): string => {
+  // Format YYYY-MM-DD pour les inputs de type date
+  return date.toISOString().split('T')[0];
+}
+
