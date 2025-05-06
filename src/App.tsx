@@ -16,6 +16,9 @@ import DashboardPage from "./pages/DashboardPage";
 import MarketCreationPage from "./pages/MarketCreationPage";
 import FormsPage from "./pages/FormsPage";
 import ClientsPage from "./pages/ClientsPage";
+import MarchesPage from "./pages/MarchesPage";
+import MarcheDetailPage from "./pages/MarcheDetailPage";
+import QuestionsReponsesPage from "./pages/QuestionsReponsesPage";
 import NotFound from "./pages/NotFound";
 
 import { useEffect } from "react";
@@ -26,10 +29,13 @@ import { trackPageView } from "./utils/analytics";
 
 // Define routes configuration with redirects
 const routes = [
-  { path: "/", element: <Index /> },
+  { path: "/", element: <DashboardPage /> },
   { path: "/login", element: <LoginPage /> },
   { path: "/dashboard", element: <DashboardPage /> },
+  { path: "/marches", element: <MarchesPage /> },
+  { path: "/marches/:id", element: <MarcheDetailPage /> },
   { path: "/marches/creation", element: <MarketCreationPage /> },
+  { path: "/questions-reponses", element: <QuestionsReponsesPage /> },
   { path: "/formulaires", element: <FormsPage /> },
   { path: "/clients", element: <ClientsPage /> },
   { path: "/parcelles", element: <ParcelsPage /> },

@@ -2,12 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
-  Home, 
-  MapPin, 
-  Sprout, 
-  Package, 
-  Wallet, 
-  BarChart2, 
+  LayoutDashboard, 
+  FileText, 
+  ScrollText,
+  MessageSquare, 
   Menu, 
   X,
   Sun,
@@ -15,7 +13,7 @@ import {
   ChevronRight,
   Settings,
   Users,
-  FileText
+  Folder
 } from 'lucide-react';
 
 const Navbar = () => {
@@ -53,13 +51,11 @@ const Navbar = () => {
   };
 
   const navItems = [
-    { title: 'Tableau de bord', path: '/', icon: Home },
-    { title: 'Parcelles', path: '/parcelles', icon: MapPin },
-    { title: 'Cultures', path: '/cultures', icon: Sprout },
-    { title: 'Inventaire', path: '/inventaire', icon: Package },
-    { title: 'Finances', path: '/finances', icon: Wallet },
-    { title: 'Statistiques', path: '/statistiques', icon: BarChart2 },
-    { title: 'Rapports', path: '/rapports', icon: FileText },
+    { title: 'Tableau de bord', path: '/', icon: LayoutDashboard },
+    { title: 'Marchés', path: '/marches', icon: FileText },
+    { title: 'Questions/Réponses', path: '/questions-reponses', icon: MessageSquare },
+    { title: 'Formulaires', path: '/formulaires', icon: ScrollText },
+    { title: 'Clients', path: '/clients', icon: Users },
     { title: 'Paramètres', path: '/parametres', icon: Settings },
   ];
 
@@ -90,8 +86,8 @@ const Navbar = () => {
       >
         <div className="p-4 border-b border-border flex items-center justify-between">
           <Link to="/" className="flex items-center space-x-2">
-            <Sprout className="h-6 w-6 text-agri-primary" />
-            <span className="text-lg font-bold text-foreground">Agri Dom</span>
+            <FileText className="h-6 w-6 text-btp-blue" />
+            <span className="text-lg font-bold text-foreground">Mandator</span>
           </Link>
           <button 
             onClick={toggleTheme} 
@@ -109,18 +105,18 @@ const Navbar = () => {
               to={item.path}
               className={`nav-link flex items-center space-x-3 py-3 px-4 rounded-lg transition-colors ${
                 isActive(item.path) 
-                  ? 'bg-agri-primary/10 text-agri-primary font-medium' 
+                  ? 'bg-btp-blue/10 text-btp-blue font-medium' 
                   : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-foreground'
               }`}
               onClick={() => setIsOpen(false)}
             >
-              <item.icon className={`h-5 w-5 ${isActive(item.path) ? 'text-agri-primary' : ''}`} />
+              <item.icon className={`h-5 w-5 ${isActive(item.path) ? 'text-btp-blue' : ''}`} />
               <span>{item.title}</span>
               
               {isActive(item.path) && (
                 <div className="ml-auto flex items-center">
-                  <span className="h-2 w-2 rounded-full bg-agri-primary animate-pulse-slow"></span>
-                  <ChevronRight className="h-4 w-4 text-agri-primary ml-1" />
+                  <span className="h-2 w-2 rounded-full bg-btp-blue animate-pulse-slow"></span>
+                  <ChevronRight className="h-4 w-4 text-btp-blue ml-1" />
                 </div>
               )}
             </Link>
@@ -134,7 +130,7 @@ const Navbar = () => {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">Utilisateur</p>
-              <p className="text-xs text-muted-foreground truncate">agriculteur@example.com</p>
+              <p className="text-xs text-muted-foreground truncate">admin@mandator.fr</p>
             </div>
           </div>
         </div>
