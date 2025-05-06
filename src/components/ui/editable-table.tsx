@@ -1,30 +1,31 @@
 
-import React from 'react';
-import { Edit, Trash2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { PlusCircle, Trash2, Edit, Check, X } from 'lucide-react';
+import { Button } from './button';
 
 export interface Column {
   id: string;
   header: string;
   accessorKey: string;
-  isEditable: boolean;
-  type?: 'text' | 'number' | 'select';
-  options?: string[];
+  isEditable?: boolean;
+  type?: 'text' | 'number' | 'date' | 'select';
+  width?: string; // Ajout de la propriété width
+  options?: string[]; // Pour les colonnes de type select
 }
 
-interface Action {
-  icon: React.ReactNode;
-  label: string;
-  onClick: (rowIndex: number) => void;
-}
-
-interface EditableTableProps {
+export interface EditableTableProps {
   data: any[];
   columns: Column[];
-  onUpdate: (rowIndex: number, columnId: string, value: any) => void;
+  onUpdate?: (rowIndex: number, columnId: string, value: any) => void;
   onDelete?: (rowIndex: number) => void;
-  onAdd?: () => void;
+  onAdd?: (newRow: Record<string, any>) => void;
+  className?: string; // Ajout de className
+  actions?: {
+    icon: React.ReactNode;
+    label: string;
+    onClick: (rowIndex: number) => void;
+  }[];
   sortable?: boolean;
-  actions?: Action[];
 }
 
 export const EditableTable: React.FC<EditableTableProps> = ({
@@ -33,8 +34,9 @@ export const EditableTable: React.FC<EditableTableProps> = ({
   onUpdate,
   onDelete,
   onAdd,
+  className = "",
+  actions = [],
   sortable = false,
-  actions = []
 }) => {
   const [sortConfig, setSortConfig] = React.useState<{
     key: string;

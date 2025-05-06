@@ -1,114 +1,120 @@
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Pencil } from 'lucide-react';
+import React, { useState } from 'react';
+import { Edit } from 'lucide-react';
 
 interface EditableFieldProps {
   value: string | number;
   onSave: (value: string | number) => void;
-  type?: 'text' | 'number' | 'textarea';
   className?: string;
-  placeholder?: string;
+  type?: "text" | "number" | "textarea" | "date"; // Ajout du type "date"
   showEditIcon?: boolean;
 }
 
 export const EditableField: React.FC<EditableFieldProps> = ({
   value,
   onSave,
-  type = 'text',
-  className = '',
-  placeholder = 'Editer...',
-  showEditIcon = false
+  className = "",
+  type = "text",
+  showEditIcon = false,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [currentValue, setCurrentValue] = useState<string | number>(value);
-  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+  const [editValue, setEditValue] = useState<string | number>(value);
 
-  useEffect(() => {
-    setCurrentValue(value);
-  }, [value]);
-
-  useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-      
-      if ('select' in inputRef.current) {
-        inputRef.current.select();
-      }
-    }
-  }, [isEditing]);
-
-  const handleDoubleClick = () => {
+  const handleEdit = () => {
+    setEditValue(value);
     setIsEditing(true);
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const val = type === 'number' ? parseFloat(e.target.value) : e.target.value;
-    setCurrentValue(val);
-  };
-
-  const handleBlur = () => {
+  const handleSave = () => {
+    onSave(editValue);
     setIsEditing(false);
-    onSave(currentValue);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleCancel = () => {
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && type !== 'textarea') {
-      setIsEditing(false);
-      onSave(currentValue);
+      handleSave();
     } else if (e.key === 'Escape') {
-      setIsEditing(false);
-      setCurrentValue(value);
+      handleCancel();
     }
   };
 
-  const renderEditIcon = () => {
-    if (!showEditIcon) return null;
-    
-    return (
-      <Pencil 
-        className="h-3.5 w-3.5 ml-1.5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" 
-      />
-    );
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    if (type === 'number') {
+      setEditValue(val === '' ? '' : Number(val));
+    } else {
+      setEditValue(val);
+    }
   };
 
   if (isEditing) {
     if (type === 'textarea') {
       return (
-        <textarea
-          ref={inputRef as React.RefObject<HTMLTextAreaElement>}
-          value={currentValue}
-          onChange={handleChange}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          className={`w-full border rounded px-2 py-1 ${className}`}
-          placeholder={placeholder}
-          rows={3}
-        />
+        <div className={`inline-flex flex-col ${className}`}>
+          <textarea
+            value={editValue}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            className="p-1 border rounded"
+            autoFocus
+          />
+          <div className="flex justify-end mt-1 space-x-1">
+            <button
+              onClick={handleSave}
+              className="px-2 py-0.5 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+            >
+              Enregistrer
+            </button>
+            <button
+              onClick={handleCancel}
+              className="px-2 py-0.5 text-xs border rounded hover:bg-gray-100"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
       );
     }
-    
+
     return (
-      <input
-        ref={inputRef as React.RefObject<HTMLInputElement>}
-        type={type}
-        value={currentValue}
-        onChange={handleChange}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        className={`border rounded px-2 py-1 ${className}`}
-        placeholder={placeholder}
-      />
+      <div className={`inline-flex items-center ${className}`}>
+        <input
+          type={type === "date" ? "date" : type === "number" ? "number" : "text"}
+          value={type === "date" && typeof editValue === "string" ? editValue : editValue}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          className="p-1 border rounded"
+          autoFocus
+        />
+        <button
+          onClick={handleSave}
+          className="ml-1 p-1 text-green-500 hover:text-green-700"
+        >
+          ✓
+        </button>
+        <button
+          onClick={handleCancel}
+          className="p-1 text-red-500 hover:text-red-700"
+        >
+          ✗
+        </button>
+      </div>
     );
   }
 
   return (
-    <span 
-      onDoubleClick={handleDoubleClick} 
-      onClick={() => showEditIcon && setIsEditing(true)}
-      className={`cursor-text group inline-flex items-center ${className}`}
+    <span
+      className={`cursor-pointer hover:bg-gray-100 rounded px-1 ${className}`}
+      onClick={handleEdit}
     >
-      {value || placeholder}
-      {renderEditIcon()}
+      {value}
+      {showEditIcon && (
+        <Edit className="h-3 w-3 inline-block ml-1 text-muted-foreground" />
+      )}
     </span>
   );
 };
