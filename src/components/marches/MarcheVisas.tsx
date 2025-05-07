@@ -114,12 +114,12 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
       const fetchUserRole = async () => {
         const { data, error } = await supabase
           .from('profiles')
-          .select('role_utilisateur')
+          .select('role')
           .eq('id', user.id)
           .single();
         
-        if (data && data.role_utilisateur) {
-          setUserRole(data.role_utilisateur as UserRole);
+        if (data && data.role) {
+          setUserRole(data.role as UserRole);
         } else {
           console.error('Error fetching user role:', error);
         }
@@ -164,7 +164,7 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
             .map(v => ({
               id: v.id,
               version: v.version,
-              statut: v.statut || 'En attente de diffusion'
+              statut: (v.statut || 'En attente de diffusion') as Version['statut']
             }));
             
           const latestVersion = docVersions[docVersions.length - 1];
@@ -173,7 +173,7 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
             id: doc.id,
             nom: doc.nom,
             currentVersionId: latestVersion?.id || '',
-            statut: doc.statut,
+            statut: doc.statut as Document['statut'],
             versions: docVersions
           };
         });
@@ -187,9 +187,9 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
             document: document?.nom || 'Document inconnu',
             version: visa.version,
             demandePar: visa.demande_par,
-            dateDemande: new Date(visa.date_demande).toLocaleDateString('fr-FR'),
+            dateDemande: new Date(visa.date_demande ?? '').toLocaleDateString('fr-FR'),
             echeance: visa.echeance ? new Date(visa.echeance).toLocaleDateString('fr-FR') : '-',
-            statut: visa.statut as 'En attente' | 'VSO' | 'VAO' | 'Refusé'
+            statut: (visa.statut as 'En attente' | 'VSO' | 'VAO' | 'Refusé') || 'En attente'
           };
         });
         
@@ -227,9 +227,9 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
           document: visa.document_id,  // Dans un cas réel, on ferait une jointure
           version: visa.version,
           demandePar: visa.demande_par,
-          dateDemande: new Date(visa.date_demande).toLocaleDateString('fr-FR'),
+          dateDemande: new Date(visa.date_demande ?? '').toLocaleDateString('fr-FR'),
           echeance: visa.echeance ? new Date(visa.echeance).toLocaleDateString('fr-FR') : '-',
-          statut: visa.statut as 'En attente' | 'VSO' | 'VAO' | 'Refusé'
+          statut: (visa.statut as 'En attente' | 'VSO' | 'VAO' | 'Refusé') || 'En attente'
         }));
         
         setVisas(formattedVisas);
@@ -393,12 +393,12 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
         if (doc.id === selectedDocument.id) {
           return {
             ...doc,
-            statut: 'En attente de validation',
+            statut: 'En attente de validation' as Document['statut'],
             versions: doc.versions.map(ver => {
               if (ver.id === selectedVersion.id) {
                 return {
                   ...ver,
-                  statut: 'En attente de visa'
+                  statut: 'En attente de visa' as Version['statut']
                 };
               }
               return ver;
@@ -495,10 +495,13 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
             if (doc.id === selectedDocument.id) {
               return {
                 ...doc,
-                statut: 'Validé',
+                statut: 'Validé' as Document['statut'],
                 versions: doc.versions.map(ver => {
                   if (ver.id === selectedVersion.id) {
-                    return { ...ver, statut: 'BPE' };
+                    return { 
+                      ...ver, 
+                      statut: 'BPE' as Version['statut'] 
+                    };
                   }
                   return ver;
                 })
@@ -554,19 +557,22 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
             const newVersion = {
               id: newVersionData[0].id,
               version: newVersionString,
-              statut: 'En attente de diffusion'
+              statut: 'En attente de diffusion' as Version['statut']
             };
             
             setDocuments(prevDocs => prevDocs.map(doc => {
               if (doc.id === selectedDocument.id) {
                 return {
                   ...doc,
-                  statut: 'En attente de diffusion',
+                  statut: 'En attente de diffusion' as Document['statut'],
                   currentVersionId: newVersion.id,
                   versions: [
                     ...doc.versions.map(ver => {
                       if (ver.id === selectedVersion.id) {
-                        return { ...ver, statut: 'À remettre à jour' };
+                        return { 
+                          ...ver, 
+                          statut: 'À remettre à jour' as Version['statut'] 
+                        };
                       }
                       return ver;
                     }),
@@ -602,10 +608,13 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
             if (doc.id === selectedDocument.id) {
               return {
                 ...doc,
-                statut: 'En attente de diffusion',
+                statut: 'En attente de diffusion' as Document['statut'],
                 versions: doc.versions.map(ver => {
                   if (ver.id === selectedVersion.id) {
-                    return { ...ver, statut: 'Refusé' };
+                    return { 
+                      ...ver, 
+                      statut: 'Refusé' as Version['statut'] 
+                    };
                   }
                   return ver;
                 })

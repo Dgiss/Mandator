@@ -1,18 +1,6 @@
 
 import { supabase } from '@/lib/supabase';
-
-export interface Visa {
-  id?: string;
-  document_id?: string;
-  marche_id: string;
-  version: string;
-  demande_par: string;
-  date_demande?: string;
-  echeance?: string;
-  statut?: string;
-  commentaire?: string;
-  attachment_path?: string;
-}
+import { Visa } from './types';
 
 export const visasService = {
   // Récupérer tous les visas pour un marché

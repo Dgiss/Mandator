@@ -1,17 +1,6 @@
 
 import { supabase } from '@/lib/supabase';
-
-export interface Version {
-  id?: string;
-  document_id: string;
-  marche_id: string;
-  version: string;
-  cree_par: string;
-  date_creation?: string;
-  taille?: string;
-  commentaire?: string;
-  file_path?: string;
-}
+import { Version } from './types';
 
 export const versionsService = {
   // Récupérer toutes les versions pour un marché
@@ -68,7 +57,8 @@ export const versionsService = {
         taille: version.taille,
         commentaire: version.commentaire,
         file_path: filePath,
-        date_creation: new Date().toISOString()
+        date_creation: new Date().toISOString(),
+        statut: version.statut
       }])
       .select();
 

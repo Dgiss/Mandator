@@ -1,3 +1,4 @@
+
 import { Database as SupabaseDatabase } from '@/integrations/supabase/types';
 
 // Extend the Supabase types with our custom database schema
@@ -186,6 +187,7 @@ export interface Database {
           entreprise: string | null;
           created_at: string | null;
           updated_at: string | null;
+          role_utilisateur: string | null;
         };
         Insert: {
           id: string;
@@ -195,6 +197,7 @@ export interface Database {
           entreprise?: string | null;
           created_at?: string | null;
           updated_at?: string | null;
+          role_utilisateur?: string | null;
         };
         Update: {
           id?: string;
@@ -204,6 +207,7 @@ export interface Database {
           entreprise?: string | null;
           created_at?: string | null;
           updated_at?: string | null;
+          role_utilisateur?: string | null;
         };
         Relationships: [];
       };
@@ -220,6 +224,7 @@ export interface Database {
           commentaire: string | null;
           file_path: string | null;
           created_at: string | null;
+          statut: string | null;
         };
         Insert: {
           id?: string;
@@ -232,6 +237,7 @@ export interface Database {
           commentaire?: string | null;
           file_path?: string | null;
           created_at?: string | null;
+          statut?: string | null;
         };
         Update: {
           id?: string;
@@ -244,6 +250,7 @@ export interface Database {
           commentaire?: string | null;
           file_path?: string | null;
           created_at?: string | null;
+          statut?: string | null;
         };
         Relationships: [];
       };
