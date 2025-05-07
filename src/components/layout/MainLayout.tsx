@@ -1,6 +1,6 @@
 
 import React, { ReactNode } from 'react';
-import Navbar from './Navbar';
+import Navbar from '../Navbar'; // Import the same Navbar component used in other pages
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -26,7 +26,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col md:flex-row">
       <Navbar />
       <main className="flex-1">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
