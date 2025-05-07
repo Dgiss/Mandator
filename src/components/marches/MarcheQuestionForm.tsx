@@ -109,7 +109,7 @@ const MarcheQuestionForm: React.FC<MarcheQuestionFormProps> = ({ marcheId, onSub
         attachmentPath = fileData?.path || null;
       }
       
-      // Save question to database
+      // Save question to database - Now using the correctly defined questions table
       const { data, error } = await supabase
         .from('questions')
         .insert([{

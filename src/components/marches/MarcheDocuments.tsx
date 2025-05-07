@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -53,7 +54,7 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
         id: doc.id,
         nom: doc.nom,
         type: doc.type,
-        statut: doc.statut,
+        statut: doc.statut as 'Approuvé' | 'En révision' | 'Soumis pour visa' | 'Rejeté',
         version: doc.version,
         dateUpload: doc.dateUpload || new Date().toLocaleDateString('fr-FR'),
         taille: doc.taille || '0 KB',

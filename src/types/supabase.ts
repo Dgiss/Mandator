@@ -83,6 +83,42 @@ export interface Database {
         };
         Relationships: [];
       };
+      questions: {
+        Row: {
+          id: string;
+          content: string;
+          marche_id: string;
+          document_id: string | null;
+          fascicule_id: string | null;
+          attachment_path: string | null;
+          date_creation: string;
+          statut: string;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          content: string;
+          marche_id: string;
+          document_id?: string | null;
+          fascicule_id?: string | null;
+          attachment_path?: string | null;
+          date_creation?: string;
+          statut?: string;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          content?: string;
+          marche_id?: string;
+          document_id?: string | null;
+          fascicule_id?: string | null;
+          attachment_path?: string | null;
+          date_creation?: string;
+          statut?: string;
+          created_at?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: SupabaseDatabase['public']['Views'];
     Functions: SupabaseDatabase['public']['Functions'];
