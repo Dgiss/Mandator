@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/layout/PageLayout';
-import PageHeader from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
@@ -97,24 +96,30 @@ export default function MarchesPage() {
 
   const getStatusColor = (statut: 'En cours' | 'Terminé' | 'En attente') => {
     switch(statut) {
-      case 'En cours': return 'bg-blue-500';
-      case 'Terminé': return 'bg-green-500';
-      case 'En attente': return 'bg-amber-500';
+      case 'En cours': return 'bg-btp-blue';
+      case 'Terminé': return 'bg-btp-success';
+      case 'En attente': return 'bg-btp-warning';
       default: return 'bg-gray-500';
     }
   };
 
-  return (
-    <PageLayout>
-      <PageHeader
-        title="Gestion des Marchés"
-        description="Consultez et gérez l'ensemble de vos marchés publics"
-      >
-        <Button onClick={handleCreateMarche} className="flex items-center">
-          <Plus className="mr-2 h-4 w-4" /> Nouveau marché
-        </Button>
-      </PageHeader>
+  // Actions for the page
+  const pageActions = (
+    <Button 
+      variant="btpPrimary" 
+      onClick={handleCreateMarche} 
+      className="flex items-center"
+    >
+      <Plus className="mr-2 h-4 w-4" /> Nouveau marché
+    </Button>
+  );
 
+  return (
+    <PageLayout 
+      title="Gestion des Marchés" 
+      description="Consultez et gérez l'ensemble de vos marchés publics"
+      actions={pageActions}
+    >
       <div className="mb-6 flex flex-col sm:flex-row justify-between gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />

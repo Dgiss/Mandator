@@ -18,8 +18,8 @@ const QuickActions: React.FC<QuickActionsProps> = ({ ensureAuth }) => {
         <h2 className="text-xl font-semibold text-gray-800 mb-4">Actions rapides</h2>
         <div className="space-y-3">
           <Button 
-            variant="default" 
-            className="w-full justify-start bg-blue-600 hover:bg-blue-700"
+            variant="btpPrimary" 
+            className="w-full justify-start"
             onClick={() => ensureAuth() && navigate('/marches/creation')}
           >
             <FileText className="mr-2 h-4 w-4" />

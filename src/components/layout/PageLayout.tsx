@@ -1,24 +1,41 @@
 
 import React, { ReactNode } from 'react';
-import Navbar from '../Navbar';
-import { useIsMobile } from '@/hooks/use-mobile';
+import MainLayout from './MainLayout';
+import { Card } from '@/components/ui/card';
 
 interface PageLayoutProps {
+  title: string;
+  description?: string;
   children: ReactNode;
+  actions?: ReactNode;
 }
 
-const PageLayout = ({ children }: PageLayoutProps) => {
-  const isMobile = useIsMobile();
-  
+const PageLayout: React.FC<PageLayoutProps> = ({ 
+  title, 
+  description, 
+  children,
+  actions
+}) => {
   return (
-    <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-gray-50">
-      <Navbar />
-      <div className="flex-1 overflow-y-auto pb-16 md:pb-0">
-        <div className={`container mx-auto px-3 py-4 md:px-6 ${isMobile ? 'max-w-full' : 'max-w-7xl'}`}>
-          {children}
+    <MainLayout>
+      <div className="container mx-auto p-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800 mb-1">{title}</h1>
+            {description && (
+              <p className="text-gray-600">{description}</p>
+            )}
+          </div>
+          {actions && (
+            <div className="mt-4 md:mt-0">
+              {actions}
+            </div>
+          )}
         </div>
+        
+        {children}
       </div>
-    </div>
+    </MainLayout>
   );
 };
 

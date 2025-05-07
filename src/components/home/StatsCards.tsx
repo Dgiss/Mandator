@@ -1,11 +1,6 @@
 
 import React from 'react';
 import { Card } from '@/components/ui/card';
-import { 
-  FileText, 
-  LayoutDashboard, 
-  FileEdit,
-} from 'lucide-react';
 
 type StatItem = {
   title: string;

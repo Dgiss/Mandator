@@ -2,11 +2,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { checkAuth } from '@/utils/authUtils';
-import MainLayout from '@/components/layout/MainLayout';
+import PageLayout from '@/components/layout/PageLayout';
+import { Button } from '@/components/ui/button';
+import { FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { FileText, LayoutDashboard, FileEdit, FileText as FileTextIcon } from 'lucide-react';
 
-// Import the newly created components
+// Import the components
 import StatsCards from '@/components/home/StatsCards';
 import RecentProjects from '@/components/home/RecentProjects';
 import QuickActions from '@/components/home/QuickActions';
@@ -20,22 +21,22 @@ export default function HomePage() {
     { 
       title: "Marchés en cours",
       value: 12,
-      icon: <FileText className="h-6 w-6 text-blue-600 bg-blue-100 p-1 rounded-full" />
+      icon: <FileText className="h-6 w-6 text-btp-blue bg-blue-100 p-1 rounded-full" />
     },
     { 
       title: "Projets actifs",
       value: 7,
-      icon: <LayoutDashboard className="h-6 w-6 text-green-600 bg-green-100 p-1 rounded-full" />
+      icon: <FileText className="h-6 w-6 text-btp-blue bg-blue-100 p-1 rounded-full" />
     },
     { 
       title: "Devis en attente",
       value: 5,
-      icon: <FileEdit className="h-6 w-6 text-amber-600 bg-amber-100 p-1 rounded-full" />
+      icon: <FileText className="h-6 w-6 text-btp-blue bg-blue-100 p-1 rounded-full" />
     },
     { 
       title: "Marchés terminés",
       value: 23,
-      icon: <FileTextIcon className="h-6 w-6 text-purple-600 bg-purple-100 p-1 rounded-full" />
+      icon: <FileText className="h-6 w-6 text-btp-blue bg-blue-100 p-1 rounded-full" />
     },
   ];
 
@@ -75,30 +76,38 @@ export default function HomePage() {
     return true;
   };
 
+  // Actions for the page
+  const pageActions = (
+    <Button 
+      variant="btpPrimary" 
+      onClick={() => ensureAuth() && navigate('/marches/creation')}
+    >
+      <FileText className="mr-2 h-4 w-4" />
+      Nouveau marché
+    </Button>
+  );
+
   return (
-    <MainLayout>
-      <div className="container mx-auto p-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Tableau de bord</h1>
-          <p className="text-gray-600">Bienvenue sur votre espace de gestion des marchés publics</p>
+    <PageLayout 
+      title="Tableau de bord" 
+      description="Bienvenue sur votre espace de gestion des marchés publics" 
+      actions={pageActions}
+    >
+      {/* Stats Cards */}
+      <StatsCards stats={stats} />
+      
+      {/* Main Content - Two Columns */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Recent Projects Column */}
+        <div className="lg:col-span-2">
+          <RecentProjects projects={recentProjects} />
         </div>
         
-        {/* Stats Cards */}
-        <StatsCards stats={stats} />
-        
-        {/* Main Content - Two Columns */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Recent Projects Column */}
-          <div className="lg:col-span-2">
-            <RecentProjects projects={recentProjects} />
-          </div>
-          
-          {/* Actions Column */}
-          <div>
-            <QuickActions ensureAuth={ensureAuth} />
-          </div>
+        {/* Actions Column */}
+        <div>
+          <QuickActions ensureAuth={ensureAuth} />
         </div>
       </div>
-    </MainLayout>
+    </PageLayout>
   );
 }
