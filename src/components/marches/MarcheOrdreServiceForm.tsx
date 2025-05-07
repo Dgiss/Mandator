@@ -58,12 +58,12 @@ const MarcheOrdreServiceForm: React.FC<OrdreServiceFormProps> = ({ marcheId, onO
     resolver: zodResolver(ordreServiceFormSchema),
     defaultValues: {
       reference: '',
-      type: '',
+      type: 'Démarrage',
       dateEmission: new Date(),
       delai: '',
       description: '',
       destinataire: '',
-      impact: '',
+      impact: 'Aucun',
       statut: 'Brouillon',
     }
   });
@@ -134,7 +134,7 @@ const MarcheOrdreServiceForm: React.FC<OrdreServiceFormProps> = ({ marcheId, onO
                   <FormItem>
                     <FormLabel>Type*</FormLabel>
                     <FormControl>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <SelectTrigger>
                           <SelectValue placeholder="Type d'ordre de service" />
                         </SelectTrigger>
@@ -187,6 +187,7 @@ const MarcheOrdreServiceForm: React.FC<OrdreServiceFormProps> = ({ marcheId, onO
                           onSelect={field.onChange}
                           disabled={(date) => date > new Date()}
                           initialFocus
+                          className="p-3 pointer-events-auto"
                         />
                       </PopoverContent>
                     </Popover>
@@ -250,7 +251,7 @@ const MarcheOrdreServiceForm: React.FC<OrdreServiceFormProps> = ({ marcheId, onO
                 <FormItem>
                   <FormLabel>Impact sur le délai global</FormLabel>
                   <FormControl>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <SelectTrigger>
                         <SelectValue placeholder="Impact sur le délai global" />
                       </SelectTrigger>
@@ -274,7 +275,7 @@ const MarcheOrdreServiceForm: React.FC<OrdreServiceFormProps> = ({ marcheId, onO
                 <FormItem>
                   <FormLabel>Statut*</FormLabel>
                   <FormControl>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <SelectTrigger>
                         <SelectValue placeholder="Statut de l'ordre de service" />
                       </SelectTrigger>

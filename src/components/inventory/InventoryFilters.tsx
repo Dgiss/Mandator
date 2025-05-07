@@ -68,7 +68,7 @@ const InventoryFilters = ({
             aria-label="Filtrer par catégorie"
           >
             {categories.map(category => (
-              <option key={category} value={category}>
+              <option key={category} value={category || "default-category"}>
                 {category === 'all' ? 'Toutes catégories' : category}
               </option>
             ))}
