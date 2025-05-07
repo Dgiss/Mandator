@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -115,13 +114,13 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
   };
 
   // Download document from Supabase storage
-  const handleDownloadDocument = async (document: Document) => {
+  const handleDownloadDocument = async (documentItem: Document) => {
     try {
       // Get file path from document record
       const { data, error } = await supabase
         .from('documents')
         .select('file_path')
-        .eq('id', document.id)
+        .eq('id', documentItem.id)
         .single();
       
       if (error || !data || !data.file_path) {
@@ -137,11 +136,11 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
         throw fileError;
       }
       
-      // Create a download link
+      // Create a download link using the browser's document object
       const url = URL.createObjectURL(fileData);
       const link = document.createElement('a');
       link.href = url;
-      link.download = document.nom;
+      link.download = documentItem.nom;
       document.body.appendChild(link);
       link.click();
       link.remove();
