@@ -60,10 +60,15 @@ export const visasService = {
     const { data, error } = await supabase
       .from('visas')
       .insert([{
-        ...visa,
+        document_id: visa.document_id,
+        marche_id: visa.marche_id,
+        version: visa.version,
+        demande_par: visa.demande_par,
         attachment_path: attachmentPath,
         date_demande: new Date().toISOString(),
-        statut: visa.statut || 'En attente'
+        echeance: visa.echeance,
+        statut: visa.statut || 'En attente',
+        commentaire: visa.commentaire
       }])
       .select();
 

@@ -119,6 +119,151 @@ export interface Database {
         };
         Relationships: [];
       };
+      // Ajout de la table profiles
+      profiles: {
+        Row: {
+          id: string;
+          nom: string | null;
+          prenom: string | null;
+          role: string | null;
+          entreprise: string | null;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id: string;
+          nom?: string | null;
+          prenom?: string | null;
+          role?: string | null;
+          entreprise?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          nom?: string | null;
+          prenom?: string | null;
+          role?: string | null;
+          entreprise?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Relationships: [];
+      };
+      // Ajout de la table versions
+      versions: {
+        Row: {
+          id: string;
+          document_id: string;
+          marche_id: string;
+          version: string;
+          cree_par: string;
+          date_creation: string | null;
+          taille: string | null;
+          commentaire: string | null;
+          file_path: string | null;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          document_id: string;
+          marche_id: string;
+          version: string;
+          cree_par: string;
+          date_creation?: string | null;
+          taille?: string | null;
+          commentaire?: string | null;
+          file_path?: string | null;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          document_id?: string;
+          marche_id?: string;
+          version?: string;
+          cree_par?: string;
+          date_creation?: string | null;
+          taille?: string | null;
+          commentaire?: string | null;
+          file_path?: string | null;
+          created_at?: string | null;
+        };
+        Relationships: [];
+      };
+      // Ajout de la table visas
+      visas: {
+        Row: {
+          id: string;
+          document_id: string | null;
+          marche_id: string;
+          version: string;
+          demande_par: string;
+          date_demande: string | null;
+          echeance: string | null;
+          statut: string | null;
+          commentaire: string | null;
+          attachment_path: string | null;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          document_id?: string | null;
+          marche_id: string;
+          version: string;
+          demande_par: string;
+          date_demande?: string | null;
+          echeance?: string | null;
+          statut?: string | null;
+          commentaire?: string | null;
+          attachment_path?: string | null;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          document_id?: string | null;
+          marche_id?: string;
+          version?: string;
+          demande_par?: string;
+          date_demande?: string | null;
+          echeance?: string | null;
+          statut?: string | null;
+          commentaire?: string | null;
+          attachment_path?: string | null;
+          created_at?: string | null;
+        };
+        Relationships: [];
+      };
+      // Ajout de la table reponses
+      reponses: {
+        Row: {
+          id: string;
+          question_id: string;
+          content: string;
+          user_id: string | null;
+          date_creation: string | null;
+          attachment_path: string | null;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          question_id: string;
+          content: string;
+          user_id?: string | null;
+          date_creation?: string | null;
+          attachment_path?: string | null;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          question_id?: string;
+          content?: string;
+          user_id?: string | null;
+          date_creation?: string | null;
+          attachment_path?: string | null;
+          created_at?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: SupabaseDatabase['public']['Views'];
     Functions: SupabaseDatabase['public']['Functions'];

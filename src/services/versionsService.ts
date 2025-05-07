@@ -16,6 +16,7 @@ export interface Version {
 export const versionsService = {
   // Récupérer toutes les versions pour un marché
   async getVersionsByMarcheId(marcheId: string) {
+    // Utiliser la requête correcte pour la table versions
     const { data, error } = await supabase
       .from('versions')
       .select('*, documents(nom)')
@@ -28,6 +29,7 @@ export const versionsService = {
 
   // Récupérer toutes les versions pour un document
   async getVersionsByDocumentId(documentId: string) {
+    // Utiliser la requête correcte pour la table versions
     const { data, error } = await supabase
       .from('versions')
       .select('*')
@@ -59,7 +61,12 @@ export const versionsService = {
     const { data, error } = await supabase
       .from('versions')
       .insert([{
-        ...version,
+        document_id: version.document_id,
+        marche_id: version.marche_id,
+        version: version.version,
+        cree_par: version.cree_par,
+        taille: version.taille,
+        commentaire: version.commentaire,
         file_path: filePath,
         date_creation: new Date().toISOString()
       }])

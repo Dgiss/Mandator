@@ -29,11 +29,29 @@ export const questionsService = {
       .select(`
         *,
         documents(nom),
-        fascicules(nom),
-        reponses(*)
+        fascicules(nom)
       `)
       .eq('marche_id', marcheId)
       .order('date_creation', { ascending: false });
+
+    // Récupérer les réponses pour chaque question
+    if (!error && data) {
+      const questionsWithResponses = await Promise.all(
+        data.map(async (question) => {
+          const { data: responsesData } = await supabase
+            .from('reponses')
+            .select('*')
+            .eq('question_id', question.id);
+          
+          return {
+            ...question,
+            reponses: responsesData || []
+          };
+        })
+      );
+      
+      return questionsWithResponses;
+    }
 
     if (error) throw error;
     return data;
@@ -96,14 +114,19 @@ export const questionsService = {
       if (uploadError) throw uploadError;
     }
 
+    // Récupérer l'ID de l'utilisateur actuel
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
+
     // Insérer la réponse dans la base de données
     const { data, error } = await supabase
       .from('reponses')
       .insert([{
-        ...reponse,
+        question_id: reponse.question_id,
+        content: reponse.content,
         attachment_path: attachmentPath,
         date_creation: new Date().toISOString(),
-        user_id: supabase.auth.getUser().then(({ data }) => data.user?.id)
+        user_id: userId
       }])
       .select();
 
