@@ -185,7 +185,7 @@ export default function MarketCreationPage() {
         isPublic: data.isPublic
       };
       
-      // Insérer le marché dans la base de données
+      // Insérer le marché dans la base de données en utilisant le client typé
       const { data: newMarche, error } = await supabase
         .from('marches')
         .insert([marcheData])

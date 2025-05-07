@@ -36,7 +36,7 @@ export default function MarchesPage() {
     const fetchMarches = async () => {
       setLoading(true);
       try {
-        // Récupérer les marchés de l'API Supabase
+        // Utiliser le client Supabase typé pour accéder à la table marches
         const { data, error } = await supabase
           .from('marches')
           .select('*')

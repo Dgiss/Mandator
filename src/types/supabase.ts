@@ -1,4 +1,3 @@
-
 import { Database as SupabaseDatabase } from '@/integrations/supabase/types';
 
 // Extend the Supabase types with our custom database schema
@@ -80,6 +79,64 @@ export interface Database {
           progression?: number | null;
           dateMaj?: string | null;
           created_at?: string | null;
+        };
+        Relationships: [];
+      };
+      // Ajout de la définition de la table marches
+      marches: {
+        Row: {
+          id: string;
+          titre: string;
+          description: string | null;
+          client: string | null;
+          statut: string;
+          dateCreation: string | null;
+          budget: string | null;
+          image: string | null;
+          user_id: string | null;
+          created_at: string | null;
+          reference?: string | null;
+          dateDebut?: string | null;
+          dateFin?: string | null;
+          hasAttachments?: boolean | null;
+          isPublic?: boolean | null;
+          logo?: string | null;
+        };
+        Insert: {
+          id?: string;
+          titre: string;
+          description?: string | null;
+          client?: string | null;
+          statut?: string;
+          dateCreation?: string | null;
+          budget?: string | null;
+          image?: string | null;
+          user_id?: string | null;
+          created_at?: string | null;
+          reference?: string | null;
+          dateDebut?: string | null;
+          dateFin?: string | null;
+          hasAttachments?: boolean | null;
+          isPublic?: boolean | null;
+          logo?: string | null;
+        };
+        Update: {
+          id?: string;
+          titre?: string;
+          description?: string | null;
+          client?: string | null;
+          statut?: string;
+          dateCreation?: string | null;
+          budget?: string | null;
+          image?: string | null;
+          user_id?: string | null;
+          created_at?: string | null;
+          reference?: string | null;
+          dateDebut?: string | null;
+          dateFin?: string | null;
+          hasAttachments?: boolean | null;
+          isPublic?: boolean | null;
+          logo?: string | null;
         };
         Relationships: [];
       };
