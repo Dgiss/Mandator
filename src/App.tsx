@@ -28,7 +28,6 @@ const routes = [
   { path: "/marches/:id", element: <MarcheDetailPage /> },
   { path: "/marches/creation", element: <MarketCreationPage /> },
   { path: "/questions-reponses", element: <QuestionsReponsesPage /> },
-  { path: "/connexion", element: <Navigate to="/login" replace /> },
   { path: "*", element: <NotFound /> }
 ];
 

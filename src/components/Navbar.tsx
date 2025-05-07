@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -6,16 +7,12 @@ import {
   MessageSquare, 
   Menu, 
   X,
-  Sun,
-  Moon,
   ChevronRight,
-  Settings,
   Folder
 } from 'lucide-react';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const location = useLocation();
   
   // Close mobile menu when route changes
@@ -23,35 +20,12 @@ const Navbar = () => {
     setIsOpen(false);
   }, [location.pathname]);
   
-  // Handle theme toggle
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
-    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-      setIsDarkMode(true);
-      document.documentElement.classList.add('dark');
-    }
-  }, []);
-  
   const toggleSidebar = () => setIsOpen(!isOpen);
-  
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    if (isDarkMode) {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    } else {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    }
-  };
 
   const navItems = [
     { title: 'Tableau de bord', path: '/', icon: LayoutDashboard },
     { title: 'Marchés', path: '/marches', icon: FileText },
     { title: 'Questions/Réponses', path: '/questions-reponses', icon: MessageSquare },
-    { title: 'Paramètres', path: '/parametres', icon: Settings },
   ];
 
   const isActive = (path: string) => {
@@ -82,15 +56,8 @@ const Navbar = () => {
         <div className="p-4 border-b border-border flex items-center justify-between">
           <Link to="/" className="flex items-center space-x-2">
             <FileText className="h-6 w-6 text-btp-blue" />
-            <span className="text-lg font-bold text-foreground">Mandator</span>
+            <span className="text-lg font-bold text-foreground">Mandataire</span>
           </Link>
-          <button 
-            onClick={toggleTheme} 
-            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            aria-label="Toggle theme"
-          >
-            {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
         </div>
 
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">

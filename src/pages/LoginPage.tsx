@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import useFormOperations from "@/hooks/use-form-operations";
-import { Shield, User } from "lucide-react";
+import { Shield, User, Hammer, HardHat, Building } from "lucide-react";
 
 const loginSchema = {
   email: {
@@ -78,9 +78,9 @@ export default function LoginPage() {
       <div className="md:w-1/2 bg-btp-navy flex flex-col items-center justify-center p-8">
         <div className="max-w-md text-white">
           <div className="mb-6 flex items-center justify-center">
-            <Shield className="h-16 w-16 text-btp-blue" />
+            <Building className="h-16 w-16 text-btp-blue" />
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold mb-4 text-center">MarchésPublics<span className="text-btp-blue">BTP</span></h1>
+          <h1 className="text-3xl md:text-4xl font-bold mb-4 text-center">Mandataire<span className="text-btp-blue">BTP</span></h1>
           <p className="text-lg mb-8 text-center text-gray-300">
             Plateforme de gestion des marchés publics pour le secteur du BTP.
           </p>
