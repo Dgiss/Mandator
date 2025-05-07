@@ -23,10 +23,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { CalendarIcon, Plus, Upload } from 'lucide-react';
+import { CalendarIcon, CheckCircle, FileText, FilePen, Plus, Upload, X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -34,13 +35,20 @@ import { useToast } from '@/hooks/use-toast';
 
 interface VisaFormProps {
   marcheId: string;
+  documentId?: string;
+  documentVersion?: string;
+  documentName?: string;
   onVisaCreated?: () => void;
 }
 
 const visaFormSchema = z.object({
   name: z.string().min(1, { message: 'Le nom est requis' }),
+  documentName: z.string().min(1, { message: 'Le document est requis' }),
   documentVersion: z.string().min(1, { message: 'La version du document est requise' }),
   type: z.string().min(1, { message: 'Le type est requis' }),
+  visaType: z.enum(['VSO', 'VAO', 'Refusé'], { 
+    required_error: "Le type de visa est requis" 
+  }),
   broadcastDate: z.date({ required_error: 'La date de diffusion est requise' }),
   visaDate: z.date().optional(),
   comment: z.string().optional(),
@@ -49,7 +57,13 @@ const visaFormSchema = z.object({
 
 type VisaFormValues = z.infer<typeof visaFormSchema>;
 
-const MarcheVisaForm: React.FC<VisaFormProps> = ({ marcheId, onVisaCreated }) => {
+const MarcheVisaForm: React.FC<VisaFormProps> = ({ 
+  marcheId, 
+  documentId,
+  documentName,
+  documentVersion,
+  onVisaCreated 
+}) => {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const [attachmentName, setAttachmentName] = useState<string | null>(null);
@@ -58,13 +72,29 @@ const MarcheVisaForm: React.FC<VisaFormProps> = ({ marcheId, onVisaCreated }) =>
     resolver: zodResolver(visaFormSchema),
     defaultValues: {
       name: '',
-      documentVersion: '',
+      documentName: documentName || '',
+      documentVersion: documentVersion || '',
       type: '',
+      visaType: 'VSO',
       broadcastDate: new Date(),
       viser: '',
       comment: '',
     }
   });
+
+  // Fonction pour incrémenter l'index de version
+  const handleNewVersionIndex = (currentVersion: string): string => {
+    if (!currentVersion) return "A";
+    
+    // Extraire la première lettre (ex: "A" de "A1.0")
+    const letterPart = currentVersion.charAt(0);
+    
+    // Incrémenter cette lettre (A → B, B → C, etc.)
+    const newLetterCode = letterPart.charCodeAt(0) + 1;
+    const newLetter = String.fromCharCode(newLetterCode);
+    
+    return newLetter;
+  };
 
   const onSubmit = async (values: VisaFormValues) => {
     console.log('Visa à créer:', { ...values, marcheId, attachmentName });
@@ -73,9 +103,33 @@ const MarcheVisaForm: React.FC<VisaFormProps> = ({ marcheId, onVisaCreated }) =>
       // Simulation d'envoi à une API
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      // Logique spécifique selon le type de visa
+      let documentStatus = '';
+      let message = '';
+      
+      switch(values.visaType) {
+        case 'VSO':
+          documentStatus = 'BPE'; // Bon Pour Exécution
+          message = "Le visa a été créé avec succès. Le document est maintenant BPE.";
+          break;
+          
+        case 'VAO':
+          documentStatus = 'À remettre à jour';
+          const newVersionLetter = handleNewVersionIndex(values.documentVersion);
+          message = `Le visa a été créé avec succès. Une nouvelle version ${newVersionLetter} a été créée pour modifications.`;
+          // Ici, nous simulons la création d'une nouvelle version avec la lettre incrémentée
+          // Dans une implémentation réelle, il faudrait appeler l'API pour créer cette nouvelle version
+          break;
+          
+        case 'Refusé':
+          documentStatus = 'Refusé';
+          message = "Le document a été refusé.";
+          break;
+      }
+      
       toast({
         title: "Visa créé",
-        description: "Le visa a été créé avec succès",
+        description: message,
         variant: "success",
       });
       
@@ -132,6 +186,20 @@ const MarcheVisaForm: React.FC<VisaFormProps> = ({ marcheId, onVisaCreated }) =>
               )}
             />
             
+            <FormField
+              control={form.control}
+              name="documentName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Document*</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ex: CCTP Lot 1" {...field} readOnly={!!documentName} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -140,7 +208,7 @@ const MarcheVisaForm: React.FC<VisaFormProps> = ({ marcheId, onVisaCreated }) =>
                   <FormItem>
                     <FormLabel>Version du document*</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ex: 1.0" {...field} />
+                      <Input placeholder="Ex: A1.0" {...field} readOnly={!!documentVersion} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -171,6 +239,59 @@ const MarcheVisaForm: React.FC<VisaFormProps> = ({ marcheId, onVisaCreated }) =>
                 )}
               />
             </div>
+            
+            <FormField
+              control={form.control}
+              name="visaType"
+              render={({ field }) => (
+                <FormItem className="space-y-3">
+                  <FormLabel>Statut du visa*</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      className="flex flex-col space-y-1"
+                    >
+                      <FormItem className="flex items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="VSO" />
+                        </FormControl>
+                        <FormLabel className="font-normal flex items-center">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
+                          VSO (Visa Sans Observation - Document approuvé)
+                        </FormLabel>
+                      </FormItem>
+                      
+                      <FormItem className="flex items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="VAO" />
+                        </FormControl>
+                        <FormLabel className="font-normal flex items-center">
+                          <FilePen className="h-4 w-4 text-amber-600 mr-2" />
+                          VAO (Visa Avec Observation - Nouvelle version requise)
+                        </FormLabel>
+                      </FormItem>
+                      
+                      <FormItem className="flex items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="Refusé" />
+                        </FormControl>
+                        <FormLabel className="font-normal flex items-center">
+                          <X className="h-4 w-4 text-red-600 mr-2" />
+                          Refusé (Document rejeté)
+                        </FormLabel>
+                      </FormItem>
+                    </RadioGroup>
+                  </FormControl>
+                  <FormDescription>
+                    {field.value === 'VAO' && "Une nouvelle version du document sera automatiquement créée."}
+                    {field.value === 'VSO' && "Le document sera approuvé et marqué comme Bon Pour Exécution (BPE)."}
+                    {field.value === 'Refusé' && "Le document sera rejeté sans création d'une nouvelle version."}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             
             <div className="grid grid-cols-2 gap-4">
               <FormField
@@ -274,14 +395,23 @@ const MarcheVisaForm: React.FC<VisaFormProps> = ({ marcheId, onVisaCreated }) =>
               name="comment"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Commentaire</FormLabel>
+                  <FormLabel>Commentaire {form.getValues('visaType') === 'VAO' && '*'}</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="Commentaire ou observation sur le visa..." 
+                      placeholder={
+                        form.getValues('visaType') === 'VAO' 
+                          ? "Précisez les modifications requises pour la nouvelle version..."
+                          : "Commentaire ou observation sur le visa..." 
+                      }
                       className="min-h-[80px]" 
                       {...field} 
                     />
                   </FormControl>
+                  {form.getValues('visaType') === 'VAO' && (
+                    <FormDescription>
+                      Obligatoire pour les visas avec observations (VAO).
+                    </FormDescription>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}

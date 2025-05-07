@@ -11,8 +11,11 @@ import {
   TableBody, 
   TableCell 
 } from '@/components/ui/table';
-import { Search, Filter, CheckCircle, XCircle, FileText } from 'lucide-react';
+import { Search, Filter, CheckCircle, XCircle, FileText, FilePen } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+// Import du formulaire de visa
+import MarcheVisaForm from './MarcheVisaForm';
 
 interface MarcheVisasProps {
   marcheId: string;
@@ -25,14 +28,14 @@ interface Visa {
   demandePar: string;
   dateDemande: string;
   echeance: string;
-  statut: 'En attente' | 'Approuvé' | 'Rejeté';
+  statut: 'En attente' | 'VSO' | 'VAO' | 'Refusé';
 }
 
 const visasMock: Visa[] = [
   {
     id: "v1",
     document: "CCTP GC v1.1",
-    version: "1.1",
+    version: "A1.1",
     demandePar: "Martin Dupont",
     dateDemande: "21/03/2024",
     echeance: "28/03/2024",
@@ -41,53 +44,62 @@ const visasMock: Visa[] = [
   {
     id: "v2",
     document: "Plan Coffrage R+1 v3",
-    version: "3.0",
+    version: "B3.0",
     demandePar: "Sophie Laurent",
     dateDemande: "19/03/2024",
     echeance: "26/03/2024",
-    statut: "En attente"
+    statut: "VSO"
   },
   {
     id: "v3",
     document: "Note de Calcul Fondations",
-    version: "1.0",
+    version: "A1.0",
     demandePar: "Thomas Bernard",
     dateDemande: "15/03/2024",
     echeance: "22/03/2024",
-    statut: "Approuvé"
+    statut: "VAO"
   },
   {
     id: "v4",
     document: "Détails Façade Ouest",
-    version: "2.1",
+    version: "C2.1",
     demandePar: "Julie Moreau",
     dateDemande: "14/03/2024",
     echeance: "21/03/2024",
-    statut: "Rejeté"
+    statut: "Refusé"
   },
   {
     id: "v5",
     document: "Plan Structure v2",
-    version: "2.0",
+    version: "B2.0",
     demandePar: "Pierre Lefebvre",
     dateDemande: "16/03/2024",
     echeance: "23/03/2024",
-    statut: "Approuvé"
+    statut: "VSO"
   }
 ];
 
 export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('tous');
+  const [visas, setVisas] = useState<Visa[]>(visasMock);
+
+  // Fonction pour rafraîchir les données après création d'un visa
+  const handleVisaCreated = () => {
+    // Dans une application réelle, cette fonction ferait un appel API
+    // pour récupérer les données à jour. Ici, nous simulons cela.
+    console.log('Visa créé, rafraîchissement des données...');
+  };
 
   // Filtrer les visas selon le terme de recherche et l'onglet actif
-  const filteredVisas = visasMock
+  const filteredVisas = visas
     .filter(visa => visa.document.toLowerCase().includes(searchTerm.toLowerCase()))
     .filter(visa => {
       if (activeTab === 'tous') return true;
       if (activeTab === 'attente') return visa.statut === 'En attente';
-      if (activeTab === 'approuves') return visa.statut === 'Approuvé';
-      if (activeTab === 'rejetes') return visa.statut === 'Rejeté';
+      if (activeTab === 'vso') return visa.statut === 'VSO';
+      if (activeTab === 'vao') return visa.statut === 'VAO';
+      if (activeTab === 'rejetes') return visa.statut === 'Refusé';
       return true;
     });
 
@@ -100,13 +112,19 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
           textColor: 'text-blue-700',
           icon: <FileText className="h-4 w-4 mr-1.5" />
         };
-      case 'Approuvé':
+      case 'VSO':
         return {
           bgColor: 'bg-green-100',
           textColor: 'text-green-700',
           icon: <CheckCircle className="h-4 w-4 mr-1.5" />
         };
-      case 'Rejeté':
+      case 'VAO':
+        return {
+          bgColor: 'bg-amber-100',
+          textColor: 'text-amber-700',
+          icon: <FilePen className="h-4 w-4 mr-1.5" />
+        };
+      case 'Refusé':
         return {
           bgColor: 'bg-red-100',
           textColor: 'text-red-700',
@@ -125,23 +143,26 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
     <div className="pt-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h2 className="text-2xl font-semibold">Visas</h2>
-        <Button>Demander un visa</Button>
+        <MarcheVisaForm marcheId={marcheId} onVisaCreated={handleVisaCreated} />
       </div>
 
       <div className="mb-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-4 w-full max-w-md">
+          <TabsList className="grid grid-cols-5 w-full max-w-2xl">
             <TabsTrigger value="tous">
-              Tous <span className="ml-1.5 text-xs bg-gray-200 px-1.5 py-0.5 rounded-full">{visasMock.length}</span>
+              Tous <span className="ml-1.5 text-xs bg-gray-200 px-1.5 py-0.5 rounded-full">{visas.length}</span>
             </TabsTrigger>
             <TabsTrigger value="attente">
-              En attente <span className="ml-1.5 text-xs bg-blue-100 px-1.5 py-0.5 rounded-full">{visasMock.filter(v => v.statut === 'En attente').length}</span>
+              En attente <span className="ml-1.5 text-xs bg-blue-100 px-1.5 py-0.5 rounded-full">{visas.filter(v => v.statut === 'En attente').length}</span>
             </TabsTrigger>
-            <TabsTrigger value="approuves">
-              Approuvés <span className="ml-1.5 text-xs bg-green-100 px-1.5 py-0.5 rounded-full">{visasMock.filter(v => v.statut === 'Approuvé').length}</span>
+            <TabsTrigger value="vso">
+              VSO <span className="ml-1.5 text-xs bg-green-100 px-1.5 py-0.5 rounded-full">{visas.filter(v => v.statut === 'VSO').length}</span>
+            </TabsTrigger>
+            <TabsTrigger value="vao">
+              VAO <span className="ml-1.5 text-xs bg-amber-100 px-1.5 py-0.5 rounded-full">{visas.filter(v => v.statut === 'VAO').length}</span>
             </TabsTrigger>
             <TabsTrigger value="rejetes">
-              Rejetés <span className="ml-1.5 text-xs bg-red-100 px-1.5 py-0.5 rounded-full">{visasMock.filter(v => v.statut === 'Rejeté').length}</span>
+              Refusés <span className="ml-1.5 text-xs bg-red-100 px-1.5 py-0.5 rounded-full">{visas.filter(v => v.statut === 'Refusé').length}</span>
             </TabsTrigger>
           </TabsList>
         </Tabs>
