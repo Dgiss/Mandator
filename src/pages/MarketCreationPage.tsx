@@ -121,6 +121,13 @@ export default function MarketCreationPage() {
   // Fonction pour télécharger une image sur Supabase Storage
   const uploadImage = async (file: File, path: string): Promise<string | null> => {
     try {
+      // Vérifier si le bucket existe, le créer s'il n'existe pas
+      const { data: buckets } = await supabase.storage.listBuckets();
+      if (!buckets?.find(bucket => bucket.name === 'marches')) {
+        console.log('Le bucket marches n\'existe pas, création...');
+        await supabase.storage.createBucket('marches', { public: true });
+      }
+      
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
       const filePath = `${path}/${fileName}`;
@@ -130,6 +137,7 @@ export default function MarketCreationPage() {
         .upload(filePath, file);
       
       if (uploadError) {
+        console.error('Erreur lors du téléchargement de l\'image:', uploadError);
         throw uploadError;
       }
       
@@ -179,12 +187,11 @@ export default function MarketCreationPage() {
         logo: logoPath,
         user_id: user.id,
         reference: data.reference,
-        dateDebut: data.startDate,
-        dateFin: data.endDate || null,
-        hasAttachments: data.hasAttachments,
-        isPublic: data.isPublic
+        datecreation: new Date().toISOString() // Utilisez datecreation au lieu de dateCreation
       };
       
+      console.log("Données du marché à insérer:", marcheData);
+
       // Insérer le marché dans la base de données en utilisant le client typé
       const { data: newMarche, error } = await supabase
         .from('marches')
@@ -192,6 +199,7 @@ export default function MarketCreationPage() {
         .select();
       
       if (error) {
+        console.error('Erreur détaillée:', error);
         throw error;
       }
       

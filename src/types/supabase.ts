@@ -1,4 +1,3 @@
-
 import { Database as SupabaseDatabase } from '@/integrations/supabase/types';
 
 // Extend the Supabase types with our custom database schema
@@ -91,17 +90,18 @@ export interface Database {
           description: string | null;
           client: string | null;
           statut: string;
-          dateCreation: string | null;
+          datecreation: string | null;  // Correction: datecreation au lieu de dateCreation
           budget: string | null;
           image: string | null;
           user_id: string | null;
           created_at: string | null;
-          reference?: string | null;
-          dateDebut?: string | null;
-          dateFin?: string | null;
-          hasAttachments?: boolean | null;
-          isPublic?: boolean | null;
-          logo?: string | null;
+          reference: string | null;
+          logo: string | null;
+          // Ces champs ne sont pas présents dans la base de données
+          // dateDebut?: string | null;
+          // dateFin?: string | null;
+          // hasAttachments?: boolean | null;
+          // isPublic?: boolean | null;
         };
         Insert: {
           id?: string;
@@ -109,16 +109,12 @@ export interface Database {
           description?: string | null;
           client?: string | null;
           statut?: string;
-          dateCreation?: string | null;
+          datecreation?: string | null;  // Correction: datecreation au lieu de dateCreation
           budget?: string | null;
           image?: string | null;
           user_id?: string | null;
           created_at?: string | null;
           reference?: string | null;
-          dateDebut?: string | null;
-          dateFin?: string | null;
-          hasAttachments?: boolean | null;
-          isPublic?: boolean | null;
           logo?: string | null;
         };
         Update: {
@@ -127,16 +123,12 @@ export interface Database {
           description?: string | null;
           client?: string | null;
           statut?: string;
-          dateCreation?: string | null;
+          datecreation?: string | null;  // Correction: datecreation au lieu de dateCreation
           budget?: string | null;
           image?: string | null;
           user_id?: string | null;
           created_at?: string | null;
           reference?: string | null;
-          dateDebut?: string | null;
-          dateFin?: string | null;
-          hasAttachments?: boolean | null;
-          isPublic?: boolean | null;
           logo?: string | null;
         };
         Relationships: [];
