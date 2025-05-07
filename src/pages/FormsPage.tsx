@@ -24,22 +24,24 @@ export default function FormsPage() {
 
   return (
     <MainLayout>
-      <div className="container mx-auto py-6">
-        <div className="flex items-center mb-6">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="mr-2"
-            onClick={() => navigate('/dashboard')}
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Retour
-          </Button>
-          <PageHeader 
-            title="Formulaires" 
-            description="Création et modification des documents administratifs"
-          />
-          <div className="ml-auto">
+      <div className="container mx-auto px-4 py-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="mr-2"
+              onClick={() => navigate('/dashboard')}
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Retour
+            </Button>
+            <PageHeader 
+              title="Formulaires" 
+              description="Création et modification des documents administratifs"
+            />
+          </div>
+          <div>
             <Button 
               variant="outline"
               onClick={handleDownloadTemplates}
@@ -51,39 +53,43 @@ export default function FormsPage() {
           </div>
         </div>
         
-        <Tabs 
-          defaultValue="marche" 
-          value={activeTab} 
-          onValueChange={setActiveTab}
-          className="w-full"
-        >
-          <TabsList className="grid grid-cols-4 mb-8">
-            <TabsTrigger value="marche">Marché</TabsTrigger>
-            <TabsTrigger value="fascicule">Fascicule</TabsTrigger>
-            <TabsTrigger value="document">Documents</TabsTrigger>
-            <TabsTrigger value="situation">Situation</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="marche" className="bg-white p-6 rounded-lg border">
-            <h2 className="text-xl font-bold mb-6">Formulaire de Marché</h2>
-            <MarcheForm />
-          </TabsContent>
-          
-          <TabsContent value="fascicule" className="bg-white p-6 rounded-lg border">
-            <h2 className="text-xl font-bold mb-6">Formulaire de Fascicule</h2>
-            <FasciculeForm />
-          </TabsContent>
-          
-          <TabsContent value="document" className="bg-white p-6 rounded-lg border">
-            <h2 className="text-xl font-bold mb-6">Formulaire de Document</h2>
-            <DocumentForm />
-          </TabsContent>
-          
-          <TabsContent value="situation" className="bg-white p-6 rounded-lg border">
-            <h2 className="text-xl font-bold mb-6">Formulaire de Situation</h2>
-            <SituationForm />
-          </TabsContent>
-        </Tabs>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+          <Tabs 
+            defaultValue="marche" 
+            value={activeTab} 
+            onValueChange={setActiveTab}
+            className="w-full"
+          >
+            <div className="px-6 pt-4">
+              <TabsList className="grid grid-cols-4 w-full">
+                <TabsTrigger value="marche">Marché</TabsTrigger>
+                <TabsTrigger value="fascicule">Fascicule</TabsTrigger>
+                <TabsTrigger value="document">Documents</TabsTrigger>
+                <TabsTrigger value="situation">Situation</TabsTrigger>
+              </TabsList>
+            </div>
+            
+            <TabsContent value="marche" className="p-6 focus:outline-none">
+              <h2 className="text-xl font-bold mb-6">Formulaire de Marché</h2>
+              <MarcheForm />
+            </TabsContent>
+            
+            <TabsContent value="fascicule" className="p-6 focus:outline-none">
+              <h2 className="text-xl font-bold mb-6">Formulaire de Fascicule</h2>
+              <FasciculeForm />
+            </TabsContent>
+            
+            <TabsContent value="document" className="p-6 focus:outline-none">
+              <h2 className="text-xl font-bold mb-6">Formulaire de Document</h2>
+              <DocumentForm />
+            </TabsContent>
+            
+            <TabsContent value="situation" className="p-6 focus:outline-none">
+              <h2 className="text-xl font-bold mb-6">Formulaire de Situation</h2>
+              <SituationForm />
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     </MainLayout>
   );
