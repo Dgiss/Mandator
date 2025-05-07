@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { 
   Form, 
@@ -24,6 +24,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Paperclip, X, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
 
 interface MarcheQuestionFormProps {
   marcheId: string;
@@ -36,22 +37,6 @@ interface MarcheQuestionFormProps {
   onCancel: () => void;
 }
 
-const documents = [
-  { id: "d1", name: "Plan Structure v2" },
-  { id: "d2", name: "CCTP GC v1.1" },
-  { id: "d3", name: "Plan Coffrage R+1 v3" },
-  { id: "d4", name: "Note de Calcul Fondations" },
-  { id: "d5", name: "Détails Façade Ouest" },
-];
-
-const fascicules = [
-  { id: "f1", name: "Lot 1 - Génie Civil" },
-  { id: "f2", name: "Lot 2 - Turbines" },
-  { id: "f3", name: "Lot 3 - Électricité" },
-  { id: "f4", name: "Lot 4 - Plomberie" },
-  { id: "f5", name: "Lot 5 - Aménagements extérieurs" },
-];
-
 const questionSchema = z.object({
   content: z.string().min(10, { message: 'La question doit comporter au moins 10 caractères' }),
   documentId: z.string().optional(),
@@ -62,6 +47,8 @@ type QuestionFormValues = z.infer<typeof questionSchema>;
 
 const MarcheQuestionForm: React.FC<MarcheQuestionFormProps> = ({ marcheId, onSubmit, onCancel }) => {
   const [attachment, setAttachment] = useState<File | null>(null);
+  const [documents, setDocuments] = useState<{id: string; nom: string}[]>([]);
+  const [fascicules, setFascicules] = useState<{id: string; nom: string}[]>([]);
   const { toast } = useToast();
 
   const form = useForm<QuestionFormValues>({
@@ -73,12 +60,77 @@ const MarcheQuestionForm: React.FC<MarcheQuestionFormProps> = ({ marcheId, onSub
     }
   });
 
+  // Fetch documents and fascicules from Supabase
+  useEffect(() => {
+    const fetchData = async () => {
+      // Fetch documents
+      const { data: documentsData, error: documentsError } = await supabase
+        .from('documents')
+        .select('id, nom')
+        .eq('marche_id', marcheId);
+      
+      if (!documentsError && documentsData) {
+        setDocuments(documentsData);
+      } else {
+        console.error('Error fetching documents:', documentsError);
+      }
+      
+      // Fetch fascicules
+      const { data: fasciculesData, error: fasciculesError } = await supabase
+        .from('fascicules')
+        .select('id, nom')
+        .eq('marche_id', marcheId);
+      
+      if (!fasciculesError && fasciculesData) {
+        setFascicules(fasciculesData);
+      } else {
+        console.error('Error fetching fascicules:', fasciculesError);
+      }
+    };
+    
+    fetchData();
+  }, [marcheId]);
+
   const handleSubmit = async (values: QuestionFormValues) => {
     try {
+      let attachmentPath = null;
+      
+      // Upload attachment if exists
+      if (attachment) {
+        const fileNameWithTimestamp = `${Date.now()}_${attachment.name}`;
+        const { data: fileData, error: fileError } = await supabase.storage
+          .from('questions')
+          .upload(`marches/${marcheId}/${fileNameWithTimestamp}`, attachment);
+        
+        if (fileError) {
+          throw new Error(`Erreur lors du téléversement du fichier: ${fileError.message}`);
+        }
+        
+        attachmentPath = fileData?.path || null;
+      }
+      
+      // Save question to database
+      const { data, error } = await supabase
+        .from('questions')
+        .insert([{
+          content: values.content,
+          marche_id: marcheId,
+          document_id: values.documentId || null,
+          fascicule_id: values.fasciculeId || null,
+          attachment_path: attachmentPath,
+          date_creation: new Date().toISOString(),
+          statut: 'En attente',
+        }]);
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      // Call the onSubmit callback
       onSubmit({
         content: values.content,
-        documentId: values.documentId || undefined,
-        fasciculeId: values.fasciculeId || undefined,
+        documentId: values.documentId,
+        fasciculeId: values.fasciculeId,
         attachment: attachment || undefined
       });
       
@@ -163,7 +215,7 @@ const MarcheQuestionForm: React.FC<MarcheQuestionFormProps> = ({ marcheId, onSub
                         <SelectItem value="">Aucun document</SelectItem>
                         {documents.map(doc => (
                           <SelectItem key={doc.id} value={doc.id}>
-                            {doc.name}
+                            {doc.nom}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -195,7 +247,7 @@ const MarcheQuestionForm: React.FC<MarcheQuestionFormProps> = ({ marcheId, onSub
                         <SelectItem value="">Aucun fascicule</SelectItem>
                         {fascicules.map(fascicule => (
                           <SelectItem key={fascicule.id} value={fascicule.id}>
-                            {fascicule.name}
+                            {fascicule.nom}
                           </SelectItem>
                         ))}
                       </SelectContent>

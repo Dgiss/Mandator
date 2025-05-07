@@ -32,6 +32,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
 
 interface Document {
   id: string;
@@ -51,14 +52,6 @@ interface DocumentFormProps {
   editingDocument: Document | null;
   setEditingDocument: (document: Document | null) => void;
 }
-
-const fasciculesMock = [
-  { id: "f1", nom: "Lot 1 - Génie Civil" },
-  { id: "f2", nom: "Lot 2 - Turbines" },
-  { id: "f3", nom: "Lot 3 - Électricité" },
-  { id: "f4", nom: "Lot 4 - Plomberie" },
-  { id: "f5", nom: "Lot 5 - Aménagements extérieurs" },
-];
 
 const documentFormSchema = z.object({
   name: z.string().min(1, { message: 'Le nom est requis' }),
@@ -80,6 +73,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fascicules, setFascicules] = useState<{id: string; nom: string}[]>([]);
   const { toast } = useToast();
 
   const form = useForm<DocumentFormValues>({
@@ -93,6 +87,24 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
       fasciculeId: '',
     }
   });
+
+  // Fetch fascicules from Supabase
+  useEffect(() => {
+    const fetchFascicules = async () => {
+      const { data, error } = await supabase
+        .from('fascicules')
+        .select('id, nom')
+        .eq('marche_id', marcheId);
+      
+      if (!error && data) {
+        setFascicules(data);
+      } else {
+        console.error('Error fetching fascicules:', error);
+      }
+    };
+    
+    fetchFascicules();
+  }, [marcheId]);
 
   // Update form when editing a document
   useEffect(() => {
@@ -113,26 +125,76 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
     const isEditing = !!editingDocument;
     
     try {
-      const formData = new FormData();
-      Object.entries(values).forEach(([key, value]) => {
-        if (value !== undefined && key !== 'file') {
-          formData.append(key, String(value));
-        }
-      });
+      // Get file extension and size
+      let fileExtension = '';
+      let fileSize = '';
+      let filePath = '';
       
       if (selectedFile) {
-        formData.append('file', selectedFile);
+        fileExtension = selectedFile.name.split('.').pop()?.toUpperCase() || '';
+        fileSize = (selectedFile.size / 1024 / 1024).toFixed(2) + ' MB';
+        
+        // Upload file to Supabase Storage
+        const fileNameWithTimestamp = `${Date.now()}_${selectedFile.name}`;
+        const { data: fileData, error: fileError } = await supabase.storage
+          .from('documents')
+          .upload(`marches/${marcheId}/${fileNameWithTimestamp}`, selectedFile);
+        
+        if (fileError) {
+          throw new Error(`Erreur lors du téléversement du fichier: ${fileError.message}`);
+        }
+        
+        filePath = fileData?.path || '';
       }
       
-      console.log('Document à ', isEditing ? 'modifier' : 'créer', ':', { 
-        ...values,
-        file: selectedFile?.name || 'Pas de nouveau fichier',
-        marcheId,
-        ...(isEditing ? { id: editingDocument.id } : {})
-      });
+      // Prepare document data
+      const documentData = {
+        nom: values.name,
+        type: values.type,
+        statut: values.statut,
+        version: values.version,
+        description: values.description || null,
+        fascicule_id: values.fasciculeId || null,
+        marche_id: marcheId,
+        dateUpload: new Date().toLocaleDateString('fr-FR'),
+        taille: selectedFile ? fileSize : (isEditing ? editingDocument.taille : '0 KB'),
+        file_path: filePath || (isEditing ? editingDocument['file_path'] : null)
+      };
       
-      // Simulation d'envoi à une API
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      let result;
+      
+      if (isEditing) {
+        // Update existing document
+        result = await supabase
+          .from('documents')
+          .update(documentData)
+          .eq('id', editingDocument.id);
+      } else {
+        // Insert new document
+        result = await supabase
+          .from('documents')
+          .insert([documentData]);
+      }
+      
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+      
+      // If document is associated with a fascicule, update the fascicule's document count
+      if (values.fasciculeId) {
+        // Get current document count
+        const { data: countData } = await supabase
+          .from('documents')
+          .select('id')
+          .eq('fascicule_id', values.fasciculeId);
+        
+        if (countData) {
+          await supabase
+            .from('fascicules')
+            .update({ nombreDocuments: countData.length })
+            .eq('id', values.fasciculeId);
+        }
+      }
       
       toast({
         title: isEditing ? "Document modifié" : "Document créé",
@@ -308,7 +370,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="">Aucun fascicule</SelectItem>
-                      {fasciculesMock.map(fascicule => (
+                      {fascicules.map(fascicule => (
                         <SelectItem key={fascicule.id} value={fascicule.id}>
                           {fascicule.nom}
                         </SelectItem>

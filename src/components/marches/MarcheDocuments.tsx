@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,8 @@ import {
 } from '@/components/ui/table';
 import { FileText, Plus, Search, Download, Filter, Eye, Edit } from 'lucide-react';
 import MarcheDocumentForm from './MarcheDocumentForm';
+import { supabase } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
 
 interface MarcheDocumentsProps {
   marcheId: string;
@@ -30,65 +32,56 @@ interface Document {
   fasciculeId?: string;
 }
 
-const documentsMock: Document[] = [
-  {
-    id: "d1",
-    nom: "Plan Structure v2",
-    type: "PDF",
-    statut: "Approuvé",
-    version: "2.0",
-    dateUpload: "16/03/2024",
-    taille: "2.4 MB",
-    description: "Plan structurel mis à jour avec corrections",
-    fasciculeId: "f1"
-  },
-  {
-    id: "d2",
-    nom: "CCTP GC v1.1",
-    type: "DOC",
-    statut: "En révision",
-    version: "1.1",
-    dateUpload: "21/03/2024",
-    taille: "1.8 MB",
-    fasciculeId: "f1"
-  },
-  {
-    id: "d3",
-    nom: "Plan Coffrage R+1 v3",
-    type: "PDF",
-    statut: "Soumis pour visa",
-    version: "3.0",
-    dateUpload: "19/03/2024",
-    taille: "4.2 MB",
-    fasciculeId: "f2"
-  },
-  {
-    id: "d4",
-    nom: "Note de Calcul Fondations",
-    type: "XLS",
-    statut: "Approuvé",
-    version: "1.0",
-    dateUpload: "15/03/2024",
-    taille: "0.8 MB",
-    fasciculeId: "f3"
-  },
-  {
-    id: "d5",
-    nom: "Détails Façade Ouest",
-    type: "PDF",
-    statut: "Rejeté",
-    version: "2.1",
-    dateUpload: "14/03/2024",
-    taille: "3.5 MB"
-  }
-];
-
 export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(true);
   const [editingDocument, setEditingDocument] = useState<Document | null>(null);
+  const { toast } = useToast();
+
+  // Fetch documents from Supabase
+  const fetchDocuments = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('marche_id', marcheId);
+      
+      if (error) throw error;
+      
+      const formattedData = data.map(doc => ({
+        id: doc.id,
+        nom: doc.nom,
+        type: doc.type,
+        statut: doc.statut,
+        version: doc.version,
+        dateUpload: doc.dateUpload || new Date().toLocaleDateString('fr-FR'),
+        taille: doc.taille || '0 KB',
+        description: doc.description,
+        fasciculeId: doc.fascicule_id
+      }));
+      
+      setDocuments(formattedData);
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de récupérer la liste des documents",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load documents on component mount
+  useEffect(() => {
+    fetchDocuments();
+  }, [marcheId]);
 
   // Filtrer les documents selon le terme de recherche
-  const filteredDocuments = documentsMock.filter(doc => 
+  const filteredDocuments = documents.filter(doc => 
     doc.nom.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -118,9 +111,49 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
   };
 
   const handleDocumentSaved = () => {
-    // In a real app, we would refresh the data from the server
-    console.log("Document created or updated");
-    setEditingDocument(null);
+    fetchDocuments();
+  };
+
+  // Download document from Supabase storage
+  const handleDownloadDocument = async (document: Document) => {
+    try {
+      // Get file path from document record
+      const { data, error } = await supabase
+        .from('documents')
+        .select('file_path')
+        .eq('id', document.id)
+        .single();
+      
+      if (error || !data || !data.file_path) {
+        throw new Error('Le chemin du fichier est introuvable');
+      }
+      
+      // Get download URL
+      const { data: fileData, error: fileError } = await supabase.storage
+        .from('documents')
+        .download(data.file_path);
+      
+      if (fileError) {
+        throw fileError;
+      }
+      
+      // Create a download link
+      const url = URL.createObjectURL(fileData);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = document.nom;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de télécharger le document",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -164,7 +197,13 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredDocuments.length > 0 ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8">
+                  Chargement des documents...
+                </TableCell>
+              </TableRow>
+            ) : filteredDocuments.length > 0 ? (
               filteredDocuments.map((doc) => (
                 <TableRow key={doc.id}>
                   <TableCell>
@@ -196,7 +235,12 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
                         <Eye className="h-4 w-4" />
                         <span className="sr-only">Voir</span>
                       </Button>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 w-8 p-0"
+                        onClick={() => handleDownloadDocument(doc)}
+                      >
                         <Download className="h-4 w-4" />
                         <span className="sr-only">Télécharger</span>
                       </Button>
@@ -206,7 +250,7 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={6} className="text-center py-8">
                   Aucun document trouvé
                 </TableCell>
               </TableRow>

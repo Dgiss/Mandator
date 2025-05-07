@@ -24,6 +24,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
 
 interface Fascicule {
   id: string;
@@ -78,15 +79,36 @@ const MarcheFasciculeForm: React.FC<FasciculeFormProps> = ({
 
   const onSubmit = async (values: FasciculeFormValues) => {
     const isEditing = !!editingFascicule;
-    console.log('Fascicule à ', isEditing ? 'modifier' : 'créer', ':', { 
-      ...values, 
-      marcheId,
-      ...(isEditing ? { id: editingFascicule.id } : {})
-    });
     
     try {
-      // Simulation d'envoi à une API
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Prepare data for database
+      const fasciculeData = {
+        nom: values.name,
+        description: values.description,
+        marche_id: marcheId,
+        nombreDocuments: isEditing ? editingFascicule.nombreDocuments : 0,
+        progression: isEditing ? editingFascicule.progression : 0,
+        dateMaj: new Date().toLocaleDateString('fr-FR')
+      };
+      
+      let result;
+      
+      if (isEditing) {
+        // Update existing fascicule
+        result = await supabase
+          .from('fascicules')
+          .update(fasciculeData)
+          .eq('id', editingFascicule.id);
+      } else {
+        // Insert new fascicule
+        result = await supabase
+          .from('fascicules')
+          .insert([fasciculeData]);
+      }
+      
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
       
       toast({
         title: isEditing ? "Fascicule modifié" : "Fascicule créé",
