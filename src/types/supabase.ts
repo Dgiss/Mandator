@@ -2,7 +2,7 @@
 import { Database as SupabaseDatabase } from '@/integrations/supabase/types';
 
 // Extend the Supabase types with our custom database schema
-export interface Database extends SupabaseDatabase {
+export interface Database {
   public: {
     Tables: {
       documents: {
@@ -48,6 +48,7 @@ export interface Database extends SupabaseDatabase {
           fascicule_id?: string | null;
           created_at?: string | null;
         };
+        Relationships: [];
       };
       fascicules: {
         Row: {
@@ -80,6 +81,7 @@ export interface Database extends SupabaseDatabase {
           dateMaj?: string | null;
           created_at?: string | null;
         };
+        Relationships: [];
       };
     };
     Views: SupabaseDatabase['public']['Views'];
