@@ -1,6 +1,6 @@
 
-// Re-export the supabase client from the integrations folder
-import { supabase } from '@/integrations/supabase/client';
+// Re-export the supabase client from our custom client
+import { supabaseClient as supabase } from '@/lib/supabase-client';
 
 // Export supabase client for use throughout the app
 export { supabase };

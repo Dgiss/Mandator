@@ -9,7 +9,84 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      documents: {
+        Row: {
+          created_at: string | null
+          dateupload: string | null
+          description: string | null
+          fascicule_id: string | null
+          file_path: string | null
+          id: string
+          marche_id: string
+          nom: string
+          statut: string
+          taille: string | null
+          type: string
+          version: string
+        }
+        Insert: {
+          created_at?: string | null
+          dateupload?: string | null
+          description?: string | null
+          fascicule_id?: string | null
+          file_path?: string | null
+          id?: string
+          marche_id: string
+          nom: string
+          statut: string
+          taille?: string | null
+          type: string
+          version: string
+        }
+        Update: {
+          created_at?: string | null
+          dateupload?: string | null
+          description?: string | null
+          fascicule_id?: string | null
+          file_path?: string | null
+          id?: string
+          marche_id?: string
+          nom?: string
+          statut?: string
+          taille?: string | null
+          type?: string
+          version?: string
+        }
+        Relationships: []
+      }
+      fascicules: {
+        Row: {
+          created_at: string | null
+          datemaj: string | null
+          description: string | null
+          id: string
+          marche_id: string
+          nom: string
+          nombredocuments: number | null
+          progression: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          datemaj?: string | null
+          description?: string | null
+          id?: string
+          marche_id: string
+          nom: string
+          nombredocuments?: number | null
+          progression?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          datemaj?: string | null
+          description?: string | null
+          id?: string
+          marche_id?: string
+          nom?: string
+          nombredocuments?: number | null
+          progression?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
