@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import useFormOperations from "@/hooks/use-form-operations";
-import { Shield, User, Hammer, HardHat, Building } from "lucide-react";
+import { Shield, User, Building } from "lucide-react";
+import { login } from "@/utils/authUtils";
 
 const loginSchema = {
   email: {
@@ -39,21 +40,17 @@ export default function LoginPage() {
 
   const onSubmit = async (data: { email: string; password: string }) => {
     try {
-      // Simuler une authentification
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Use the login function from authUtils
+      const success = await login(data.email, data.password);
       
-      // Dans un cas réel, ce serait l'intégration Cognito/Amplify
-      if (data.email === 'admin@example.com' && data.password === 'password') {
-        // Stocker un token simulé dans le localStorage
-        localStorage.setItem('authToken', 'fake-jwt-token');
-        localStorage.setItem('user', JSON.stringify({ name: 'Administrateur', email: data.email }));
-        
+      if (success) {
         toast({
           title: "Connexion réussie",
           description: "Bienvenue sur votre tableau de bord",
           variant: "success"
         });
         
+        // Redirect to dashboard on successful login
         navigate('/dashboard');
       } else {
         toast({

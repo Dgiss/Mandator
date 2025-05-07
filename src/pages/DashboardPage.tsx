@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { checkAuth } from '@/utils/authUtils';
+import { checkAuth, logout } from '@/utils/authUtils';
 import MainLayout from '@/components/layout/MainLayout';
 import PageHeader from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';

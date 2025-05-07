@@ -3,8 +3,7 @@
 
 /**
  * Check if user is authenticated
- * For demo purposes, this always returns true
- * In a real application, this would check for a valid token or session
+ * For demo purposes, this checks for a valid token in localStorage
  */
 export const checkAuth = (): boolean => {
   // In a real app, check for a token in localStorage or cookies

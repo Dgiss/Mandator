@@ -1,5 +1,4 @@
 
-
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -19,17 +18,47 @@ import { useEffect } from "react";
 import { CRMProvider } from "./contexts/CRMContext";
 import { AppSettingsProvider } from "./contexts/AppSettingsContext";
 import { trackPageView } from "./utils/analytics";
+import { checkAuth } from "./utils/authUtils";
+
+// Protected route component to ensure authentication
+const ProtectedRoute = ({ children }) => {
+  const isAuthenticated = checkAuth();
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return children;
+};
 
 // Define routes configuration with redirects
 const routes = [
-  { path: "/", element: <DashboardPage /> },
+  { path: "/", element: <Navigate to="/login" replace /> },
   { path: "/login", element: <LoginPage /> },
-  { path: "/dashboard", element: <DashboardPage /> },
-  { path: "/marches", element: <MarchesPage /> },
-  { path: "/marches/:id", element: <MarcheDetailPage /> },
-  { path: "/marches/creation", element: <MarketCreationPage /> },
-  { path: "/questions-reponses", element: <QuestionsReponsesPage /> },
-  { path: "/formulaires", element: <FormsPage /> },
+  { 
+    path: "/dashboard", 
+    element: <ProtectedRoute><DashboardPage /></ProtectedRoute> 
+  },
+  { 
+    path: "/marches", 
+    element: <ProtectedRoute><MarchesPage /></ProtectedRoute> 
+  },
+  { 
+    path: "/marches/:id", 
+    element: <ProtectedRoute><MarcheDetailPage /></ProtectedRoute> 
+  },
+  { 
+    path: "/marches/creation", 
+    element: <ProtectedRoute><MarketCreationPage /></ProtectedRoute> 
+  },
+  { 
+    path: "/questions-reponses", 
+    element: <ProtectedRoute><QuestionsReponsesPage /></ProtectedRoute> 
+  },
+  { 
+    path: "/formulaires", 
+    element: <ProtectedRoute><FormsPage /></ProtectedRoute> 
+  },
   { path: "*", element: <NotFound /> }
 ];
 
