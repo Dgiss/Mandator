@@ -1,10 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   FileText, 
-  ScrollText,
   MessageSquare, 
   Menu, 
   X,
@@ -12,7 +10,6 @@ import {
   Moon,
   ChevronRight,
   Settings,
-  Users,
   Folder
 } from 'lucide-react';
 
@@ -54,8 +51,6 @@ const Navbar = () => {
     { title: 'Tableau de bord', path: '/', icon: LayoutDashboard },
     { title: 'Marchés', path: '/marches', icon: FileText },
     { title: 'Questions/Réponses', path: '/questions-reponses', icon: MessageSquare },
-    { title: 'Formulaires', path: '/formulaires', icon: ScrollText },
-    { title: 'Clients', path: '/clients', icon: Users },
     { title: 'Paramètres', path: '/parametres', icon: Settings },
   ];
 

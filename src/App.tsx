@@ -5,17 +5,10 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 
 import Index from "./pages/Index";
-import ParcelsPage from "./pages/ParcelsPage";
-import ParcelsDetailsPage from "./pages/ParcelsDetailsPage";
-import CropsPage from "./pages/CropsPage";
-import InventoryPage from "./pages/InventoryPage";
-import FinancePage from "./pages/FinancePage";
-import StatsPage from "./pages/StatsPage";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import MarketCreationPage from "./pages/MarketCreationPage";
 import FormsPage from "./pages/FormsPage";
-import ClientsPage from "./pages/ClientsPage";
 import MarchesPage from "./pages/MarchesPage";
 import MarcheDetailPage from "./pages/MarcheDetailPage";
 import QuestionsReponsesPage from "./pages/QuestionsReponsesPage";
@@ -23,7 +16,6 @@ import NotFound from "./pages/NotFound";
 
 import { useEffect } from "react";
 import { CRMProvider } from "./contexts/CRMContext";
-import { StatisticsProvider } from "./contexts/StatisticsContext";
 import { AppSettingsProvider } from "./contexts/AppSettingsContext";
 import { trackPageView } from "./utils/analytics";
 
@@ -36,18 +28,7 @@ const routes = [
   { path: "/marches/:id", element: <MarcheDetailPage /> },
   { path: "/marches/creation", element: <MarketCreationPage /> },
   { path: "/questions-reponses", element: <QuestionsReponsesPage /> },
-  { path: "/formulaires", element: <FormsPage /> },
-  { path: "/clients", element: <ClientsPage /> },
-  { path: "/parcelles", element: <ParcelsPage /> },
-  { path: "/parcelles/:id", element: <ParcelsDetailsPage /> },
-  { path: "/cultures", element: <CropsPage /> },
-  { path: "/inventaire", element: <InventoryPage /> },
-  { path: "/finances", element: <FinancePage /> },
-  { path: "/statistiques", element: <StatisticsProvider><StatsPage /></StatisticsProvider> },
-  { path: "/rapports", element: <Navigate to="/statistiques" replace /> },
-  { path: "/parametres", element: <Navigate to="/" replace /> },
   { path: "/connexion", element: <Navigate to="/login" replace /> },
-  { path: "/secteurs/collectivites", element: <ClientsPage /> },
   { path: "*", element: <NotFound /> }
 ];
 

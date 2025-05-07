@@ -18,7 +18,6 @@ import {
 } from '@/components/ui/table';
 import { 
   FileText, 
-  Plus, 
   FileEdit, 
   ClipboardList, 
   Check, 
@@ -33,6 +32,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import MarcheSituationForm from './MarcheSituationForm';
 
 interface SituationProps {
   marcheId: string;
@@ -152,13 +152,17 @@ const MarcheSituations: React.FC<SituationProps> = ({ marcheId }) => {
     }
   };
 
+  // Handler pour ajouter une nouvelle situation
+  const handleSituationCreated = () => {
+    // Dans un cas réel, cette fonction serait utilisée pour rafraîchir les données depuis l'API
+    console.log('Rafraîchissement des situations après création');
+  };
+
   return (
     <div className="space-y-6 py-4">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <h2 className="text-2xl font-bold">Situations de Travaux</h2>
-        <Button className="flex items-center">
-          <Plus className="mr-2 h-4 w-4" /> Nouvelle situation
-        </Button>
+        <MarcheSituationForm marcheId={marcheId} onSituationCreated={handleSituationCreated} />
       </div>
 
       {/* Dashboard des situations */}

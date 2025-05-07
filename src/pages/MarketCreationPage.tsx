@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/layout/PageLayout';
 import PageHeader from '@/components/layout/PageHeader';
@@ -10,11 +10,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import useFormOperations from '@/hooks/use-form-operations';
-import { z } from 'zod';
+import { Image, Upload, X } from 'lucide-react';
 
 export default function MarketCreationPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   React.useEffect(() => {
     const token = localStorage.getItem('authToken');
@@ -81,9 +83,51 @@ export default function MarketCreationPage() {
     isPublic: false
   }, marketFormSchema);
 
+  const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        setCoverImageUrl(result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        setLogoUrl(result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeCoverImage = () => {
+    setCoverImageUrl(null);
+    // Reset the file input
+    const fileInput = document.getElementById('coverImage') as HTMLInputElement;
+    if (fileInput) fileInput.value = '';
+  };
+
+  const removeLogo = () => {
+    setLogoUrl(null);
+    // Reset the file input
+    const fileInput = document.getElementById('logo') as HTMLInputElement;
+    if (fileInput) fileInput.value = '';
+  };
+
   const onSubmit = async (data: any) => {
     try {
-      console.log('Données du marché soumises:', data);
+      console.log('Données du marché soumises:', {
+        ...data,
+        coverImage: coverImageUrl,
+        logo: logoUrl
+      });
       
       // Simulation de l'envoi à une API
       await new Promise(resolve => setTimeout(resolve, 1500));
@@ -119,6 +163,78 @@ export default function MarketCreationPage() {
       <Card>
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* Image de couverture */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Image de couverture</label>
+              <div className="border border-dashed border-gray-300 rounded-md p-4">
+                {coverImageUrl ? (
+                  <div className="relative">
+                    <img 
+                      src={coverImageUrl} 
+                      alt="Aperçu de la couverture" 
+                      className="w-full h-48 object-cover rounded-md" 
+                    />
+                    <button 
+                      type="button"
+                      onClick={removeCoverImage}
+                      className="absolute top-2 right-2 bg-white rounded-full p-1 shadow-md hover:bg-gray-100"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label htmlFor="coverImage" className="flex flex-col items-center justify-center h-48 cursor-pointer">
+                    <Image className="h-12 w-12 text-gray-400 mb-2" />
+                    <span className="text-sm text-gray-500">Cliquez pour ajouter une image de couverture</span>
+                    <span className="text-xs text-gray-400 mt-1">JPG, PNG ou GIF, max 5MB</span>
+                    <input
+                      id="coverImage"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleCoverImageChange}
+                    />
+                  </label>
+                )}
+              </div>
+            </div>
+
+            {/* Logo */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Logo du marché</label>
+              <div className="border border-dashed border-gray-300 rounded-md p-4">
+                {logoUrl ? (
+                  <div className="relative flex justify-center">
+                    <img 
+                      src={logoUrl} 
+                      alt="Aperçu du logo" 
+                      className="h-24 max-w-full object-contain rounded-md" 
+                    />
+                    <button 
+                      type="button"
+                      onClick={removeLogo}
+                      className="absolute top-0 right-0 bg-white rounded-full p-1 shadow-md hover:bg-gray-100"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label htmlFor="logo" className="flex flex-col items-center justify-center h-24 cursor-pointer">
+                    <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                    <span className="text-sm text-gray-500">Cliquez pour ajouter un logo</span>
+                    <span className="text-xs text-gray-400 mt-1">Format carré recommandé, max 2MB</span>
+                    <input
+                      id="logo"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleLogoChange}
+                    />
+                  </label>
+                )}
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label htmlFor="title" className="text-sm font-medium">Titre du marché*</label>
