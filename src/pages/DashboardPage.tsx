@@ -5,7 +5,7 @@ import PageLayout from '@/components/layout/PageLayout';
 import PageHeader from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, FileText, LayoutDashboard, FileEdit, FileCheck } from 'lucide-react';
+import { ArrowRight, FileText, LayoutDashboard, FileEdit, Database, FileCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function DashboardPage() {
@@ -59,6 +59,14 @@ export default function DashboardPage() {
     if (checkAuth()) {
       navigate('/marches/creation');
     }
+  };
+
+  const handleIntegrationSupabase = () => {
+    toast({
+      title: "Intégration Supabase",
+      description: "Fonctionnalité en cours de développement",
+      variant: "default"
+    });
   };
 
   return (
@@ -125,11 +133,11 @@ export default function DashboardPage() {
             <Button variant="btpPrimary" className="w-full justify-start" onClick={goToMarketCreation}>
               <FileText className="mr-2 h-4 w-4" /> Créer un nouveau marché
             </Button>
-            <Button variant="btpOutline" className="w-full justify-start" onClick={() => navigate('/formulaires')}>
-              <FileEdit className="mr-2 h-4 w-4" /> Gérer les formulaires
+            <Button variant="btpOutline" className="w-full justify-start" onClick={() => navigate('/marches/creation/fascicule')}>
+              <FileEdit className="mr-2 h-4 w-4" /> Créer un nouveau fascicule
             </Button>
-            <Button variant="btpSecondary" className="w-full justify-start" onClick={() => navigate('/clients')}>
-              <LayoutDashboard className="mr-2 h-4 w-4" /> Gérer les clients
+            <Button variant="btpSecondary" className="w-full justify-start" onClick={handleIntegrationSupabase}>
+              <Database className="mr-2 h-4 w-4" /> Intégration Supabase
             </Button>
           </CardContent>
         </Card>
