@@ -12,3 +12,13 @@ export const checkAuth = (): boolean => {
   // For now, always return true - we removed authentication feature as requested
   return true;
 };
+
+/**
+ * Log out the current user
+ * This is a simple implementation for now
+ * @returns {boolean} True if logout was successful
+ */
+export const logout = (): boolean => {
+  // For now, just return true since we don't have real authentication
+  return true;
+};
