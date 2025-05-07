@@ -1,4 +1,5 @@
 
+
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -28,6 +29,7 @@ const routes = [
   { path: "/marches/:id", element: <MarcheDetailPage /> },
   { path: "/marches/creation", element: <MarketCreationPage /> },
   { path: "/questions-reponses", element: <QuestionsReponsesPage /> },
+  { path: "/formulaires", element: <FormsPage /> },
   { path: "*", element: <NotFound /> }
 ];
 

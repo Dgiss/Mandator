@@ -1,7 +1,9 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import PageLayout from '@/components/layout/PageLayout';
+import { checkAuth } from '@/utils/authUtils';
+import MainLayout from '@/components/layout/MainLayout';
+import Dashboard from '@/components/Dashboard';
 import PageHeader from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,27 +14,49 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Simuler des données pour le tableau de bord
+  // Stats data - would typically come from an API
   const stats = [
-    { title: "Marchés en cours", value: "12", icon: FileText, color: "bg-blue-100 text-blue-600" },
-    { title: "Projets actifs", value: "7", icon: LayoutDashboard, color: "bg-green-100 text-green-600" },
-    { title: "Devis en attente", value: "5", icon: FileEdit, color: "bg-amber-100 text-amber-600" },
-    { title: "Marchés terminés", value: "23", icon: FileCheck, color: "bg-purple-100 text-purple-600" }
+    { 
+      title: "Marchés",
+      value: 12,
+      description: "Marchés actifs",
+      color: "bg-blue-100 text-blue-800",
+    },
+    { 
+      title: "Fascicules",
+      value: 37,
+      description: "Documents enregistrés",
+      color: "bg-green-100 text-green-800",
+    },
+    { 
+      title: "Documents",
+      value: 149,
+      description: "Fichiers stockés",
+      color: "bg-purple-100 text-purple-800", 
+    },
+    { 
+      title: "Situations",
+      value: 8,
+      description: "En attente de validation",
+      color: "bg-amber-100 text-amber-800",
+    },
   ];
 
-  const recentProjects = [
-    { id: 1, name: "Rénovation Mairie", client: "Ville de Lyon", status: "En cours", date: "2023-05-15" },
-    { id: 2, name: "Construction école", client: "Département du Rhône", status: "En attente", date: "2023-06-20" },
-    { id: 3, name: "Réfection voirie", client: "Métropole de Lyon", status: "En cours", date: "2023-04-10" }
+  // Recent activity data - would typically come from an API
+  const recentActivity = [
+    { id: 1, action: "Marché créé", description: "Construction bureaux administratifs", date: "Aujourd'hui, 14:32" },
+    { id: 2, action: "Document ajouté", description: "Rapport technique fondations", date: "Hier, 09:15" },
+    { id: 3, action: "Situation validée", description: "Situation n°4 - Projet Hôpital", date: "18/08, 16:45" },
+    { id: 4, action: "Fascicule modifié", description: "CCTP Lot Plomberie", date: "16/08, 11:20" },
   ];
 
-  const checkAuth = () => {
-    const token = localStorage.getItem('authToken');
-    if (!token) {
+  // Function to check authentication and redirect to login if not authenticated
+  const ensureAuth = () => {
+    if (!checkAuth()) {
       toast({
-        title: "Session expirée",
-        description: "Veuillez vous reconnecter",
-        variant: "destructive"
+        title: "Authentification requise",
+        description: "Veuillez vous connecter pour accéder à cette fonctionnalité",
+        variant: "destructive",
       });
       navigate('/login');
       return false;
@@ -40,21 +64,7 @@ export default function DashboardPage() {
     return true;
   };
 
-  React.useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
-    toast({
-      title: "Déconnexion réussie",
-      description: "Vous avez été déconnecté avec succès",
-      variant: "success"
-    });
-    navigate('/login');
-  };
-
+  // Handlers for various actions
   const goToMarketCreation = () => {
     if (checkAuth()) {
       navigate('/marches/creation');
@@ -68,80 +78,83 @@ export default function DashboardPage() {
       variant: "default"
     });
   };
+  
+  const goToForms = () => {
+    if (checkAuth()) {
+      navigate('/formulaires');
+    }
+  };
 
   return (
-    <PageLayout>
-      <PageHeader
-        title="Tableau de bord"
-        description="Bienvenue sur votre espace de gestion des marchés publics"
-      >
-        <Button variant="outline" onClick={handleLogout}>
-          Déconnexion
-        </Button>
-      </PageHeader>
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-        {stats.map((stat, index) => (
-          <Card key={index}>
-            <CardContent className="p-6 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">{stat.title}</p>
-                <p className="text-3xl font-bold">{stat.value}</p>
-              </div>
-              <div className={`p-2 rounded-full ${stat.color}`}>
-                <stat.icon className="h-6 w-6" />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <Card className="col-span-1">
-          <CardHeader>
-            <CardTitle className="text-xl">Projets récents</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentProjects.map((project) => (
-                <div key={project.id} className="border rounded-md p-4 flex justify-between items-center">
-                  <div>
-                    <h3 className="font-medium">{project.name}</h3>
-                    <p className="text-sm text-gray-500">Client: {project.client}</p>
-                    <div className="flex items-center mt-1">
-                      <span className={`inline-block w-2 h-2 rounded-full mr-2 
-                        ${project.status === 'En cours' ? 'bg-green-500' : 
-                          project.status === 'En attente' ? 'bg-amber-500' : 'bg-gray-500'}`}
-                      />
-                      <span className="text-sm">{project.status}</span>
+    <MainLayout>
+      <div className="container mx-auto py-6">
+        <PageHeader 
+          title="Tableau de bord" 
+          description="Bienvenue sur la plateforme de gestion des marchés"
+        />
+        
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+          {stats.map((stat, i) => (
+            <Card key={i}>
+              <CardHeader className={`${stat.color} rounded-t-lg py-2`}>
+                <CardTitle className="text-center text-lg">{stat.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <p className="text-3xl font-bold text-center">{stat.value}</p>
+                <p className="text-sm text-muted-foreground text-center mt-2">{stat.description}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Activité Récente</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {recentActivity.map(activity => (
+                    <div key={activity.id} className="flex justify-between items-start pb-3 border-b last:border-0">
+                      <div>
+                        <h4 className="font-medium">{activity.action}</h4>
+                        <p className="text-sm text-muted-foreground">{activity.description}</p>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {activity.date}
+                      </div>
                     </div>
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={() => navigate(`/marches/${project.id}`)}>
-                    <ArrowRight className="h-4 w-4" />
+                  ))}
+                </div>
+                
+                <div className="mt-4 text-right">
+                  <Button variant="link" onClick={() => navigate('/activite')} className="px-0">
+                    Voir toute l'activité <ArrowRight className="ml-1 h-4 w-4" />
                   </Button>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="col-span-1">
-          <CardHeader>
-            <CardTitle className="text-xl">Actions rapides</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Button variant="btpPrimary" className="w-full justify-start" onClick={goToMarketCreation}>
-              <FileText className="mr-2 h-4 w-4" /> Créer un nouveau marché
-            </Button>
-            <Button variant="btpOutline" className="w-full justify-start" onClick={() => navigate('/marches/creation/fascicule')}>
-              <FileEdit className="mr-2 h-4 w-4" /> Créer un nouveau fascicule
-            </Button>
-            <Button variant="btpSecondary" className="w-full justify-start" onClick={handleIntegrationSupabase}>
-              <Database className="mr-2 h-4 w-4" /> Intégration Supabase
-            </Button>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions Rapides</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Button variant="btpPrimary" className="w-full justify-start" onClick={goToMarketCreation}>
+                <FileText className="mr-2 h-4 w-4" /> Créer un nouveau marché
+              </Button>
+              <Button variant="btpSecondary" className="w-full justify-start" onClick={goToForms}>
+                <FileEdit className="mr-2 h-4 w-4" /> Gérer les formulaires
+              </Button>
+              <Button variant="btpOutline" className="w-full justify-start" onClick={handleIntegrationSupabase}>
+                <Database className="mr-2 h-4 w-4" /> Intégration Supabase
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </PageLayout>
+    </MainLayout>
   );
 }
