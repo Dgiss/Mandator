@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 
-import Index from "./pages/Index";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import MarketCreationPage from "./pages/MarketCreationPage";
@@ -58,6 +57,10 @@ const routes = [
   { 
     path: "/formulaires", 
     element: <ProtectedRoute><FormsPage /></ProtectedRoute> 
+  },
+  { 
+    path: "/parametres", 
+    element: <ProtectedRoute><div className="container mx-auto p-6"><h1 className="text-2xl font-bold">Paramètres</h1></div></ProtectedRoute> 
   },
   { path: "*", element: <NotFound /> }
 ];

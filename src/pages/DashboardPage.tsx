@@ -1,43 +1,50 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { checkAuth, logout } from '@/utils/authUtils';
+import { checkAuth } from '@/utils/authUtils';
 import MainLayout from '@/components/layout/MainLayout';
-import PageHeader from '@/components/layout/PageHeader';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { ArrowRight, FileText, Settings, MessageSquare } from 'lucide-react';
+import { 
+  FileText, 
+  LayoutDashboard, 
+  FileEdit,
+  ArrowRight,
+  ChevronRight,
+  Settings,
+  Users
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Stats data
+  // Stats data matching the image
   const stats = [
     { 
       title: "Marchés en cours",
       value: 12,
-      icon: <FileText className="h-6 w-6 text-blue-500" />
+      icon: <FileText className="h-6 w-6 text-blue-600 bg-blue-100 p-1 rounded-full" />
     },
     { 
       title: "Projets actifs",
       value: 7,
-      icon: <Settings className="h-6 w-6 text-green-500" />
+      icon: <LayoutDashboard className="h-6 w-6 text-green-600 bg-green-100 p-1 rounded-full" />
     },
     { 
       title: "Devis en attente",
       value: 5,
-      icon: <FileText className="h-6 w-6 text-amber-500" />
+      icon: <FileEdit className="h-6 w-6 text-amber-600 bg-amber-100 p-1 rounded-full" />
     },
     { 
       title: "Marchés terminés",
       value: 23,
-      icon: <FileText className="h-6 w-6 text-purple-500" />
+      icon: <FileText className="h-6 w-6 text-purple-600 bg-purple-100 p-1 rounded-full" />
     },
   ];
 
-  // Recent projects data
+  // Recent projects data matching the image
   const recentProjects = [
     { 
       id: 1, 
@@ -76,35 +83,46 @@ export default function DashboardPage() {
   // Return the status badge element based on status
   const getStatusBadge = (status) => {
     if (status === "En cours") {
-      return <span className="inline-block w-3 h-3 bg-green-500 rounded-full mr-2"></span>;
+      return <span className="inline-flex items-center">
+        <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+        <span className="text-sm text-gray-600">{status}</span>
+      </span>;
     } else if (status === "En attente") {
-      return <span className="inline-block w-3 h-3 bg-amber-500 rounded-full mr-2"></span>;
+      return <span className="inline-flex items-center">
+        <span className="w-2 h-2 bg-amber-500 rounded-full mr-2"></span>
+        <span className="text-sm text-gray-600">{status}</span>
+      </span>;
     } else {
-      return <span className="inline-block w-3 h-3 bg-gray-500 rounded-full mr-2"></span>;
+      return <span className="inline-flex items-center">
+        <span className="w-2 h-2 bg-gray-500 rounded-full mr-2"></span>
+        <span className="text-sm text-gray-600">{status}</span>
+      </span>;
     }
   };
 
   return (
     <MainLayout>
-      <div className="container mx-auto py-6">
-        <PageHeader 
-          title="Tableau de bord" 
-          description="Bienvenue sur votre espace de gestion des marchés publics"
-        />
+      <div className="container mx-auto p-6">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">Tableau de bord</h1>
+          <p className="text-gray-600">Bienvenue sur votre espace de gestion des marchés publics</p>
+        </div>
         
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {stats.map((stat, i) => (
-            <Card key={i} className="border">
-              <CardContent className="flex items-center p-6">
-                <div className="mr-4">
-                  {stat.icon}
+            <Card key={i} className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+              <div className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">{stat.title}</p>
+                    <p className="text-2xl font-bold text-gray-800">{stat.value}</p>
+                  </div>
+                  <div>
+                    {stat.icon}
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">{stat.title}</p>
-                  <p className="text-3xl font-bold">{stat.value}</p>
-                </div>
-              </CardContent>
+              </div>
             </Card>
           ))}
         </div>
@@ -113,37 +131,39 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Recent Projects Column */}
           <div className="lg:col-span-2">
-            <Card className="border h-full">
-              <CardContent className="p-6">
-                <h2 className="text-xl font-semibold mb-4">Projets récents</h2>
+            <Card className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <div className="p-6">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Projets récents</h2>
                 <div className="space-y-4">
                   {recentProjects.map(project => (
-                    <div key={project.id} className="flex justify-between items-center p-4 border rounded-md hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => navigate(`/marches/${project.id}`)}>
-                      <div>
-                        <h4 className="font-medium text-lg">{project.name}</h4>
-                        <p className="text-sm text-muted-foreground">Client: {project.client}</p>
-                      </div>
-                      <div className="flex items-center">
-                        <div className="flex items-center mr-4">
-                          {getStatusBadge(project.status)}
-                          <span className="text-sm">{project.status}</span>
+                    <div key={project.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-sm transition-shadow">
+                      <div className="p-4 flex justify-between items-center">
+                        <div>
+                          <h4 className="font-medium text-gray-800">{project.name}</h4>
+                          <p className="text-sm text-gray-600">Client: {project.client}</p>
                         </div>
-                        <Button variant="ghost" size="sm">
-                          <ArrowRight className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center">
+                          {getStatusBadge(project.status)}
+                          <button 
+                            onClick={() => navigate(`/marches/${project.id}`)}
+                            className="ml-4 p-1 text-gray-400 hover:text-gray-600 rounded"
+                          >
+                            <ChevronRight className="h-5 w-5" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
-              </CardContent>
+              </div>
             </Card>
           </div>
           
           {/* Actions Column */}
           <div>
-            <Card className="border h-full">
-              <CardContent className="p-6">
-                <h2 className="text-xl font-semibold mb-4">Actions rapides</h2>
+            <Card className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <div className="p-6">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Actions rapides</h2>
                 <div className="space-y-3">
                   <Button 
                     variant="default" 
@@ -156,23 +176,23 @@ export default function DashboardPage() {
                   
                   <Button 
                     variant="outline" 
-                    className="w-full justify-start"
+                    className="w-full justify-start border-gray-300 text-gray-700 hover:text-gray-900 hover:bg-gray-50"
                     onClick={() => ensureAuth() && navigate('/formulaires')}
                   >
-                    <FileText className="mr-2 h-4 w-4" />
+                    <FileEdit className="mr-2 h-4 w-4" />
                     Gérer les formulaires
                   </Button>
                   
                   <Button 
                     variant="outline" 
-                    className="w-full justify-start"
+                    className="w-full justify-start border-gray-300 text-gray-700 hover:text-gray-900 hover:bg-gray-50"
                     onClick={() => ensureAuth() && navigate('/clients')}
                   >
-                    <Settings className="mr-2 h-4 w-4" />
+                    <Users className="mr-2 h-4 w-4" />
                     Gérer les clients
                   </Button>
                 </div>
-              </CardContent>
+              </div>
             </Card>
           </div>
         </div>
