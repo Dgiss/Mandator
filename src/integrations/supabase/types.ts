@@ -87,6 +87,222 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          created_at: string | null
+          entreprise: string | null
+          id: string
+          nom: string | null
+          prenom: string | null
+          role: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          entreprise?: string | null
+          id: string
+          nom?: string | null
+          prenom?: string | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          entreprise?: string | null
+          id?: string
+          nom?: string | null
+          prenom?: string | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      questions: {
+        Row: {
+          attachment_path: string | null
+          content: string
+          created_at: string | null
+          date_creation: string | null
+          document_id: string | null
+          fascicule_id: string | null
+          id: string
+          marche_id: string
+          statut: string
+        }
+        Insert: {
+          attachment_path?: string | null
+          content: string
+          created_at?: string | null
+          date_creation?: string | null
+          document_id?: string | null
+          fascicule_id?: string | null
+          id?: string
+          marche_id: string
+          statut?: string
+        }
+        Update: {
+          attachment_path?: string | null
+          content?: string
+          created_at?: string | null
+          date_creation?: string | null
+          document_id?: string | null
+          fascicule_id?: string | null
+          id?: string
+          marche_id?: string
+          statut?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "questions_fascicule_id_fkey"
+            columns: ["fascicule_id"]
+            isOneToOne: false
+            referencedRelation: "fascicules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reponses: {
+        Row: {
+          attachment_path: string | null
+          content: string
+          created_at: string | null
+          date_creation: string | null
+          id: string
+          question_id: string
+          user_id: string | null
+        }
+        Insert: {
+          attachment_path?: string | null
+          content: string
+          created_at?: string | null
+          date_creation?: string | null
+          id?: string
+          question_id: string
+          user_id?: string | null
+        }
+        Update: {
+          attachment_path?: string | null
+          content?: string
+          created_at?: string | null
+          date_creation?: string | null
+          id?: string
+          question_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reponses_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      versions: {
+        Row: {
+          commentaire: string | null
+          created_at: string | null
+          cree_par: string
+          date_creation: string | null
+          document_id: string
+          file_path: string | null
+          id: string
+          marche_id: string
+          taille: string | null
+          version: string
+        }
+        Insert: {
+          commentaire?: string | null
+          created_at?: string | null
+          cree_par: string
+          date_creation?: string | null
+          document_id: string
+          file_path?: string | null
+          id?: string
+          marche_id: string
+          taille?: string | null
+          version: string
+        }
+        Update: {
+          commentaire?: string | null
+          created_at?: string | null
+          cree_par?: string
+          date_creation?: string | null
+          document_id?: string
+          file_path?: string | null
+          id?: string
+          marche_id?: string
+          taille?: string | null
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "versions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      visas: {
+        Row: {
+          attachment_path: string | null
+          commentaire: string | null
+          created_at: string | null
+          date_demande: string | null
+          demande_par: string
+          document_id: string | null
+          echeance: string | null
+          id: string
+          marche_id: string
+          statut: string | null
+          version: string
+        }
+        Insert: {
+          attachment_path?: string | null
+          commentaire?: string | null
+          created_at?: string | null
+          date_demande?: string | null
+          demande_par: string
+          document_id?: string | null
+          echeance?: string | null
+          id?: string
+          marche_id: string
+          statut?: string | null
+          version: string
+        }
+        Update: {
+          attachment_path?: string | null
+          commentaire?: string | null
+          created_at?: string | null
+          date_demande?: string | null
+          demande_par?: string
+          document_id?: string | null
+          echeance?: string | null
+          id?: string
+          marche_id?: string
+          statut?: string | null
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visas_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

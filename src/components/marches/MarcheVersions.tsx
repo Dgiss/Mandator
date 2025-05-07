@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,8 @@ import {
   Download,
   Eye
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { versionsService } from '@/services/versionsService';
 
 interface MarcheVersionsProps {
   marcheId: string;
@@ -33,66 +35,56 @@ interface Version {
   dateCreation: string;
   taille: string;
   commentaire: string;
+  file_path?: string;
 }
-
-const versionsMock: Version[] = [
-  {
-    id: "v1",
-    document: "CCTP GC",
-    version: "1.1",
-    creePar: "Martin Dupont",
-    dateCreation: "21/03/2024",
-    taille: "1.8 MB",
-    commentaire: "Correction suite aux remarques du client"
-  },
-  {
-    id: "v2",
-    document: "CCTP GC",
-    version: "1.0",
-    creePar: "Martin Dupont",
-    dateCreation: "15/03/2024",
-    taille: "1.7 MB",
-    commentaire: "Version initiale"
-  },
-  {
-    id: "v3",
-    document: "Plan Coffrage R+1",
-    version: "3.0",
-    creePar: "Sophie Laurent",
-    dateCreation: "19/03/2024",
-    taille: "4.2 MB",
-    commentaire: "Mise à jour des dimensions"
-  },
-  {
-    id: "v4",
-    document: "Plan Coffrage R+1",
-    version: "2.0",
-    creePar: "Sophie Laurent",
-    dateCreation: "12/03/2024",
-    taille: "4.0 MB",
-    commentaire: "Ajout détails escalier"
-  },
-  {
-    id: "v5",
-    document: "Plan Coffrage R+1",
-    version: "1.0",
-    creePar: "Thomas Bernard",
-    dateCreation: "05/03/2024",
-    taille: "3.8 MB",
-    commentaire: "Version initiale"
-  }
-];
 
 export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [versions, setVersions] = useState<Version[]>([]);
+  const [loading, setLoading] = useState(true);
   const [sortConfig, setSortConfig] = useState<{ key: keyof Version | null, direction: 'asc' | 'desc' | null }>({ 
     key: 'dateCreation', 
     direction: 'desc' 
   });
+  const { toast } = useToast();
+
+  useEffect(() => {
+    loadVersions();
+  }, [marcheId]);
+
+  const loadVersions = async () => {
+    try {
+      setLoading(true);
+      const data = await versionsService.getVersionsByMarcheId(marcheId);
+      
+      // Formater les données pour correspondre à notre interface
+      const formattedVersions = data.map((item: any) => ({
+        id: item.id,
+        document: item.documents?.nom || "Document inconnu",
+        version: item.version,
+        creePar: item.cree_par,
+        dateCreation: new Date(item.date_creation).toLocaleDateString('fr-FR'),
+        taille: item.taille || "N/A",
+        commentaire: item.commentaire || "",
+        file_path: item.file_path
+      }));
+      
+      setVersions(formattedVersions);
+    } catch (error) {
+      console.error('Error loading versions:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les versions",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Fonction de tri
   const sortedVersions = React.useMemo(() => {
-    let sortableVersions = [...versionsMock];
+    let sortableVersions = [...versions];
     if (sortConfig.key && sortConfig.direction) {
       sortableVersions.sort((a, b) => {
         if (a[sortConfig.key!] < b[sortConfig.key!]) {
@@ -105,7 +97,7 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
       });
     }
     return sortableVersions;
-  }, [sortConfig]);
+  }, [versions, sortConfig]);
 
   // Fonction pour changer le tri
   const requestSort = (key: keyof Version) => {
@@ -121,6 +113,40 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
     version.document.toLowerCase().includes(searchTerm.toLowerCase()) ||
     version.commentaire.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Télécharger un fichier de version
+  const handleDownload = async (version: Version) => {
+    if (!version.file_path) {
+      toast({
+        title: "Information",
+        description: "Aucun fichier n'est associé à cette version",
+        variant: "default",
+      });
+      return;
+    }
+
+    try {
+      const blob = await versionsService.downloadVersionFile(version.file_path);
+      
+      // Créer une URL pour le téléchargement
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${version.document}_v${version.version}`;
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(url);
+      a.remove();
+      
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de télécharger le fichier",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="pt-6">
@@ -172,7 +198,13 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredVersions.length > 0 ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8">
+                  Chargement des versions...
+                </TableCell>
+              </TableRow>
+            ) : filteredVersions.length > 0 ? (
               filteredVersions.map((version) => (
                 <TableRow key={version.id}>
                   <TableCell>
@@ -198,7 +230,12 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
                         <Eye className="h-4 w-4" />
                         <span className="sr-only">Voir</span>
                       </Button>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 w-8 p-0"
+                        onClick={() => handleDownload(version)}
+                      >
                         <Download className="h-4 w-4" />
                         <span className="sr-only">Télécharger</span>
                       </Button>

@@ -13,59 +13,14 @@ import MarchesPage from "./pages/MarchesPage";
 import MarcheDetailPage from "./pages/MarcheDetailPage";
 import QuestionsReponsesPage from "./pages/QuestionsReponsesPage";
 import NotFound from "./pages/NotFound";
+import AuthPage from "./pages/AuthPage";
 
 import { useEffect } from "react";
 import { CRMProvider } from "./contexts/CRMContext";
 import { AppSettingsProvider } from "./contexts/AppSettingsContext";
+import { AuthProvider } from "./contexts/AuthContext";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { trackPageView } from "./utils/analytics";
-import { checkAuth } from "./utils/authUtils";
-
-// Protected route component to ensure authentication
-const ProtectedRoute = ({ children }) => {
-  const isAuthenticated = checkAuth();
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  return children;
-};
-
-// Define routes configuration with redirects
-const routes = [
-  { path: "/", element: <Navigate to="/home" replace /> },
-  { path: "/home", element: <HomePage /> },
-  { path: "/login", element: <LoginPage /> },
-  { 
-    path: "/dashboard", 
-    element: <ProtectedRoute><DashboardPage /></ProtectedRoute> 
-  },
-  { 
-    path: "/marches", 
-    element: <ProtectedRoute><MarchesPage /></ProtectedRoute> 
-  },
-  { 
-    path: "/marches/:id", 
-    element: <ProtectedRoute><MarcheDetailPage /></ProtectedRoute> 
-  },
-  { 
-    path: "/marches/creation", 
-    element: <ProtectedRoute><MarketCreationPage /></ProtectedRoute> 
-  },
-  { 
-    path: "/questions-reponses", 
-    element: <ProtectedRoute><QuestionsReponsesPage /></ProtectedRoute> 
-  },
-  { 
-    path: "/formulaires", 
-    element: <ProtectedRoute><FormsPage /></ProtectedRoute> 
-  },
-  { 
-    path: "/parametres", 
-    element: <ProtectedRoute><div className="container mx-auto p-6"><h1 className="text-2xl font-bold">Paramètres</h1></div></ProtectedRoute> 
-  },
-  { path: "*", element: <NotFound /> }
-];
 
 // Create query client with enhanced configuration
 const queryClient = new QueryClient({
@@ -99,23 +54,79 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AppSettingsProvider>
-        <CRMProvider>
-          <BrowserRouter>
-            <TooltipProvider>
-              <RouterChangeHandler />
-              <Routes>
-                {routes.map((route) => (
+        <AuthProvider>
+          <CRMProvider>
+            <BrowserRouter>
+              <TooltipProvider>
+                <RouterChangeHandler />
+                <Routes>
+                  <Route path="/" element={<Navigate to="/home" replace />} />
+                  <Route path="/home" element={<HomePage />} />
+                  <Route path="/auth" element={<AuthPage />} />
+                  <Route path="/login" element={<LoginPage />} />
                   <Route 
-                    key={route.path} 
-                    path={route.path} 
-                    element={route.element} 
+                    path="/dashboard" 
+                    element={
+                      <ProtectedRoute>
+                        <DashboardPage />
+                      </ProtectedRoute>
+                    } 
                   />
-                ))}
-              </Routes>
-              <Toaster />
-            </TooltipProvider>
-          </BrowserRouter>
-        </CRMProvider>
+                  <Route 
+                    path="/marches" 
+                    element={
+                      <ProtectedRoute>
+                        <MarchesPage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/marches/:id" 
+                    element={
+                      <ProtectedRoute>
+                        <MarcheDetailPage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/marches/creation" 
+                    element={
+                      <ProtectedRoute>
+                        <MarketCreationPage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/questions-reponses" 
+                    element={
+                      <ProtectedRoute>
+                        <QuestionsReponsesPage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/formulaires" 
+                    element={
+                      <ProtectedRoute>
+                        <FormsPage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/parametres" 
+                    element={
+                      <ProtectedRoute>
+                        <div className="container mx-auto p-6"><h1 className="text-2xl font-bold">Paramètres</h1></div>
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+                <Toaster />
+              </TooltipProvider>
+            </BrowserRouter>
+          </CRMProvider>
+        </AuthProvider>
       </AppSettingsProvider>
     </QueryClientProvider>
   );
