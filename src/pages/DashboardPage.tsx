@@ -3,11 +3,10 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { checkAuth } from '@/utils/authUtils';
 import MainLayout from '@/components/layout/MainLayout';
-import Dashboard from '@/components/Dashboard';
 import PageHeader from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, FileText, LayoutDashboard, FileEdit, Database, FileCheck } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function DashboardPage() {
@@ -17,37 +16,55 @@ export default function DashboardPage() {
   // Stats data - would typically come from an API
   const stats = [
     { 
-      title: "Marchés",
+      title: "Marchés en cours",
       value: 12,
       description: "Marchés actifs",
       color: "bg-blue-100 text-blue-800",
+      icon: "📄"
     },
     { 
-      title: "Fascicules",
-      value: 37,
-      description: "Documents enregistrés",
+      title: "Projets actifs",
+      value: 7,
+      description: "En cours de réalisation",
       color: "bg-green-100 text-green-800",
+      icon: "🔧"
     },
     { 
-      title: "Documents",
-      value: 149,
-      description: "Fichiers stockés",
-      color: "bg-purple-100 text-purple-800", 
+      title: "Devis en attente",
+      value: 5,
+      description: "À analyser",
+      color: "bg-amber-100 text-amber-800", 
+      icon: "⏳"
     },
     { 
-      title: "Situations",
-      value: 8,
-      description: "En attente de validation",
-      color: "bg-amber-100 text-amber-800",
+      title: "Marchés terminés",
+      value: 23,
+      description: "Achevés",
+      color: "bg-purple-100 text-purple-800",
+      icon: "✓"
     },
   ];
 
-  // Recent activity data - would typically come from an API
-  const recentActivity = [
-    { id: 1, action: "Marché créé", description: "Construction bureaux administratifs", date: "Aujourd'hui, 14:32" },
-    { id: 2, action: "Document ajouté", description: "Rapport technique fondations", date: "Hier, 09:15" },
-    { id: 3, action: "Situation validée", description: "Situation n°4 - Projet Hôpital", date: "18/08, 16:45" },
-    { id: 4, action: "Fascicule modifié", description: "CCTP Lot Plomberie", date: "16/08, 11:20" },
+  // Recent projects data
+  const recentProjects = [
+    { 
+      id: 1, 
+      name: "Rénovation Mairie", 
+      client: "Ville de Lyon", 
+      status: "En cours" 
+    },
+    { 
+      id: 2, 
+      name: "Construction école", 
+      client: "Département du Rhône", 
+      status: "En attente" 
+    },
+    { 
+      id: 3, 
+      name: "Réfection voirie", 
+      client: "Métropole de Lyon", 
+      status: "En cours" 
+    },
   ];
 
   // Function to check authentication and redirect to login if not authenticated
@@ -64,24 +81,14 @@ export default function DashboardPage() {
     return true;
   };
 
-  // Handlers for various actions
-  const goToMarketCreation = () => {
-    if (checkAuth()) {
-      navigate('/marches/creation');
-    }
-  };
-
-  const handleIntegrationSupabase = () => {
-    toast({
-      title: "Intégration Supabase",
-      description: "Fonctionnalité en cours de développement",
-      variant: "default"
-    });
-  };
-  
-  const goToForms = () => {
-    if (checkAuth()) {
-      navigate('/formulaires');
+  // Return the status badge element based on status
+  const getStatusBadge = (status: string) => {
+    if (status === "En cours") {
+      return <span className="inline-block w-3 h-3 bg-green-500 rounded-full mr-2"></span>;
+    } else if (status === "En attente") {
+      return <span className="inline-block w-3 h-3 bg-amber-500 rounded-full mr-2"></span>;
+    } else {
+      return <span className="inline-block w-3 h-3 bg-gray-500 rounded-full mr-2"></span>;
     }
   };
 
@@ -90,7 +97,7 @@ export default function DashboardPage() {
       <div className="container mx-auto py-6">
         <PageHeader 
           title="Tableau de bord" 
-          description="Bienvenue sur la plateforme de gestion des marchés"
+          description="Bienvenue sur votre espace de gestion des marchés publics"
         />
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
@@ -107,50 +114,37 @@ export default function DashboardPage() {
           ))}
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Activité Récente</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {recentActivity.map(activity => (
-                    <div key={activity.id} className="flex justify-between items-start pb-3 border-b last:border-0">
-                      <div>
-                        <h4 className="font-medium">{activity.action}</h4>
-                        <p className="text-sm text-muted-foreground">{activity.description}</p>
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {activity.date}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                
-                <div className="mt-4 text-right">
-                  <Button variant="link" onClick={() => navigate('/activite')} className="px-0">
-                    Voir toute l'activité <ArrowRight className="ml-1 h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          
+        <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>Actions Rapides</CardTitle>
+              <CardTitle>Projets récents</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <Button variant="btpPrimary" className="w-full justify-start" onClick={goToMarketCreation}>
-                <FileText className="mr-2 h-4 w-4" /> Créer un nouveau marché
-              </Button>
-              <Button variant="btpSecondary" className="w-full justify-start" onClick={goToForms}>
-                <FileEdit className="mr-2 h-4 w-4" /> Gérer les formulaires
-              </Button>
-              <Button variant="btpOutline" className="w-full justify-start" onClick={handleIntegrationSupabase}>
-                <Database className="mr-2 h-4 w-4" /> Intégration Supabase
-              </Button>
+            <CardContent>
+              <div className="space-y-4">
+                {recentProjects.map(project => (
+                  <div key={project.id} className="flex justify-between items-center p-4 border rounded-md hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => navigate(`/marches/${project.id}`)}>
+                    <div>
+                      <h4 className="font-medium text-lg">{project.name}</h4>
+                      <p className="text-sm text-muted-foreground">Client: {project.client}</p>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="flex items-center mr-4">
+                        {getStatusBadge(project.status)}
+                        <span className="text-sm">{project.status}</span>
+                      </div>
+                      <Button variant="ghost" size="sm">
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="mt-4 text-right">
+                <Button variant="link" onClick={() => navigate('/marches')} className="px-0">
+                  Voir tous les projets <ArrowRight className="ml-1 h-4 w-4" />
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
