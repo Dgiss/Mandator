@@ -9,7 +9,7 @@ import {
   ChevronLeft, 
   FileText, 
   Folder, 
-  Versions, 
+  History, 
   ShieldCheck, 
   MessageSquare, 
   BarChart,
@@ -127,7 +127,7 @@ export default function MarcheDetailPage() {
               <FileText className="mr-2 h-4 w-4" /> Documents
             </TabsTrigger>
             <TabsTrigger value="versions" className="flex items-center px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-btp-blue rounded-none data-[state=active]:shadow-none">
-              <Versions className="mr-2 h-4 w-4" /> Versions
+              <History className="mr-2 h-4 w-4" /> Versions
             </TabsTrigger>
             <TabsTrigger value="visas" className="flex items-center px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-btp-blue rounded-none data-[state=active]:shadow-none">
               <ShieldCheck className="mr-2 h-4 w-4" /> Visas
