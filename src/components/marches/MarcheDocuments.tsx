@@ -11,7 +11,8 @@ import {
   TableBody, 
   TableCell 
 } from '@/components/ui/table';
-import { FileText, Plus, Search, Download, Filter, Eye } from 'lucide-react';
+import { FileText, Plus, Search, Download, Filter, Eye, Edit } from 'lucide-react';
+import MarcheDocumentForm from './MarcheDocumentForm';
 
 interface MarcheDocumentsProps {
   marcheId: string;
@@ -25,6 +26,8 @@ interface Document {
   version: string;
   dateUpload: string;
   taille: string;
+  description?: string;
+  fasciculeId?: string;
 }
 
 const documentsMock: Document[] = [
@@ -35,7 +38,9 @@ const documentsMock: Document[] = [
     statut: "Approuvé",
     version: "2.0",
     dateUpload: "16/03/2024",
-    taille: "2.4 MB"
+    taille: "2.4 MB",
+    description: "Plan structurel mis à jour avec corrections",
+    fasciculeId: "f1"
   },
   {
     id: "d2",
@@ -44,7 +49,8 @@ const documentsMock: Document[] = [
     statut: "En révision",
     version: "1.1",
     dateUpload: "21/03/2024",
-    taille: "1.8 MB"
+    taille: "1.8 MB",
+    fasciculeId: "f1"
   },
   {
     id: "d3",
@@ -53,7 +59,8 @@ const documentsMock: Document[] = [
     statut: "Soumis pour visa",
     version: "3.0",
     dateUpload: "19/03/2024",
-    taille: "4.2 MB"
+    taille: "4.2 MB",
+    fasciculeId: "f2"
   },
   {
     id: "d4",
@@ -62,7 +69,8 @@ const documentsMock: Document[] = [
     statut: "Approuvé",
     version: "1.0",
     dateUpload: "15/03/2024",
-    taille: "0.8 MB"
+    taille: "0.8 MB",
+    fasciculeId: "f3"
   },
   {
     id: "d5",
@@ -77,6 +85,7 @@ const documentsMock: Document[] = [
 
 export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [editingDocument, setEditingDocument] = useState<Document | null>(null);
 
   // Filtrer les documents selon le terme de recherche
   const filteredDocuments = documentsMock.filter(doc => 
@@ -103,14 +112,27 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
       default: return <FileText className="h-5 w-5 text-gray-500" />;
     }
   };
+  
+  const handleEditDocument = (document: Document) => {
+    setEditingDocument(document);
+  };
+
+  const handleDocumentSaved = () => {
+    // In a real app, we would refresh the data from the server
+    console.log("Document created or updated");
+    setEditingDocument(null);
+  };
 
   return (
     <div className="pt-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h2 className="text-2xl font-semibold">Documents</h2>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" /> Ajouter un document
-        </Button>
+        <MarcheDocumentForm 
+          marcheId={marcheId} 
+          editingDocument={editingDocument}
+          setEditingDocument={setEditingDocument}
+          onDocumentSaved={handleDocumentSaved}
+        />
       </div>
 
       <div className="mb-6 flex flex-col sm:flex-row gap-4">
@@ -161,6 +183,15 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
                   <TableCell className="hidden md:table-cell">{doc.dateUpload}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end space-x-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 w-8 p-0"
+                        onClick={() => handleEditDocument(doc)}
+                      >
+                        <Edit className="h-4 w-4" />
+                        <span className="sr-only">Modifier</span>
+                      </Button>
                       <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                         <Eye className="h-4 w-4" />
                         <span className="sr-only">Voir</span>

@@ -10,7 +10,8 @@ import {
   TableBody, 
   TableCell 
 } from '@/components/ui/table';
-import { Folder, FileText, Plus, MoreHorizontal } from 'lucide-react';
+import { Folder, FileText, Plus, MoreHorizontal, Edit, Eye } from 'lucide-react';
+import MarcheFasciculeForm from './MarcheFasciculeForm';
 
 interface MarcheFasciculesProps {
   marcheId: string;
@@ -63,13 +64,27 @@ const fasciculesMock: Fascicule[] = [
 ];
 
 export default function MarcheFascicules({ marcheId }: MarcheFasciculesProps) {
+  const [editingFascicule, setEditingFascicule] = React.useState<Fascicule | null>(null);
+
+  const handleEditFascicule = (fascicule: Fascicule) => {
+    setEditingFascicule(fascicule);
+  };
+
+  const handleFasciculeCreated = () => {
+    // In a real app, we would refresh the data from the server
+    console.log("Fascicule created or updated");
+  };
+
   return (
     <div className="pt-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-semibold">Fascicules</h2>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" /> Nouveau fascicule
-        </Button>
+        <MarcheFasciculeForm 
+          marcheId={marcheId} 
+          onFasciculeCreated={handleFasciculeCreated}
+          editingFascicule={editingFascicule}
+          setEditingFascicule={setEditingFascicule}
+        />
       </div>
 
       <Card>
@@ -81,7 +96,7 @@ export default function MarcheFascicules({ marcheId }: MarcheFasciculesProps) {
                 <TableHead className="hidden md:table-cell">Documents</TableHead>
                 <TableHead className="hidden md:table-cell">Dernière maj.</TableHead>
                 <TableHead>Progression</TableHead>
-                <TableHead className="w-[70px]"></TableHead>
+                <TableHead className="w-[120px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -114,10 +129,25 @@ export default function MarcheFascicules({ marcheId }: MarcheFasciculesProps) {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <MoreHorizontal className="h-4 w-4" />
-                      <span className="sr-only">Actions</span>
-                    </Button>
+                    <div className="flex space-x-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 w-8 p-0"
+                        onClick={() => handleEditFascicule(fascicule)}
+                      >
+                        <Edit className="h-4 w-4" />
+                        <span className="sr-only">Modifier</span>
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Eye className="h-4 w-4" />
+                        <span className="sr-only">Voir</span>
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="sr-only">Actions</span>
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

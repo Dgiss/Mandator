@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Dialog, 
   DialogContent, 
@@ -19,15 +19,26 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus } from 'lucide-react';
+import { Plus, Edit } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/hooks/use-toast';
 
+interface Fascicule {
+  id: string;
+  nom: string;
+  nombreDocuments: number;
+  dateMaj: string;
+  progression: number;
+  description?: string;
+}
+
 interface FasciculeFormProps {
   marcheId: string;
   onFasciculeCreated?: () => void;
+  editingFascicule: Fascicule | null;
+  setEditingFascicule: (fascicule: Fascicule | null) => void;
 }
 
 const fasciculeFormSchema = z.object({
@@ -37,7 +48,12 @@ const fasciculeFormSchema = z.object({
 
 type FasciculeFormValues = z.infer<typeof fasciculeFormSchema>;
 
-const MarcheFasciculeForm: React.FC<FasciculeFormProps> = ({ marcheId, onFasciculeCreated }) => {
+const MarcheFasciculeForm: React.FC<FasciculeFormProps> = ({ 
+  marcheId, 
+  onFasciculeCreated, 
+  editingFascicule,
+  setEditingFascicule 
+}) => {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
 
@@ -49,46 +65,84 @@ const MarcheFasciculeForm: React.FC<FasciculeFormProps> = ({ marcheId, onFascicu
     }
   });
 
+  // Update form when editing a fascicule
+  useEffect(() => {
+    if (editingFascicule) {
+      form.reset({
+        name: editingFascicule.nom,
+        description: editingFascicule.description || '',
+      });
+      setOpen(true);
+    }
+  }, [editingFascicule, form]);
+
   const onSubmit = async (values: FasciculeFormValues) => {
-    console.log('Fascicule à créer:', { ...values, marcheId });
+    const isEditing = !!editingFascicule;
+    console.log('Fascicule à ', isEditing ? 'modifier' : 'créer', ':', { 
+      ...values, 
+      marcheId,
+      ...(isEditing ? { id: editingFascicule.id } : {})
+    });
     
     try {
       // Simulation d'envoi à une API
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       toast({
-        title: "Fascicule créé",
-        description: "Le fascicule a été créé avec succès",
+        title: isEditing ? "Fascicule modifié" : "Fascicule créé",
+        description: isEditing 
+          ? "Le fascicule a été modifié avec succès" 
+          : "Le fascicule a été créé avec succès",
         variant: "success",
       });
       
       form.reset();
       setOpen(false);
+      setEditingFascicule(null);
       
       if (onFasciculeCreated) {
         onFasciculeCreated();
       }
     } catch (error) {
-      console.error('Erreur lors de la création du fascicule:', error);
+      console.error('Erreur lors de l\'opération sur le fascicule:', error);
       toast({
         title: "Erreur",
-        description: "Une erreur s'est produite lors de la création du fascicule",
+        description: "Une erreur s'est produite lors de l'opération sur le fascicule",
         variant: "destructive",
       });
     }
   };
 
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      setEditingFascicule(null);
+      form.reset();
+    }
+    setOpen(newOpen);
+  };
+
+  const dialogTitle = editingFascicule ? "Modifier le fascicule" : "Créer un nouveau fascicule";
+  const submitButtonText = editingFascicule ? "Enregistrer les modifications" : "Créer le fascicule";
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button className="flex items-center">
-          <Plus className="mr-2 h-4 w-4" /> Nouveau fascicule
+          {editingFascicule ? (
+            <>
+              <Edit className="mr-2 h-4 w-4" /> Modifier
+            </>
+          ) : (
+            <>
+              <Plus className="mr-2 h-4 w-4" /> Nouveau fascicule
+            </>
+          )}
         </Button>
       </DialogTrigger>
       
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Créer un nouveau fascicule</DialogTitle>
+          <DialogTitle>{dialogTitle}</DialogTitle>
         </DialogHeader>
         
         <Form {...form}>
@@ -126,10 +180,10 @@ const MarcheFasciculeForm: React.FC<FasciculeFormProps> = ({ marcheId, onFascicu
             />
             
             <DialogFooter className="mt-6">
-              <Button variant="outline" type="button" onClick={() => setOpen(false)}>
+              <Button variant="outline" type="button" onClick={() => handleOpenChange(false)}>
                 Annuler
               </Button>
-              <Button type="submit">Créer le fascicule</Button>
+              <Button type="submit">{submitButtonText}</Button>
             </DialogFooter>
           </form>
         </Form>

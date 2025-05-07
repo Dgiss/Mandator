@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
-import { Send, FileText, Paperclip, ChevronDown, Image } from 'lucide-react';
+import { Send, FileText, Paperclip, ChevronDown, Image, MessageSquare, Plus } from 'lucide-react';
+import MarcheQuestionForm from './MarcheQuestionForm';
 
 interface MarcheQuestionsReponsesProps {
   marcheId: string;
@@ -19,7 +20,10 @@ interface Message {
     type: 'document' | 'image';
     name: string;
     url: string;
+    id?: string;
   };
+  documentId?: string;
+  fasciculeId?: string;
 }
 
 // Données fictives pour les messages
@@ -28,7 +32,8 @@ const initialMessages: Message[] = [
     id: "m1",
     content: "Bonjour, j'ai une question concernant le plan de coffrage du niveau R+1. Est-ce que les dimensions des poutres ont été validées par le bureau d'études ?",
     sender: 'user',
-    timestamp: '10:15'
+    timestamp: '10:15',
+    documentId: "d3"
   },
   {
     id: "m2",
@@ -38,14 +43,16 @@ const initialMessages: Message[] = [
     attachment: {
       type: 'document',
       name: 'Validation_BET_Structure.pdf',
-      url: '#'
+      url: '#',
+      id: "d1"
     }
   },
   {
     id: "m3",
     content: "Merci pour cette information. Concernant les délais de livraison du béton, pouvons-nous confirmer la date du 28/03/2024 ?",
     sender: 'user',
-    timestamp: '10:30'
+    timestamp: '10:30',
+    fasciculeId: "f1"
   },
   {
     id: "m4",
@@ -75,6 +82,7 @@ const initialMessages: Message[] = [
 export default function MarcheQuestionsReponses({ marcheId }: MarcheQuestionsReponsesProps) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [newMessage, setNewMessage] = useState('');
+  const [showQuestionForm, setShowQuestionForm] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Fonction pour faire défiler vers le bas à chaque nouveau message
@@ -112,22 +120,75 @@ export default function MarcheQuestionsReponses({ marcheId }: MarcheQuestionsRep
     }
   };
 
+  const handleNewQuestion = (questionData: { 
+    content: string, 
+    documentId?: string, 
+    fasciculeId?: string,
+    attachment?: File
+  }) => {
+    const newMsg: Message = {
+      id: `m${messages.length + 1}`,
+      content: questionData.content,
+      sender: 'user',
+      timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+      documentId: questionData.documentId,
+      fasciculeId: questionData.fasciculeId,
+      ...(questionData.attachment && {
+        attachment: {
+          type: questionData.attachment.type.includes('image') ? 'image' : 'document',
+          name: questionData.attachment.name,
+          url: URL.createObjectURL(questionData.attachment)
+        }
+      })
+    };
+    
+    setMessages([...messages, newMsg]);
+    setShowQuestionForm(false);
+    
+    // Simuler une réponse du marché après un délai
+    setTimeout(() => {
+      const response: Message = {
+        id: `m${messages.length + 2}`,
+        content: "Votre question a bien été enregistrée. Un membre de l'équipe vous répondra dans les plus brefs délais.",
+        sender: 'marche',
+        timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+      };
+      
+      setMessages(prev => [...prev, response]);
+    }, 1500);
+  };
+
   return (
     <div className="pt-6 h-[calc(100vh-270px)] flex flex-col">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-semibold">Questions & Réponses</h2>
+        <Button 
+          className="flex items-center" 
+          onClick={() => setShowQuestionForm(true)}
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Nouvelle question
+        </Button>
       </div>
+
+      {showQuestionForm && (
+        <MarcheQuestionForm 
+          marcheId={marcheId}
+          onSubmit={handleNewQuestion}
+          onCancel={() => setShowQuestionForm(false)}
+        />
+      )}
 
       <Card className="flex-grow flex flex-col h-full">
         <CardContent className="p-0 flex flex-col h-full">
           {/* En-tête du chat */}
           <div className="bg-btp-blue text-white p-4 rounded-t-lg flex items-center">
             <div className="w-10 h-10 bg-white text-btp-blue rounded-full flex items-center justify-center mr-3">
-              <FileText className="h-5 w-5" />
+              <MessageSquare className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="font-medium">Aménagement Place République</h3>
-              <p className="text-xs opacity-80">Créé le 20/02/2024</p>
+              <h3 className="font-medium">Questions & Réponses</h3>
+              <p className="text-xs opacity-80">Marché: Aménagement Place République</p>
             </div>
           </div>
 
@@ -146,6 +207,14 @@ export default function MarcheQuestionsReponses({ marcheId }: MarcheQuestionsRep
                         : 'bg-white border rounded-bl-none'
                     }`}
                   >
+                    {(message.documentId || message.fasciculeId) && (
+                      <div className={`rounded mb-2 p-1 text-xs ${
+                        message.sender === 'user' ? 'bg-blue-600' : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {message.documentId && <span>Document référencé</span>}
+                        {message.fasciculeId && <span>Fascicule référencé</span>}
+                      </div>
+                    )}
                     <p>{message.content}</p>
                     
                     {message.attachment && (
