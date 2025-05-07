@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 
 import LoginPage from "./pages/LoginPage";
+import HomePage from "./pages/HomePage"; 
 import DashboardPage from "./pages/DashboardPage";
 import MarketCreationPage from "./pages/MarketCreationPage";
 import FormsPage from "./pages/FormsPage";
@@ -32,7 +33,8 @@ const ProtectedRoute = ({ children }) => {
 
 // Define routes configuration with redirects
 const routes = [
-  { path: "/", element: <Navigate to="/login" replace /> },
+  { path: "/", element: <Navigate to="/home" replace /> },
+  { path: "/home", element: <HomePage /> },
   { path: "/login", element: <LoginPage /> },
   { 
     path: "/dashboard", 
@@ -85,7 +87,7 @@ const RouterChangeHandler = () => {
     
     // Track page view for analytics
     const currentPath = window.location.pathname;
-    const pageName = currentPath === '/' ? 'dashboard' : currentPath.replace(/^\//, '');
+    const pageName = currentPath === '/' ? 'home' : currentPath.replace(/^\//, '');
     trackPageView(pageName);
   }, [location.pathname]);
   

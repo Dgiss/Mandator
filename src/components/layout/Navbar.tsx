@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   FileText, 
@@ -10,7 +10,6 @@ import {
   LogOut
 } from 'lucide-react';
 import { logout } from '@/utils/authUtils';
-import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 
 const Navbar = () => {
@@ -37,15 +36,15 @@ const Navbar = () => {
   };
 
   const navItems = [
-    { title: 'Tableau de bord', path: '/dashboard', icon: LayoutDashboard },
+    { title: 'Tableau de bord', path: '/home', icon: LayoutDashboard },
     { title: 'Marchés', path: '/marches', icon: FileText },
     { title: 'Questions/Réponses', path: '/questions-reponses', icon: MessageSquare },
     { title: 'Paramètres', path: '/parametres', icon: Settings },
   ];
 
   const isActive = (path: string) => {
-    if (path === '/dashboard' && location.pathname === '/dashboard') return true;
-    if (path !== '/dashboard' && location.pathname.startsWith(path)) return true;
+    if (path === '/home' && (location.pathname === '/home' || location.pathname === '/')) return true;
+    if (path !== '/home' && location.pathname.startsWith(path)) return true;
     return false;
   };
 
