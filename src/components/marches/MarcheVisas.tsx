@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,6 +46,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Import du formulaire de visa
 import MarcheVisaForm from './MarcheVisaForm';
@@ -82,150 +84,15 @@ interface Document {
 // Rôle de l'utilisateur actuel (simulé - dans une application réelle, viendrait de l'authentification)
 type UserRole = 'Mandataire' | 'MOE' | 'MOA';
 
-const visasMock: Visa[] = [
-  {
-    id: "v1",
-    document: "CCTP GC v1.1",
-    version: "A1.1",
-    demandePar: "Martin Dupont",
-    dateDemande: "21/03/2024",
-    echeance: "28/03/2024",
-    statut: "En attente"
-  },
-  {
-    id: "v2",
-    document: "Plan Coffrage R+1 v3",
-    version: "B3.0",
-    demandePar: "Sophie Laurent",
-    dateDemande: "19/03/2024",
-    echeance: "26/03/2024",
-    statut: "VSO"
-  },
-  {
-    id: "v3",
-    document: "Note de Calcul Fondations",
-    version: "A1.0",
-    demandePar: "Thomas Bernard",
-    dateDemande: "15/03/2024",
-    echeance: "22/03/2024",
-    statut: "VAO"
-  },
-  {
-    id: "v4",
-    document: "Détails Façade Ouest",
-    version: "C2.1",
-    demandePar: "Julie Moreau",
-    dateDemande: "14/03/2024",
-    echeance: "21/03/2024",
-    statut: "Refusé"
-  },
-  {
-    id: "v5",
-    document: "Plan Structure v2",
-    version: "B2.0",
-    demandePar: "Pierre Lefebvre",
-    dateDemande: "16/03/2024",
-    echeance: "23/03/2024",
-    statut: "VSO"
-  }
-];
-
-// Documents fictifs pour simuler la logique de visibilité
-const documentsMock: Document[] = [
-  {
-    id: "d1",
-    nom: "CCTP GC",
-    currentVersionId: "v1-1",
-    statut: "En attente de diffusion",
-    versions: [
-      {
-        id: "v1-1",
-        version: "A1.1",
-        statut: "En attente de diffusion"
-      }
-    ]
-  },
-  {
-    id: "d2",
-    nom: "Plan Coffrage R+1",
-    currentVersionId: "v2-3",
-    statut: "En attente de validation",
-    versions: [
-      {
-        id: "v2-1",
-        version: "A1.0",
-        statut: "BPE"
-      },
-      {
-        id: "v2-2",
-        version: "B2.0",
-        statut: "BPE"
-      },
-      {
-        id: "v2-3",
-        version: "B3.0",
-        statut: "En attente de visa"
-      }
-    ]
-  },
-  {
-    id: "d3",
-    nom: "Note de Calcul Fondations",
-    currentVersionId: "v3-2",
-    statut: "En attente de diffusion",
-    versions: [
-      {
-        id: "v3-1",
-        version: "A1.0",
-        statut: "À remettre à jour"
-      },
-      {
-        id: "v3-2",
-        version: "B1.0",
-        statut: "En attente de diffusion"
-      }
-    ]
-  },
-  {
-    id: "d4",
-    nom: "Détails Façade Ouest",
-    currentVersionId: "v4-1",
-    statut: "Refusé",
-    versions: [
-      {
-        id: "v4-1",
-        version: "C2.1",
-        statut: "Refusé"
-      }
-    ]
-  },
-  {
-    id: "d5",
-    nom: "Plan Structure",
-    currentVersionId: "v5-2",
-    statut: "Validé",
-    versions: [
-      {
-        id: "v5-1",
-        version: "A1.0",
-        statut: "À remettre à jour"
-      },
-      {
-        id: "v5-2",
-        version: "B2.0",
-        statut: "BPE"
-      }
-    ]
-  }
-];
-
 export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('tous');
-  const [visas, setVisas] = useState<Visa[]>(visasMock);
-  const [documents, setDocuments] = useState<Document[]>(documentsMock);
+  const [visas, setVisas] = useState<Visa[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const { toast } = useToast();
+  const { user } = useAuth();
   
-  // État pour gérer le rôle de l'utilisateur (dans une app réelle, viendrait de l'authentification)
+  // État pour gérer le rôle de l'utilisateur
   const [userRole, setUserRole] = useState<UserRole>('Mandataire');
   
   // États pour les modales
@@ -239,14 +106,139 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
   const [visaType, setVisaType] = useState<'VSO' | 'VAO' | 'Refusé'>('VSO');
   const [visaComment, setVisaComment] = useState('');
   const [attachmentName, setAttachmentName] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   
-  const { toast } = useToast();
+  // Chargement du rôle de l'utilisateur depuis Supabase
+  useEffect(() => {
+    if (user) {
+      const fetchUserRole = async () => {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('role_utilisateur')
+          .eq('id', user.id)
+          .single();
+        
+        if (data && data.role_utilisateur) {
+          setUserRole(data.role_utilisateur as UserRole);
+        } else {
+          console.error('Error fetching user role:', error);
+        }
+      };
+      
+      fetchUserRole();
+    }
+  }, [user]);
+
+  // Chargement des documents et visas depuis Supabase
+  useEffect(() => {
+    const loadDocuments = async () => {
+      try {
+        // Charger les documents
+        const { data: documentsData, error: documentsError } = await supabase
+          .from('documents')
+          .select('*')
+          .eq('marche_id', marcheId);
+          
+        if (documentsError) throw documentsError;
+        
+        // Charger les versions
+        const { data: versionsData, error: versionsError } = await supabase
+          .from('versions')
+          .select('*')
+          .eq('marche_id', marcheId);
+          
+        if (versionsError) throw versionsError;
+        
+        // Charger les visas
+        const { data: visasData, error: visasError } = await supabase
+          .from('visas')
+          .select('*')
+          .eq('marche_id', marcheId);
+          
+        if (visasError) throw visasError;
+        
+        // Transformer les données pour correspondre à notre structure
+        const formattedDocuments: Document[] = documentsData.map((doc) => {
+          const docVersions = versionsData
+            .filter(v => v.document_id === doc.id)
+            .map(v => ({
+              id: v.id,
+              version: v.version,
+              statut: v.statut || 'En attente de diffusion'
+            }));
+            
+          const latestVersion = docVersions[docVersions.length - 1];
+          
+          return {
+            id: doc.id,
+            nom: doc.nom,
+            currentVersionId: latestVersion?.id || '',
+            statut: doc.statut,
+            versions: docVersions
+          };
+        });
+        
+        const formattedVisas: Visa[] = visasData.map((visa) => {
+          // Trouver le document associé
+          const document = documentsData.find(d => d.id === visa.document_id);
+          
+          return {
+            id: visa.id,
+            document: document?.nom || 'Document inconnu',
+            version: visa.version,
+            demandePar: visa.demande_par,
+            dateDemande: new Date(visa.date_demande).toLocaleDateString('fr-FR'),
+            echeance: visa.echeance ? new Date(visa.echeance).toLocaleDateString('fr-FR') : '-',
+            statut: visa.statut as 'En attente' | 'VSO' | 'VAO' | 'Refusé'
+          };
+        });
+        
+        setDocuments(formattedDocuments);
+        setVisas(formattedVisas);
+        
+      } catch (error) {
+        console.error('Error loading data:', error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les données",
+          variant: "destructive",
+        });
+      }
+    };
+    
+    loadDocuments();
+  }, [marcheId, toast]);
 
   // Fonction pour rafraîchir les données après création d'un visa
   const handleVisaCreated = () => {
-    // Dans une application réelle, cette fonction ferait un appel API
-    // pour récupérer les données à jour. Ici, nous simulons cela.
-    console.log('Visa créé, rafraîchissement des données...');
+    // Recharger les données après création d'un visa
+    const fetchData = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('visas')
+          .select('*')
+          .eq('marche_id', marcheId);
+          
+        if (error) throw error;
+        
+        // Mettre à jour les visas avec les nouvelles données
+        const formattedVisas = data.map(visa => ({
+          id: visa.id,
+          document: visa.document_id,  // Dans un cas réel, on ferait une jointure
+          version: visa.version,
+          demandePar: visa.demande_par,
+          dateDemande: new Date(visa.date_demande).toLocaleDateString('fr-FR'),
+          echeance: visa.echeance ? new Date(visa.echeance).toLocaleDateString('fr-FR') : '-',
+          statut: visa.statut as 'En attente' | 'VSO' | 'VAO' | 'Refusé'
+        }));
+        
+        setVisas(formattedVisas);
+      } catch (error) {
+        console.error('Error refreshing visas:', error);
+      }
+    };
+    
+    fetchData();
   };
 
   // Filtrer les visas selon le terme de recherche et l'onglet actif
@@ -297,7 +289,7 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
     }
   };
 
-  // Fonction pour déterminer si le bouton "Diffuser" est visible
+  // Fonction pour déterminer si le bouton "Diffuser" est visible (Mandataire)
   const canShowDiffuseButton = (document: Document, version: Version) => {
     if (userRole !== 'Mandataire') return false;
     
@@ -321,7 +313,7 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
     return hasPreviousVisa;
   };
 
-  // Fonction pour déterminer si le bouton "Viser" est visible
+  // Fonction pour déterminer si le bouton "Viser" est visible (MOE)
   const canShowVisaButton = (document: Document, version: Version) => {
     if (userRole !== 'MOE') return false;
     
@@ -338,6 +330,7 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
     setSelectedVersion(version);
     setDiffusionComment('');
     setAttachmentName(null);
+    setSelectedFile(null);
     setDiffusionDialogOpen(true);
   };
 
@@ -348,42 +341,86 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
     setVisaType('VSO');
     setVisaComment('');
     setAttachmentName(null);
+    setSelectedFile(null);
     setVisaDialogOpen(true);
   };
 
   // Gérer la soumission du formulaire de diffusion
-  const handleDiffusionSubmit = () => {
+  const handleDiffusionSubmit = async () => {
     if (!selectedDocument || !selectedVersion) return;
     
-    // Dans une application réelle, ceci serait un appel API
-    // Mise à jour du statut du document et de la version
-    const updatedDocuments = documents.map(doc => {
-      if (doc.id === selectedDocument.id) {
-        return {
-          ...doc,
-          statut: 'En attente de validation' as Document['statut'],
-          versions: doc.versions.map(ver => {
-            if (ver.id === selectedVersion.id) {
-              return {
-                ...ver,
-                statut: 'En attente de visa' as Version['statut']
-              };
-            }
-            return ver;
-          })
-        };
+    try {
+      let filePath = null;
+      
+      // Téléverser le fichier si disponible
+      if (selectedFile) {
+        const fileExt = selectedFile.name.split('.').pop();
+        const fileName = `${Date.now()}_${selectedFile.name}`;
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('documents')
+          .upload(`marches/${marcheId}/${fileName}`, selectedFile);
+          
+        if (uploadError) throw uploadError;
+        
+        filePath = uploadData?.path || null;
       }
-      return doc;
-    });
-    
-    setDocuments(updatedDocuments);
-    setDiffusionDialogOpen(false);
-    
-    toast({
-      title: "Document diffusé",
-      description: `${selectedDocument.nom} v${selectedVersion.version} a été diffusé avec succès.`,
-      variant: "success",
-    });
+      
+      // Mettre à jour le statut du document
+      const { error: docUpdateError } = await supabase
+        .from('documents')
+        .update({ 
+          statut: 'En attente de validation',
+          file_path: filePath || selectedDocument.versions[0].id
+        })
+        .eq('id', selectedDocument.id);
+        
+      if (docUpdateError) throw docUpdateError;
+      
+      // Mettre à jour le statut de la version
+      const { error: versionUpdateError } = await supabase
+        .from('versions')
+        .update({ statut: 'En attente de visa' })
+        .eq('id', selectedVersion.id);
+        
+      if (versionUpdateError) throw versionUpdateError;
+      
+      // Fermer la dialog et mettre à jour l'état local
+      setDiffusionDialogOpen(false);
+      
+      // Mettre à jour l'état local pour refléter les changements
+      setDocuments(prevDocs => prevDocs.map(doc => {
+        if (doc.id === selectedDocument.id) {
+          return {
+            ...doc,
+            statut: 'En attente de validation',
+            versions: doc.versions.map(ver => {
+              if (ver.id === selectedVersion.id) {
+                return {
+                  ...ver,
+                  statut: 'En attente de visa'
+                };
+              }
+              return ver;
+            })
+          };
+        }
+        return doc;
+      }));
+      
+      toast({
+        title: "Document diffusé",
+        description: `${selectedDocument.nom} v${selectedVersion.version} a été diffusé avec succès.`,
+        variant: "default",
+      });
+    } catch (error) {
+      console.error('Error submitting diffusion:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de diffuser le document.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Fonction pour incrémenter l'index de version (A -> B -> C, etc.)
@@ -401,132 +438,221 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
   };
 
   // Gérer la soumission du formulaire de visa
-  const handleVisaSubmit = () => {
-    if (!selectedDocument || !selectedVersion) return;
+  const handleVisaSubmit = async () => {
+    if (!selectedDocument || !selectedVersion || !user) return;
     
-    // Dans une application réelle, ceci serait un appel API
-    
-    // Créer un nouveau visa
-    const newVisa: Visa = {
-      id: `visa-${Date.now()}`,
-      document: selectedDocument.nom,
-      version: selectedVersion.version,
-      demandePar: 'Utilisateur actuel', // Dans une app réelle, serait l'utilisateur connecté
-      dateDemande: new Date().toLocaleDateString('fr-FR'),
-      echeance: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR'), // +7 jours
-      statut: visaType
-    };
-    
-    setVisas([...visas, newVisa]);
-    
-    // Mettre à jour le statut selon le type de visa
-    let updatedDocuments = [...documents];
-    let notificationTitle = "";
-    let notificationDescription = "";
-    
-    switch(visaType) {
-      case 'VSO':
-        // Mettre à jour le statut du document à Validé et la version à BPE
-        updatedDocuments = documents.map(doc => {
-          if (doc.id === selectedDocument.id) {
-            return {
-              ...doc,
-              statut: 'Validé' as Document['statut'],
-              versions: doc.versions.map(ver => {
-                if (ver.id === selectedVersion.id) {
-                  return {
-                    ...ver,
-                    statut: 'BPE' as Version['statut']
-                  };
-                }
-                return ver;
-              })
-            };
-          }
-          return doc;
-        });
+    try {
+      let filePath = null;
+      
+      // Téléverser le fichier si disponible
+      if (selectedFile) {
+        const fileName = `${Date.now()}_${selectedFile.name}`;
         
-        notificationTitle = "Document approuvé";
-        notificationDescription = `${selectedDocument.nom} v${selectedVersion.version} a été approuvé sans observation.`;
-        break;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('visas')
+          .upload(`marches/${marcheId}/${fileName}`, selectedFile);
+          
+        if (uploadError) throw uploadError;
         
-      case 'VAO':
-        // Créer une nouvelle version et mettre à jour le statut
-        const newVersionLetter = handleNewVersionIndex(selectedVersion.version);
-        const versionBase = selectedVersion.version.substring(1); // Enlever la première lettre
-        const newVersion: Version = {
-          id: `${selectedDocument.id}-v${Date.now()}`,
-          version: `${newVersionLetter}${versionBase}`,
-          statut: 'En attente de diffusion'
-        };
+        filePath = uploadData?.path || null;
+      }
+      
+      // Créer un nouveau visa
+      const newVisa = {
+        document_id: selectedDocument.id,
+        marche_id: marcheId,
+        version: selectedVersion.version,
+        demande_par: user.email || 'Utilisateur actuel',
+        statut: visaType,
+        commentaire: visaComment,
+        attachment_path: filePath,
+        echeance: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      };
+      
+      const { data: visaData, error: visaError } = await supabase
+        .from('visas')
+        .insert([newVisa])
+        .select();
         
-        updatedDocuments = documents.map(doc => {
-          if (doc.id === selectedDocument.id) {
-            return {
-              ...doc,
-              statut: 'En attente de diffusion' as Document['statut'],
-              currentVersionId: newVersion.id,
-              versions: [
-                ...doc.versions.map(ver => {
+      if (visaError) throw visaError;
+      
+      // Gérer les différents cas selon le type de visa
+      switch(visaType) {
+        case 'VSO':
+          // Mettre à jour le statut du document à Validé et la version à BPE
+          await supabase
+            .from('documents')
+            .update({ statut: 'Validé' })
+            .eq('id', selectedDocument.id);
+            
+          await supabase
+            .from('versions')
+            .update({ statut: 'BPE' })
+            .eq('id', selectedVersion.id);
+            
+          // Mettre à jour l'état local
+          setDocuments(prevDocs => prevDocs.map(doc => {
+            if (doc.id === selectedDocument.id) {
+              return {
+                ...doc,
+                statut: 'Validé',
+                versions: doc.versions.map(ver => {
                   if (ver.id === selectedVersion.id) {
-                    return {
-                      ...ver,
-                      statut: 'À remettre à jour' as Version['statut']
-                    };
+                    return { ...ver, statut: 'BPE' };
                   }
                   return ver;
-                }),
-                newVersion
-              ]
+                })
+              };
+            }
+            return doc;
+          }));
+          
+          toast({
+            title: "Document approuvé",
+            description: `${selectedDocument.nom} v${selectedVersion.version} a été approuvé sans observation.`,
+            variant: "default",
+          });
+          break;
+          
+        case 'VAO':
+          // Créer une nouvelle version avec la lettre incrémentée
+          const versionBase = selectedVersion.version.substring(1); // Enlever la première lettre
+          const newVersionLetter = handleNewVersionIndex(selectedVersion.version);
+          const newVersionString = `${newVersionLetter}${versionBase}`;
+          
+          // Mettre à jour l'ancienne version comme "À remettre à jour"
+          await supabase
+            .from('versions')
+            .update({ statut: 'À remettre à jour' })
+            .eq('id', selectedVersion.id);
+            
+          // Créer la nouvelle version
+          const { data: newVersionData, error: newVersionError } = await supabase
+            .from('versions')
+            .insert([{
+              document_id: selectedDocument.id,
+              marche_id: marcheId,
+              version: newVersionString,
+              cree_par: user.email || 'Utilisateur système',
+              statut: 'En attente de diffusion',
+              commentaire: `Nouvelle version suite au visa VAO sur ${selectedVersion.version}`
+            }])
+            .select();
+            
+          if (newVersionError) throw newVersionError;
+          
+          // Mettre à jour le document
+          await supabase
+            .from('documents')
+            .update({ 
+              statut: 'En attente de diffusion'
+            })
+            .eq('id', selectedDocument.id);
+            
+          // Mettre à jour l'état local
+          if (newVersionData && newVersionData.length > 0) {
+            const newVersion = {
+              id: newVersionData[0].id,
+              version: newVersionString,
+              statut: 'En attente de diffusion'
             };
+            
+            setDocuments(prevDocs => prevDocs.map(doc => {
+              if (doc.id === selectedDocument.id) {
+                return {
+                  ...doc,
+                  statut: 'En attente de diffusion',
+                  currentVersionId: newVersion.id,
+                  versions: [
+                    ...doc.versions.map(ver => {
+                      if (ver.id === selectedVersion.id) {
+                        return { ...ver, statut: 'À remettre à jour' };
+                      }
+                      return ver;
+                    }),
+                    newVersion
+                  ]
+                };
+              }
+              return doc;
+            }));
           }
-          return doc;
-        });
-        
-        notificationTitle = "Document avec observations";
-        notificationDescription = `${selectedDocument.nom} v${selectedVersion.version} a reçu un visa avec observations. Une nouvelle version ${newVersionLetter}${versionBase} a été créée.`;
-        break;
-        
-      case 'Refusé':
-        // Mettre à jour le statut du document à En attente de diffusion et la version à Refusé
-        updatedDocuments = documents.map(doc => {
-          if (doc.id === selectedDocument.id) {
-            return {
-              ...doc,
-              statut: 'En attente de diffusion' as Document['statut'],
-              versions: doc.versions.map(ver => {
-                if (ver.id === selectedVersion.id) {
-                  return {
-                    ...ver,
-                    statut: 'Refusé' as Version['statut']
-                  };
-                }
-                return ver;
-              })
-            };
-          }
-          return doc;
-        });
-        
-        notificationTitle = "Document refusé";
-        notificationDescription = `${selectedDocument.nom} v${selectedVersion.version} a été refusé.`;
-        break;
+          
+          toast({
+            title: "Document avec observations",
+            description: `${selectedDocument.nom} v${selectedVersion.version} a reçu un visa avec observations. Une nouvelle version ${newVersionLetter}${versionBase} a été créée.`,
+            variant: "default",
+          });
+          break;
+          
+        case 'Refusé':
+          // Mettre à jour le statut du document et de la version
+          await supabase
+            .from('documents')
+            .update({ statut: 'En attente de diffusion' })
+            .eq('id', selectedDocument.id);
+            
+          await supabase
+            .from('versions')
+            .update({ statut: 'Refusé' })
+            .eq('id', selectedVersion.id);
+            
+          // Mettre à jour l'état local
+          setDocuments(prevDocs => prevDocs.map(doc => {
+            if (doc.id === selectedDocument.id) {
+              return {
+                ...doc,
+                statut: 'En attente de diffusion',
+                versions: doc.versions.map(ver => {
+                  if (ver.id === selectedVersion.id) {
+                    return { ...ver, statut: 'Refusé' };
+                  }
+                  return ver;
+                })
+              };
+            }
+            return doc;
+          }));
+          
+          toast({
+            title: "Document refusé",
+            description: `${selectedDocument.nom} v${selectedVersion.version} a été refusé.`,
+            variant: "destructive",
+          });
+          break;
+      }
+      
+      // Fermer la dialog
+      setVisaDialogOpen(false);
+      
+      // Ajouter le nouveau visa à la liste locale
+      const newVisaForState: Visa = {
+        id: visaData?.[0]?.id || 'temp-id',
+        document: selectedDocument.nom,
+        version: selectedVersion.version,
+        demandePar: user.email || 'Utilisateur actuel',
+        dateDemande: new Date().toLocaleDateString('fr-FR'),
+        echeance: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR'),
+        statut: visaType
+      };
+      
+      setVisas([...visas, newVisaForState]);
+      
+    } catch (error) {
+      console.error('Error submitting visa:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de soumettre le visa.",
+        variant: "destructive",
+      });
     }
-    
-    setDocuments(updatedDocuments);
-    setVisaDialogOpen(false);
-    
-    toast({
-      title: notificationTitle,
-      description: notificationDescription,
-      variant: visaType === 'Refusé' ? "destructive" : "success",
-    });
   };
 
   // Gérer le changement de fichier
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setSelectedFile(file);
       setAttachmentName(file.name);
     }
   };
@@ -859,7 +985,11 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
               <X className="mr-2 h-4 w-4" />
               Annuler
             </AlertDialogCancel>
-            <AlertDialogAction onClick={handleVisaSubmit} className="flex items-center">
+            <AlertDialogAction 
+              onClick={handleVisaSubmit} 
+              className="flex items-center"
+              disabled={visaType === 'VAO' && !visaComment.trim()}
+            >
               <Check className="mr-2 h-4 w-4" />
               Valider
             </AlertDialogAction>
