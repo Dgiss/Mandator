@@ -11,24 +11,17 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import useFormOperations from '@/hooks/use-form-operations';
 import { Image, Upload, X } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function MarketCreationPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
-
-  React.useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-      toast({
-        title: "Accès non autorisé",
-        description: "Veuillez vous connecter pour accéder à cette page",
-        variant: "destructive"
-      });
-      navigate('/login');
-    }
-  }, [navigate, toast]);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
 
   const marketFormSchema = {
     title: {
@@ -86,6 +79,7 @@ export default function MarketCreationPage() {
   const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setCoverImageFile(file);
       const reader = new FileReader();
       reader.onload = () => {
         const result = reader.result as string;
@@ -98,6 +92,7 @@ export default function MarketCreationPage() {
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setLogoFile(file);
       const reader = new FileReader();
       reader.onload = () => {
         const result = reader.result as string;
@@ -109,6 +104,7 @@ export default function MarketCreationPage() {
 
   const removeCoverImage = () => {
     setCoverImageUrl(null);
+    setCoverImageFile(null);
     // Reset the file input
     const fileInput = document.getElementById('coverImage') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
@@ -116,21 +112,88 @@ export default function MarketCreationPage() {
 
   const removeLogo = () => {
     setLogoUrl(null);
+    setLogoFile(null);
     // Reset the file input
     const fileInput = document.getElementById('logo') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
   };
 
-  const onSubmit = async (data: any) => {
+  // Fonction pour télécharger une image sur Supabase Storage
+  const uploadImage = async (file: File, path: string): Promise<string | null> => {
     try {
-      console.log('Données du marché soumises:', {
-        ...data,
-        coverImage: coverImageUrl,
-        logo: logoUrl
-      });
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+      const filePath = `${path}/${fileName}`;
       
-      // Simulation de l'envoi à une API
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const { error: uploadError } = await supabase.storage
+        .from('marches')
+        .upload(filePath, file);
+      
+      if (uploadError) {
+        throw uploadError;
+      }
+      
+      // Récupérer l'URL publique de l'image
+      const { data: { publicUrl } } = supabase.storage
+        .from('marches')
+        .getPublicUrl(filePath);
+      
+      return publicUrl;
+    } catch (error) {
+      console.error('Erreur lors du téléchargement de l\'image:', error);
+      return null;
+    }
+  };
+
+  const onSubmit = async (data: any) => {
+    if (!user) {
+      toast({
+        title: "Erreur",
+        description: "Vous devez être connecté pour créer un marché",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Télécharger les images si elles existent
+      let coverImagePath = null;
+      let logoPath = null;
+      
+      if (coverImageFile) {
+        coverImagePath = await uploadImage(coverImageFile, 'covers');
+      }
+      
+      if (logoFile) {
+        logoPath = await uploadImage(logoFile, 'logos');
+      }
+      
+      // Préparer les données pour Supabase
+      const marcheData = {
+        titre: data.title,
+        description: data.description,
+        client: data.client,
+        statut: 'En attente',
+        budget: `${data.budget} €`,
+        image: coverImagePath,
+        logo: logoPath,
+        user_id: user.id,
+        reference: data.reference,
+        dateDebut: data.startDate,
+        dateFin: data.endDate || null,
+        hasAttachments: data.hasAttachments,
+        isPublic: data.isPublic
+      };
+      
+      // Insérer le marché dans la base de données
+      const { data: newMarche, error } = await supabase
+        .from('marches')
+        .insert([marcheData])
+        .select();
+      
+      if (error) {
+        throw error;
+      }
       
       toast({
         title: "Marché créé avec succès",
@@ -138,12 +201,17 @@ export default function MarketCreationPage() {
         variant: "success"
       });
       
-      navigate('/dashboard');
-    } catch (error) {
+      // Rediriger vers la page du nouveau marché
+      if (newMarche && newMarche.length > 0) {
+        navigate(`/marches/${newMarche[0].id}`);
+      } else {
+        navigate('/marches');
+      }
+    } catch (error: any) {
       console.error('Erreur lors de la création du marché:', error);
       toast({
         title: "Erreur",
-        description: "Une erreur s'est produite lors de la création du marché",
+        description: error.message || "Une erreur s'est produite lors de la création du marché",
         variant: "destructive"
       });
     }
@@ -361,7 +429,7 @@ export default function MarketCreationPage() {
             </div>
 
             <div className="flex justify-end space-x-3">
-              <Button variant="outline" onClick={() => navigate('/dashboard')}>
+              <Button variant="outline" onClick={() => navigate('/marches')}>
                 Annuler
               </Button>
               <Button type="submit" variant="btpPrimary" disabled={isSubmitting}>

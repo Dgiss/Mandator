@@ -12,10 +12,13 @@ import MarchesPage from "./pages/MarchesPage";
 import MarcheDetailPage from "./pages/MarcheDetailPage";
 import QuestionsReponsesPage from "./pages/QuestionsReponsesPage";
 import NotFound from "./pages/NotFound";
+import AuthPage from "./pages/AuthPage";
 
 import { useEffect } from "react";
 import { CRMProvider } from "./contexts/CRMContext";
 import { AppSettingsProvider } from "./contexts/AppSettingsContext";
+import { AuthProvider } from "./contexts/AuthContext";
+import PrivateRoute from "./components/auth/PrivateRoute";
 import { trackPageView } from "./utils/analytics";
 
 // Create query client with enhanced configuration
@@ -50,28 +53,33 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AppSettingsProvider>
-        <CRMProvider>
-          <BrowserRouter>
-            <TooltipProvider>
-              <RouterChangeHandler />
-              <Routes>
-                <Route path="/" element={<Navigate to="/home" replace />} />
-                <Route path="/home" element={<HomePage />} />
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/marches" element={<MarchesPage />} />
-                <Route path="/marches/:id" element={<MarcheDetailPage />} />
-                <Route path="/marches/creation" element={<MarketCreationPage />} />
-                <Route path="/questions-reponses" element={<QuestionsReponsesPage />} />
-                <Route path="/formulaires" element={<FormsPage />} />
-                <Route path="/parametres" element={
-                  <div className="container mx-auto p-6"><h1 className="text-2xl font-bold">Paramètres</h1></div>
-                } />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-              <Toaster />
-            </TooltipProvider>
-          </BrowserRouter>
-        </CRMProvider>
+        <AuthProvider>
+          <CRMProvider>
+            <BrowserRouter>
+              <TooltipProvider>
+                <RouterChangeHandler />
+                <Routes>
+                  <Route path="/" element={<Navigate to="/home" replace />} />
+                  <Route path="/auth" element={<AuthPage />} />
+                  <Route path="/home" element={<PrivateRoute><HomePage /></PrivateRoute>} />
+                  <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
+                  <Route path="/marches" element={<PrivateRoute><MarchesPage /></PrivateRoute>} />
+                  <Route path="/marches/:id" element={<PrivateRoute><MarcheDetailPage /></PrivateRoute>} />
+                  <Route path="/marches/creation" element={<PrivateRoute><MarketCreationPage /></PrivateRoute>} />
+                  <Route path="/questions-reponses" element={<PrivateRoute><QuestionsReponsesPage /></PrivateRoute>} />
+                  <Route path="/formulaires" element={<PrivateRoute><FormsPage /></PrivateRoute>} />
+                  <Route path="/parametres" element={
+                    <PrivateRoute>
+                      <div className="container mx-auto p-6"><h1 className="text-2xl font-bold">Paramètres</h1></div>
+                    </PrivateRoute>
+                  } />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+                <Toaster />
+              </TooltipProvider>
+            </BrowserRouter>
+          </CRMProvider>
+        </AuthProvider>
       </AppSettingsProvider>
     </QueryClientProvider>
   );

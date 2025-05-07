@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarInset
 } from "@/components/ui/sidebar";
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { 
   FileText, 
@@ -25,6 +25,7 @@ import {
   Users 
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -32,15 +33,20 @@ interface MainLayoutProps {
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, profile, signOut } = useAuth();
   
   const isActive = (path: string) => {
     return location.pathname.startsWith(path);
   };
   
-  const handleLogout = () => {
-    // Since we've removed authentication, this is just a placeholder
-    // that shows a toast notification
-    toast.success("Déconnexion réussie");
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigate('/auth');
+    } catch (error) {
+      toast.error("Erreur lors de la déconnexion");
+    }
   };
 
   return (
@@ -55,6 +61,20 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           </SidebarHeader>
           
           <SidebarContent>
+            {user && (
+              <div className="px-4 py-3 border-b">
+                <div className="flex items-center space-x-2">
+                  <div className="h-8 w-8 bg-btp-blue rounded-full flex items-center justify-center text-white font-medium">
+                    {profile?.prenom?.charAt(0) || profile?.nom?.charAt(0) || user.email?.charAt(0) || 'U'}
+                  </div>
+                  <div className="flex-1 truncate">
+                    <p className="text-sm font-medium">{profile?.prenom && profile?.nom ? `${profile.prenom} ${profile.nom}` : user.email}</p>
+                    <p className="text-xs text-gray-500 truncate">{profile?.entreprise || 'Compte personnel'}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton isActive={isActive('/home')} tooltip="Accueil" asChild>

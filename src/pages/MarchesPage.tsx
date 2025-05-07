@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { FileText, Search, Plus, Filter } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Type définition pour un marché
 interface Marche {
@@ -18,67 +20,60 @@ interface Marche {
   dateCreation: string;
   budget: string;
   image?: string;
+  user_id?: string;
 }
-
-// Données fictives pour les marchés
-const marchesMock: Marche[] = [
-  {
-    id: "m1",
-    titre: "Aménagement Place République",
-    description: "Réaménagement paysager et piétonnier de la place centrale.",
-    client: "Ville de Lyon",
-    statut: "Terminé",
-    dateCreation: "20/02/2024",
-    budget: "450 000 €",
-    image: "/placeholder.svg"
-  },
-  {
-    id: "m2",
-    titre: "Construction Centre Culturel",
-    description: "Édification d'un complexe culturel avec bibliothèque et salles polyvalentes.",
-    client: "Département du Rhône",
-    statut: "En cours",
-    dateCreation: "15/01/2024",
-    budget: "2 800 000 €",
-    image: "/placeholder.svg"
-  },
-  {
-    id: "m3",
-    titre: "Rénovation Lycée Technique",
-    description: "Rénovation énergétique et mise aux normes du lycée technique municipal.",
-    client: "Région Auvergne-Rhône-Alpes",
-    statut: "En cours",
-    dateCreation: "03/03/2024",
-    budget: "1 200 000 €",
-    image: "/placeholder.svg"
-  },
-  {
-    id: "m4",
-    titre: "Extension Réseau Eau Potable",
-    description: "Extension du réseau d'eau potable vers les nouveaux quartiers résidentiels.",
-    client: "Métropole de Lyon",
-    statut: "En attente",
-    dateCreation: "10/02/2024",
-    budget: "780 000 €",
-    image: "/placeholder.svg"
-  },
-  {
-    id: "m5",
-    titre: "Réfection Voirie Quartier Est",
-    description: "Réfection complète de la voirie et des trottoirs dans le quartier Est.",
-    client: "Ville de Lyon",
-    statut: "En cours",
-    dateCreation: "25/01/2024", 
-    budget: "520 000 €",
-    image: "/placeholder.svg"
-  }
-];
 
 export default function MarchesPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [marches, setMarches] = useState<Marche[]>(marchesMock);
+  const [marches, setMarches] = useState<Marche[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Chargement des marchés depuis Supabase
+  useEffect(() => {
+    const fetchMarches = async () => {
+      setLoading(true);
+      try {
+        // Récupérer les marchés de l'API Supabase
+        const { data, error } = await supabase
+          .from('marches')
+          .select('*')
+          .order('dateCreation', { ascending: false });
+        
+        if (error) {
+          throw error;
+        }
+        
+        // Formater les données pour correspondre au type Marche
+        const formattedMarches = data.map((marche: any) => ({
+          id: marche.id,
+          titre: marche.titre,
+          description: marche.description || '',
+          client: marche.client || '',
+          statut: marche.statut as 'En cours' | 'Terminé' | 'En attente',
+          dateCreation: new Date(marche.dateCreation).toLocaleDateString('fr-FR'),
+          budget: marche.budget || '',
+          image: marche.image,
+          user_id: marche.user_id
+        }));
+        
+        setMarches(formattedMarches);
+      } catch (error) {
+        console.error('Erreur lors du chargement des marchés:', error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de récupérer la liste des marchés",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMarches();
+  }, [toast]);
 
   // Filtrer les marchés en fonction du terme de recherche
   const filteredMarches = marches.filter(marche => 
@@ -150,7 +145,15 @@ export default function MarchesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredMarches.length > 0 ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="h-24 text-center">
+                  <div className="flex justify-center items-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-btp-blue"></div>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : filteredMarches.length > 0 ? (
               filteredMarches.map((marche) => (
                 <TableRow 
                   key={marche.id} 
@@ -180,7 +183,9 @@ export default function MarchesPage() {
             ) : (
               <TableRow>
                 <TableCell colSpan={5} className="h-24 text-center">
-                  Aucun marché trouvé
+                  {searchTerm 
+                    ? "Aucun marché ne correspond à votre recherche" 
+                    : "Aucun marché trouvé. Cliquez sur 'Nouveau marché' pour en créer un."}
                 </TableCell>
               </TableRow>
             )}

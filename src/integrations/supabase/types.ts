@@ -87,6 +87,45 @@ export type Database = {
         }
         Relationships: []
       }
+      marches: {
+        Row: {
+          budget: string | null
+          client: string | null
+          created_at: string | null
+          datecreation: string | null
+          description: string | null
+          id: string
+          image: string | null
+          statut: string
+          titre: string
+          user_id: string | null
+        }
+        Insert: {
+          budget?: string | null
+          client?: string | null
+          created_at?: string | null
+          datecreation?: string | null
+          description?: string | null
+          id?: string
+          image?: string | null
+          statut?: string
+          titre: string
+          user_id?: string | null
+        }
+        Update: {
+          budget?: string | null
+          client?: string | null
+          created_at?: string | null
+          datecreation?: string | null
+          description?: string | null
+          id?: string
+          image?: string | null
+          statut?: string
+          titre?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
