@@ -62,25 +62,16 @@ export default function DashboardPage() {
     },
   ];
 
-  // Function to check authentication and redirect to login if not authenticated
-  const ensureAuth = () => {
-    if (!checkAuth()) {
-      toast({
-        title: "Authentification requise",
-        description: "Veuillez vous connecter pour accéder à cette fonctionnalité",
-        variant: "destructive",
-      });
-      navigate('/login');
-      return false;
-    }
-    return true;
+  // Function to handle navigation
+  const handleNavigation = (path: string) => {
+    navigate(path);
   };
 
   // Actions for the page
   const pageActions = (
     <Button 
       variant="btpPrimary" 
-      onClick={() => ensureAuth() && navigate('/marches/creation')}
+      onClick={() => handleNavigation('/marches/creation')}
     >
       <FileText className="mr-2 h-4 w-4" />
       Nouveau marché
@@ -105,7 +96,7 @@ export default function DashboardPage() {
         
         {/* Actions Column */}
         <div>
-          <QuickActions ensureAuth={ensureAuth} />
+          <QuickActions />
         </div>
       </div>
     </PageLayout>

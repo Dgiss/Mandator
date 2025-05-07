@@ -5,11 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, FileEdit, Users } from 'lucide-react';
 
-interface QuickActionsProps {
-  ensureAuth: () => boolean;
-}
-
-const QuickActions: React.FC<QuickActionsProps> = ({ ensureAuth }) => {
+const QuickActions: React.FC = () => {
   const navigate = useNavigate();
 
   return (
@@ -20,7 +16,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({ ensureAuth }) => {
           <Button 
             variant="btpPrimary" 
             className="w-full justify-start"
-            onClick={() => ensureAuth() && navigate('/marches/creation')}
+            onClick={() => navigate('/marches/creation')}
           >
             <FileText className="mr-2 h-4 w-4" />
             Créer un nouveau marché
@@ -29,7 +25,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({ ensureAuth }) => {
           <Button 
             variant="outline" 
             className="w-full justify-start border-gray-300 text-gray-700 hover:text-gray-900 hover:bg-gray-50"
-            onClick={() => ensureAuth() && navigate('/formulaires')}
+            onClick={() => navigate('/formulaires')}
           >
             <FileEdit className="mr-2 h-4 w-4" />
             Gérer les formulaires
@@ -38,7 +34,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({ ensureAuth }) => {
           <Button 
             variant="outline" 
             className="w-full justify-start border-gray-300 text-gray-700 hover:text-gray-900 hover:bg-gray-50"
-            onClick={() => ensureAuth() && navigate('/clients')}
+            onClick={() => navigate('/clients')}
           >
             <Users className="mr-2 h-4 w-4" />
             Gérer les clients
