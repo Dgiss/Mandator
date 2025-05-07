@@ -13,7 +13,10 @@ import {
   ShieldCheck, 
   MessageSquare, 
   BarChart,
-  FileEdit
+  FileEdit,
+  ClipboardList,
+  ClipboardCheck,
+  DollarSign
 } from 'lucide-react';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 
@@ -23,6 +26,9 @@ import MarcheFascicules from '@/components/marches/MarcheFascicules';
 import MarcheVisas from '@/components/marches/MarcheVisas';
 import MarcheVersions from '@/components/marches/MarcheVersions';
 import MarcheQuestionsReponses from '@/components/marches/MarcheQuestionsReponses';
+import MarcheSituations from '@/components/marches/MarcheSituations';
+import MarcheOrdresService from '@/components/marches/MarcheOrdresService';
+import MarchePrixNouveaux from '@/components/marches/MarchePrixNouveaux';
 
 // Type définition pour un marché
 interface Marche {
@@ -134,6 +140,15 @@ export default function MarcheDetailPage() {
             </TabsTrigger>
             <TabsTrigger value="qr" className="flex items-center px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-btp-blue rounded-none data-[state=active]:shadow-none">
               <MessageSquare className="mr-2 h-4 w-4" /> Q/R
+            </TabsTrigger>
+            <TabsTrigger value="situations" className="flex items-center px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-btp-blue rounded-none data-[state=active]:shadow-none">
+              <ClipboardList className="mr-2 h-4 w-4" /> Situations
+            </TabsTrigger>
+            <TabsTrigger value="ordres" className="flex items-center px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-btp-blue rounded-none data-[state=active]:shadow-none">
+              <ClipboardCheck className="mr-2 h-4 w-4" /> Ordres de service
+            </TabsTrigger>
+            <TabsTrigger value="prix" className="flex items-center px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-btp-blue rounded-none data-[state=active]:shadow-none">
+              <DollarSign className="mr-2 h-4 w-4" /> Prix nouveaux
             </TabsTrigger>
           </TabsList>
         </div>
@@ -289,6 +304,18 @@ export default function MarcheDetailPage() {
 
         <TabsContent value="qr">
           <MarcheQuestionsReponses marcheId={id || ""} />
+        </TabsContent>
+
+        <TabsContent value="situations">
+          <MarcheSituations marcheId={id || ""} />
+        </TabsContent>
+
+        <TabsContent value="ordres">
+          <MarcheOrdresService marcheId={id || ""} />
+        </TabsContent>
+
+        <TabsContent value="prix">
+          <MarchePrixNouveaux marcheId={id || ""} />
         </TabsContent>
       </Tabs>
     </PageLayout>
