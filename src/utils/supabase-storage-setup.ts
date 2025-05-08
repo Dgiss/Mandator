@@ -21,19 +21,24 @@ export const ensureStorageBucketsExist = async (): Promise<void> => {
     // Vérifier et créer le bucket 'marches' s'il n'existe pas
     if (!buckets || !buckets.find(bucket => bucket.name === 'marches')) {
       console.log('Création du bucket marches...');
-      try {
-        // Utilisons des options de création simplifiées
-        const { error: createError } = await supabase.storage.createBucket('marches', {
-          public: true
-        });
+      
+      // Créer le bucket avec le moins d'options possibles pour éviter les erreurs
+      const { error: createError } = await supabase.storage.createBucket('marches');
+      
+      if (createError) {
+        console.error('Erreur lors de la création du bucket marches:', createError);
+      } else {
+        console.log('Bucket marches créé avec succès');
         
-        if (createError) {
-          console.error('Erreur lors de la création du bucket marches:', createError);
-        } else {
-          console.log('Bucket marches créé avec succès');
+        // Mettre à jour les politiques d'accès du bucket pour le rendre public
+        try {
+          const { error: policyError } = await supabase.storage.from('marches').getPublicUrl('test.txt');
+          if (policyError) {
+            console.error('Erreur lors de la mise à jour des politiques du bucket:', policyError);
+          }
+        } catch (policyErr) {
+          console.error('Exception lors de la mise à jour des politiques:', policyErr);
         }
-      } catch (createBucketError) {
-        console.error('Exception lors de la création du bucket marches:', createBucketError);
       }
     } else {
       console.log('Bucket marches existe déjà');

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/layout/PageLayout';
 import PageHeader from '@/components/layout/PageHeader';
@@ -24,6 +24,20 @@ export default function MarketCreationPage() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Vérifie si le bucket de stockage existe au chargement du composant
+  useEffect(() => {
+    const checkBucket = async () => {
+      try {
+        const { data: buckets } = await supabase.storage.listBuckets();
+        console.log("Buckets disponibles:", buckets);
+      } catch (err) {
+        console.error("Erreur lors de la vérification des buckets:", err);
+      }
+    };
+    
+    checkBucket();
+  }, []);
+
   const marketFormSchema = {
     titre: {
       required: true,
@@ -40,9 +54,7 @@ export default function MarketCreationPage() {
     },
     budget: {
       required: true,
-      isNumber: true,
-      min: 1000,
-      errorMessage: "Le budget doit être un nombre supérieur à 1000"
+      errorMessage: "Le budget est requis"
     },
     description: {
       required: true,
@@ -113,34 +125,53 @@ export default function MarketCreationPage() {
   // Fonction pour télécharger une image sur Supabase Storage
   const uploadImage = async (file: File, path: string): Promise<string | null> => {
     try {
-      // Vérifier si le bucket existe, le créer s'il n'existe pas
-      const { data: buckets } = await supabase.storage.listBuckets();
-      if (!buckets?.find(bucket => bucket.name === 'marches')) {
-        console.log('Le bucket marches n\'existe pas, création...');
-        await supabase.storage.createBucket('marches', { public: true });
-      }
+      console.log(`Tentative d'upload d'un fichier ${file.name} dans ${path}`);
       
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
       const filePath = `${path}/${fileName}`;
       
-      const { error: uploadError } = await supabase.storage
+      // Vérifier que le bucket existe
+      const { data: buckets } = await supabase.storage.listBuckets();
+      console.log("Buckets disponibles avant upload:", buckets);
+      
+      // Si le bucket 'marches' n'existe pas, essayer de le créer
+      if (!buckets || !buckets.find(b => b.name === 'marches')) {
+        console.log("Le bucket 'marches' n'existe pas, tentative de création...");
+        const { error: createError } = await supabase.storage.createBucket('marches', {
+          public: true
+        });
+        
+        if (createError) {
+          console.error("Erreur lors de la création du bucket:", createError);
+          throw new Error(`Impossible de créer le bucket: ${createError.message}`);
+        }
+      }
+      
+      console.log(`Upload du fichier ${filePath} dans le bucket 'marches'...`);
+      const { error: uploadError, data: uploadData } = await supabase.storage
         .from('marches')
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
       
       if (uploadError) {
         console.error('Erreur lors du téléchargement de l\'image:', uploadError);
         throw uploadError;
       }
       
+      console.log("Upload réussi:", uploadData);
+      
       // Récupérer l'URL publique de l'image
       const { data: { publicUrl } } = supabase.storage
         .from('marches')
         .getPublicUrl(filePath);
       
+      console.log("URL publique générée:", publicUrl);
       return publicUrl;
     } catch (error) {
-      console.error('Erreur lors du téléchargement de l\'image:', error);
+      console.error('Erreur détaillée lors du téléchargement de l\'image:', error);
       return null;
     }
   };
@@ -156,7 +187,7 @@ export default function MarketCreationPage() {
     }
 
     setSubmitting(true);
-    console.log("Début de création du marché");
+    console.log("Début de création du marché avec les données:", data);
     
     try {
       // Télécharger les images si elles existent
@@ -164,15 +195,19 @@ export default function MarketCreationPage() {
       let logoPath = null;
       
       if (coverImageFile) {
+        console.log("Téléchargement de l'image de couverture...");
         coverImagePath = await uploadImage(coverImageFile, 'covers');
+        console.log("Image de couverture téléchargée:", coverImagePath);
       }
       
       if (logoFile) {
+        console.log("Téléchargement du logo...");
         logoPath = await uploadImage(logoFile, 'logos');
+        console.log("Logo téléchargé:", logoPath);
       }
       
-      // Préparer les données pour Supabase - nous devons garantir que 'titre' est présent
-      // car c'est une colonne NOT NULL dans la base de données
+      // Préparer les données pour l'insertion dans la base de données
+      // S'assurer que tous les champs correspondent aux colonnes de la table
       const marcheData = {
         titre: data.titre,
         description: data.description,
@@ -188,8 +223,8 @@ export default function MarketCreationPage() {
       
       console.log("Données du marché à insérer:", marcheData);
 
-      // Insérer le marché dans la base de données - Correction ici
-      // Nous passons directement l'objet, pas un tableau d'objets
+      // Insérer le marché dans la base de données
+      console.log("Envoi à Supabase...");
       const { data: newMarche, error } = await supabase
         .from('marches')
         .insert(marcheData)

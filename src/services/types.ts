@@ -50,7 +50,7 @@ export interface UserProfile {
 
 export interface Marche {
   id: string;
-  titre: string;  // This must remain required as it's required in the database
+  titre: string;  // Required field
   description?: string | null;
   client?: string | null;
   statut: string;
