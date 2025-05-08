@@ -1,19 +1,26 @@
 
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App'
-import './index.css'
-import { ensureStorageBucketsExist } from './utils/supabase-storage-setup'
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import App from "./App";
+import "./index.css";
+import { Toaster } from "./components/ui/toaster";
+import { initApp } from "./main-init";
 
-// Configuration initiale des buckets de stockage
-ensureStorageBucketsExist()
-  .catch(console.error)
-  .finally(() => {
-    console.log('Application démarrée');
-  });
+// Initialize the app
+initApp();
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+// Create a client
+const queryClient = new QueryClient();
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-)
+    <BrowserRouter>
+      <QueryClientProvider client={queryClient}>
+        <App />
+        <Toaster />
+      </QueryClientProvider>
+    </BrowserRouter>
+  </React.StrictMode>
+);

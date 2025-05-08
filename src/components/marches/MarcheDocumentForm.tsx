@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Dialog, 
@@ -32,6 +33,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 interface Document {
   id: string;
@@ -42,7 +44,8 @@ interface Document {
   dateUpload: string;
   taille: string;
   description?: string;
-  fasciculeId?: string;
+  fascicule_id?: string;
+  marche_id: string;
 }
 
 interface DocumentFormProps {
@@ -58,7 +61,8 @@ const documentFormSchema = z.object({
   type: z.string().min(1, { message: 'Le type est requis' }),
   statut: z.string().min(1, { message: 'Le statut est requis' }),
   description: z.string().optional(),
-  fasciculeId: z.string().optional(),
+  fascicule_id: z.string().optional(),
+  marche_id: z.string().min(1, { message: 'Le marché est requis' }),
   file: z.any().optional()
 });
 
@@ -72,8 +76,38 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [fascicules, setFascicules] = useState<{id: string; nom: string}[]>([]);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Récupérer la liste des marchés pour le dropdown
+  const { data: marches = [] } = useQuery({
+    queryKey: ['marches-for-select'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('marches')
+        .select('id, titre')
+        .order('titre');
+        
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  // Récupérer les fascicules en fonction du marché sélectionné
+  const { data: fascicules = [], refetch: refetchFascicules } = useQuery({
+    queryKey: ['fascicules-for-marche', marcheId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('fascicules')
+        .select('id, nom')
+        .eq('marche_id', marcheId)
+        .order('nom');
+        
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!marcheId
+  });
 
   const form = useForm<DocumentFormValues>({
     resolver: zodResolver(documentFormSchema),
@@ -83,29 +117,12 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
       type: 'PDF',
       statut: 'En révision',
       description: '',
-      fasciculeId: '',
+      fascicule_id: undefined,
+      marche_id: marcheId
     }
   });
 
-  // Fetch fascicules from Supabase
-  useEffect(() => {
-    const fetchFascicules = async () => {
-      const { data, error } = await supabase
-        .from('fascicules')
-        .select('id, nom')
-        .eq('marche_id', marcheId);
-      
-      if (!error && data) {
-        setFascicules(data);
-      } else {
-        console.error('Error fetching fascicules:', error);
-      }
-    };
-    
-    fetchFascicules();
-  }, [marcheId]);
-
-  // Update form when editing a document
+  // Update form when editing a document or when marcheId changes
   useEffect(() => {
     if (editingDocument) {
       form.reset({
@@ -114,11 +131,22 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         type: editingDocument.type,
         statut: editingDocument.statut,
         description: editingDocument.description || '',
-        fasciculeId: editingDocument.fasciculeId || '',
+        fascicule_id: editingDocument.fascicule_id || undefined,
+        marche_id: editingDocument.marche_id || marcheId
       });
       setOpen(true);
+    } else if (marcheId) {
+      form.setValue('marche_id', marcheId);
     }
-  }, [editingDocument, form]);
+  }, [editingDocument, marcheId, form]);
+
+  // Watch for marche_id changes to refetch fascicules
+  const watchedMarcheId = form.watch('marche_id');
+  useEffect(() => {
+    if (watchedMarcheId !== marcheId) {
+      refetchFascicules();
+    }
+  }, [watchedMarcheId, marcheId, refetchFascicules]);
 
   const onSubmit = async (values: DocumentFormValues) => {
     const isEditing = !!editingDocument;
@@ -132,6 +160,15 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
       if (selectedFile) {
         fileExtension = selectedFile.name.split('.').pop()?.toUpperCase() || '';
         fileSize = (selectedFile.size / 1024 / 1024).toFixed(2) + ' MB';
+        
+        // Verify storage bucket exists or create it
+        const { data: buckets } = await supabase.storage.listBuckets();
+        if (!buckets?.find(bucket => bucket.name === 'documents')) {
+          await supabase.storage.createBucket('documents', {
+            public: false,
+            fileSizeLimit: 10485760 // 10MB limit
+          });
+        }
         
         // Upload file to Supabase Storage
         const fileNameWithTimestamp = `${Date.now()}_${selectedFile.name}`;
@@ -153,9 +190,9 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         statut: values.statut,
         version: values.version,
         description: values.description || null,
-        fascicule_id: values.fasciculeId || null,
-        marche_id: marcheId,
-        dateUpload: new Date().toLocaleDateString('fr-FR'),
+        fascicule_id: values.fascicule_id === 'none' ? null : values.fascicule_id,
+        marche_id: values.marche_id,
+        dateUpload: new Date().toISOString(),
         taille: selectedFile ? fileSize : (isEditing ? editingDocument.taille : '0 KB'),
         file_path: filePath || (isEditing ? editingDocument['file_path'] : null)
       };
@@ -180,18 +217,18 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
       }
       
       // If document is associated with a fascicule, update the fascicule's document count
-      if (values.fasciculeId) {
+      if (values.fascicule_id && values.fascicule_id !== 'none') {
         // Get current document count
         const { data: countData } = await supabase
           .from('documents')
           .select('id')
-          .eq('fascicule_id', values.fasciculeId);
+          .eq('fascicule_id', values.fascicule_id);
         
         if (countData) {
           await supabase
             .from('fascicules')
             .update({ nombreDocuments: countData.length })
-            .eq('id', values.fasciculeId);
+            .eq('id', values.fascicule_id);
         }
       }
       
@@ -203,9 +240,14 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         variant: "success",
       });
       
+      // Invalider les requêtes pour forcer un rechargement des données
+      queryClient.invalidateQueries({ queryKey: ['documents-recents', marcheId] });
+      queryClient.invalidateQueries({ queryKey: ['documents', marcheId] });
+      
       form.reset();
       setSelectedFile(null);
       setOpen(false);
+      setEditingDocument(null);
       
       if (onDocumentSaved) {
         onDocumentSaved();
@@ -317,6 +359,9 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
                         <SelectItem value="XLS">XLS</SelectItem>
                         <SelectItem value="DWG">DWG</SelectItem>
                         <SelectItem value="JPG">JPG</SelectItem>
+                        <SelectItem value="CCTP">CCTP</SelectItem>
+                        <SelectItem value="PLANS">PLANS</SelectItem>
+                        <SelectItem value="DEVIS">DEVIS</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -341,9 +386,10 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Approuvé">Approuvé</SelectItem>
+                      <SelectItem value="Brouillon">Brouillon</SelectItem>
                       <SelectItem value="En révision">En révision</SelectItem>
                       <SelectItem value="Soumis pour visa">Soumis pour visa</SelectItem>
+                      <SelectItem value="Approuvé">Approuvé</SelectItem>
                       <SelectItem value="Rejeté">Rejeté</SelectItem>
                     </SelectContent>
                   </Select>
@@ -354,7 +400,39 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
             
             <FormField
               control={form.control}
-              name="fasciculeId"
+              name="marche_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Marché associé*</FormLabel>
+                  <Select 
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      // Reset fascicule selection when marché changes
+                      form.setValue('fascicule_id', undefined);
+                    }} 
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner un marché" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {marches.map((marche: any) => (
+                        <SelectItem key={marche.id} value={marche.id}>
+                          {marche.titre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="fascicule_id"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Fascicule (optionnel)</FormLabel>
@@ -369,7 +447,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="none">Aucun fascicule</SelectItem>
-                      {fascicules.map(fascicule => (
+                      {fascicules.map((fascicule: any) => (
                         <SelectItem key={fascicule.id} value={fascicule.id}>
                           {fascicule.nom}
                         </SelectItem>

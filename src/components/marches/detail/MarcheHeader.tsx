@@ -1,10 +1,8 @@
 
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft } from 'lucide-react';
 import { Marche } from '@/services/types';
-import { FileText } from 'lucide-react';
+import { ArrowLeft, Download, Calendar, MapPin, User, Building, BarChart } from 'lucide-react';
 
 interface MarcheHeaderProps {
   marche: Marche;
@@ -15,44 +13,59 @@ interface MarcheHeaderProps {
 const MarcheHeader: React.FC<MarcheHeaderProps> = ({ marche, getStatusColor, formatDate }) => {
   return (
     <div className="mb-6">
-      <Link to="/marches">
-        <Button variant="outline" size="sm" className="mb-4">
-          <ChevronLeft className="mr-1 h-4 w-4" /> Retour aux marchés
+      <div className="flex items-center gap-2 mb-4">
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" asChild>
+          <a href="/marches">
+            <ArrowLeft className="h-4 w-4" />
+            <span className="sr-only">Retour</span>
+          </a>
         </Button>
-      </Link>
+        <p className="text-sm text-gray-500">Retour à la liste</p>
+      </div>
 
-      <div className="relative w-full h-56 rounded-lg overflow-hidden mb-6 bg-gray-200">
-        {marche.image ? (
-          <img 
-            src={marche.image} 
-            alt={marche.titre} 
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="flex items-center justify-center h-full">
-            <FileText className="h-12 w-12 text-gray-400" />
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+        <div className="flex items-center gap-4">
+          {marche.logo && (
+            <div className="flex-shrink-0 w-12 h-12 rounded-md overflow-hidden">
+              <img 
+                src={marche.logo} 
+                alt={`Logo ${marche.titre}`}
+                className="w-full h-full object-contain"
+              />
+            </div>
+          )}
+          <div>
+            <h1 className="text-2xl font-bold">{marche.titre}</h1>
+            <div className="flex flex-wrap items-center gap-2 mt-1">
+              <span className={`px-2 py-0.5 text-xs rounded-full ${getStatusColor(marche.statut)}`}>
+                {marche.statut}
+              </span>
+              <span className="text-sm text-gray-500 flex items-center">
+                <Calendar className="h-3.5 w-3.5 mr-1" />
+                {formatDate(marche.datecreation)}
+              </span>
+              {marche.client && (
+                <span className="text-sm text-gray-500 flex items-center">
+                  <Building className="h-3.5 w-3.5 mr-1" />
+                  {marche.client}
+                </span>
+              )}
+            </div>
           </div>
-        )}
+        </div>
+        
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" className="flex items-center gap-1">
+            <Download className="h-4 w-4" />
+            Exporter
+          </Button>
+          {/* Autres boutons d'action si nécessaire */}
+        </div>
       </div>
 
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-        <div>
-          <h1 className="text-3xl font-bold">{marche.titre}</h1>
-          <p className="text-gray-600">{marche.description || 'Aucune description'}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(marche.statut)}`}>
-            {marche.statut}
-          </span>
-          {marche.client && (
-            <span className="px-3 py-1 bg-gray-100 rounded-full text-sm">Client: {marche.client}</span>
-          )}
-          <span className="px-3 py-1 bg-gray-100 rounded-full text-sm">Date: {formatDate(marche.datecreation)}</span>
-          {marche.budget && (
-            <span className="px-3 py-1 bg-gray-100 rounded-full text-sm">Budget: {marche.budget}</span>
-          )}
-        </div>
-      </div>
+      {marche.description && (
+        <p className="text-gray-600 mb-4">{marche.description}</p>
+      )}
     </div>
   );
 };

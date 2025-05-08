@@ -6,6 +6,7 @@ import { fetchMarcheById } from '@/services/marchesService';
 import { visasService } from '@/services/visasService';
 import { versionsService } from '@/services/versionsService';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
 
 export interface DocumentStats {
   total: number;
@@ -64,7 +65,6 @@ export const useMarcheDetail = (id: string | undefined): UseMarcheDetailReturn =
     enabled: !!id,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 1,
-    // Use meta to handle errors
     meta: {
       onError: (error: Error) => {
         console.error("Erreur lors du chargement des données du marché:", error);
@@ -89,12 +89,47 @@ export const useMarcheDetail = (id: string | undefined): UseMarcheDetailReturn =
     retry: 1
   });
 
-  // Requête pour récupérer les documents récents (versions)
+  // Requête pour récupérer les documents récents
   const documentsQuery = useQuery({
     queryKey: ['documents-recents', id],
     queryFn: async () => {
       if (!id) return [];
-      return await versionsService.getVersionsByMarcheId(id);
+      const { data, error } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('marche_id', id)
+        .order('created_at', { ascending: false })
+        .limit(3);
+      
+      if (error) {
+        console.error("Erreur lors du chargement des documents récents:", error);
+        throw error;
+      }
+      
+      return data || [];
+    },
+    enabled: !!id && !!marcheQuery.data,
+    staleTime: 5 * 60 * 1000,
+    retry: 1
+  });
+
+  // Requête pour récupérer les fascicules et leur progression
+  const fasciculesQuery = useQuery({
+    queryKey: ['fascicules', id],
+    queryFn: async () => {
+      if (!id) return [];
+      const { data, error } = await supabase
+        .from('fascicules')
+        .select('*')
+        .eq('marche_id', id)
+        .order('nom', { ascending: true });
+      
+      if (error) {
+        console.error("Erreur lors du chargement des fascicules:", error);
+        throw error;
+      }
+      
+      return data || [];
     },
     enabled: !!id && !!marcheQuery.data,
     staleTime: 5 * 60 * 1000,
@@ -113,9 +148,9 @@ export const useMarcheDetail = (id: string | undefined): UseMarcheDetailReturn =
 
   // Calculer les statistiques des documents
   const documentStats = useMemo(() => {
-    const visasData = visasQuery.data;
+    const documentsData = documentsQuery.data;
     
-    if (!visasData || !Array.isArray(visasData)) {
+    if (!documentsData || !Array.isArray(documentsData)) {
       return {
         total: 0,
         approuves: 0,
@@ -124,28 +159,31 @@ export const useMarcheDetail = (id: string | undefined): UseMarcheDetailReturn =
     }
     
     return {
-      total: visasData.length,
-      approuves: visasData.filter((visa: any) => visa.statut === 'Approuvé').length,
-      enAttente: visasData.filter((visa: any) => visa.statut === 'En attente').length
+      total: documentsData.length,
+      approuves: documentsData.filter((doc: any) => doc.statut === 'Approuvé').length,
+      enAttente: documentsData.filter((doc: any) => doc.statut === 'En révision' || doc.statut === 'Soumis pour visa').length
     };
-  }, [visasQuery.data]);
+  }, [documentsQuery.data]);
 
-  // Données de progression des fascicules (exemple statique)
-  const fasciculeProgress = useMemo(() => [
-    { nom: "Lot 1 - Génie Civil", progression: 75 },
-    { nom: "Lot 2 - Turbines", progression: 40 }
-  ], []);
+  // Données de progression des fascicules
+  const fasciculeProgress = useMemo(() => {
+    const fasciculesData = fasciculesQuery.data;
+    
+    if (!fasciculesData || !Array.isArray(fasciculesData)) return [];
+    
+    return fasciculesData.map(fascicule => ({
+      nom: fascicule.nom,
+      progression: fascicule.progression || 0
+    })).slice(0, 3); // Limiter à 3 pour l'affichage dans la vue d'aperçu
+  }, [fasciculesQuery.data]);
 
   // Préparer les documents récents
   const documentsRecents = useMemo(() => {
-    const versionsData = documentsQuery.data;
-    if (!versionsData || !Array.isArray(versionsData)) return [];
-    
-    return versionsData.slice(0, 3); // Limiter à 3 pour l'affichage
+    return documentsQuery.data || [];
   }, [documentsQuery.data]);
 
   // État de chargement global
-  const loading = marcheQuery.isLoading || visasQuery.isLoading || documentsQuery.isLoading;
+  const loading = marcheQuery.isLoading || visasQuery.isLoading || documentsQuery.isLoading || fasciculesQuery.isLoading;
 
   return {
     marche: marcheQuery.data,

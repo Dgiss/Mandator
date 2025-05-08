@@ -14,17 +14,27 @@ import {
   FormItem, 
   FormLabel, 
   FormControl, 
-  FormMessage
+  FormMessage,
+  FormDescription
 } from '@/components/ui/form';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Slider } from '@/components/ui/slider';
 import { Plus, Edit } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
+import { useQuery } from '@tanstack/react-query';
 
 interface Fascicule {
   id: string;
@@ -33,6 +43,7 @@ interface Fascicule {
   dateMaj: string;
   progression: number;
   description?: string;
+  marche_id: string;
 }
 
 interface FasciculeFormProps {
@@ -45,6 +56,9 @@ interface FasciculeFormProps {
 const fasciculeFormSchema = z.object({
   name: z.string().min(1, { message: 'Le nom est requis' }),
   description: z.string().min(1, { message: 'La description est requise' }),
+  marche_id: z.string().min(1, { message: 'Le marché est requis' }),
+  nombreDocuments: z.coerce.number().min(0).default(0),
+  progression: z.number().min(0).max(100).default(0)
 });
 
 type FasciculeFormValues = z.infer<typeof fasciculeFormSchema>;
@@ -58,24 +72,46 @@ const MarcheFasciculeForm: React.FC<FasciculeFormProps> = ({
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
 
+  // Récupérer la liste des marchés pour le dropdown
+  const { data: marches = [] } = useQuery({
+    queryKey: ['marches-for-select'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('marches')
+        .select('id, titre')
+        .order('titre');
+        
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
   const form = useForm<FasciculeFormValues>({
     resolver: zodResolver(fasciculeFormSchema),
     defaultValues: {
       name: '',
       description: '',
+      marche_id: marcheId,
+      nombreDocuments: 0,
+      progression: 0
     }
   });
 
-  // Update form when editing a fascicule
+  // Update form when editing a fascicule or when marcheId changes
   useEffect(() => {
     if (editingFascicule) {
       form.reset({
         name: editingFascicule.nom,
         description: editingFascicule.description || '',
+        marche_id: editingFascicule.marche_id || marcheId,
+        nombreDocuments: editingFascicule.nombreDocuments || 0,
+        progression: editingFascicule.progression || 0
       });
       setOpen(true);
+    } else if (marcheId) {
+      form.setValue('marche_id', marcheId);
     }
-  }, [editingFascicule, form]);
+  }, [editingFascicule, marcheId, form]);
 
   const onSubmit = async (values: FasciculeFormValues) => {
     const isEditing = !!editingFascicule;
@@ -85,9 +121,9 @@ const MarcheFasciculeForm: React.FC<FasciculeFormProps> = ({
       const fasciculeData = {
         nom: values.name,
         description: values.description,
-        marche_id: marcheId,
-        nombreDocuments: isEditing ? editingFascicule.nombreDocuments : 0,
-        progression: isEditing ? editingFascicule.progression : 0,
+        marche_id: values.marche_id,
+        nombreDocuments: values.nombreDocuments,
+        progression: values.progression,
         dateMaj: new Date().toLocaleDateString('fr-FR')
       };
       
@@ -194,6 +230,77 @@ const MarcheFasciculeForm: React.FC<FasciculeFormProps> = ({
                       placeholder="Description détaillée du fascicule..." 
                       className="min-h-[100px]" 
                       {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="marche_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Marché associé*</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner un marché" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {marches.map((marche: any) => (
+                        <SelectItem key={marche.id} value={marche.id}>
+                          {marche.titre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="nombreDocuments"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nombre de documents</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      min="0" 
+                      {...field} 
+                      onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Ce nombre sera mis à jour automatiquement lorsque des documents sont ajoutés
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="progression"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Progression ({field.value}%)</FormLabel>
+                  <FormControl>
+                    <Slider
+                      min={0}
+                      max={100}
+                      step={1}
+                      defaultValue={[field.value]}
+                      onValueChange={(values) => field.onChange(values[0])}
+                      className="pt-5 pb-1"
                     />
                   </FormControl>
                   <FormMessage />
