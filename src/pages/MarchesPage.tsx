@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
@@ -23,18 +23,26 @@ export default function MarchesPage() {
   const [error, setError] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState<number>(0);
 
-  // Chargement des marchés depuis Supabase
+  // Chargement des marchés depuis Supabase - optimisation avec un compteur de rendus
   useEffect(() => {
+    let isMounted = true;
+    
     const loadMarches = async () => {
+      if (!isMounted) return;
+      
       setLoading(true);
       setError(null);
       try {
         const data = await fetchMarches();
         
+        if (!isMounted) return;
+        
         console.log("Marchés chargés:", data);
         setMarches(data);
         setTotalCount(data.length);
       } catch (error) {
+        if (!isMounted) return;
+        
         console.error('Erreur lors du chargement des marchés:', error);
         setError("Impossible de récupérer la liste des marchés. Veuillez réessayer ultérieurement.");
         toast({
@@ -43,18 +51,27 @@ export default function MarchesPage() {
           variant: "destructive",
         });
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     loadMarches();
+    
+    // Nettoyage pour éviter les mises à jour sur un composant démonté
+    return () => {
+      isMounted = false;
+    };
   }, [toast]);
 
-  // Filtrer les marchés en fonction du terme de recherche
-  const filteredMarches = marches.filter(marche => 
-    marche.titre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (marche.client && marche.client.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Mémoisation de la liste filtrée pour éviter des re-rendus inutiles
+  const filteredMarches = useMemo(() => {
+    return marches.filter(marche => 
+      marche.titre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (marche.client && marche.client.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }, [marches, searchTerm]);
 
   const handleMarcheClick = (marcheId: string) => {
     navigate(`/marches/${marcheId}`);
@@ -94,8 +111,8 @@ export default function MarchesPage() {
     </Button>
   );
 
-  // Render loading skeleton
-  const renderLoadingSkeleton = () => (
+  // Render loading skeleton - optimisé pour éviter des re-rendus
+  const renderLoadingSkeleton = useMemo(() => (
     <TableRow>
       <TableCell colSpan={5}>
         <div className="space-y-3">
@@ -111,10 +128,10 @@ export default function MarchesPage() {
         </div>
       </TableCell>
     </TableRow>
-  );
+  ), []);
 
-  // Render error state
-  const renderError = () => (
+  // Render error state - optimisé pour éviter des re-rendus
+  const renderError = useMemo(() => error ? (
     <TableRow>
       <TableCell colSpan={5}>
         <Alert variant="destructive">
@@ -126,7 +143,7 @@ export default function MarchesPage() {
         </Alert>
       </TableCell>
     </TableRow>
-  );
+  ) : null, [error]);
 
   return (
     <PageLayout 
@@ -165,9 +182,9 @@ export default function MarchesPage() {
           </TableHeader>
           <TableBody>
             {loading ? (
-              renderLoadingSkeleton()
+              renderLoadingSkeleton
             ) : error ? (
-              renderError()
+              renderError
             ) : filteredMarches.length > 0 ? (
               filteredMarches.map((marche) => (
                 <TableRow 
