@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
@@ -54,9 +54,15 @@ export default function MarcheDetailPage() {
   const [dataLoaded, setDataLoaded] = useState(false); // Pour éviter les appels multiples
 
   // Récupération des données du marché et des statistiques
+  // Clé de mémorisation pour éviter des appels inutiles
+  const memoKey = useMemo(() => id || 'undefined', [id]);
+
   useEffect(() => {
     console.log("useEffect de MarcheDetailPage déclenché avec id:", id);
-    if (!id || dataLoaded) return;
+    if (!id) return;
+
+    // Si les données sont déjà chargées, ne pas les recharger
+    if (dataLoaded) return;
 
     let isMounted = true;
     
@@ -82,7 +88,6 @@ export default function MarcheDetailPage() {
         setVisasEnAttente(filteredVisas.slice(0, 3)); // Limiter à 3 pour l'affichage
 
         // Calculer les statistiques des documents
-        // Ces données seraient normalement récupérées via des requêtes spécifiques
         setDocumentStats({
           total: Array.isArray(visasData) ? visasData.length : 0,
           approuves: Array.isArray(visasData) ? visasData.filter((visa: any) => visa.statut === 'Approuvé').length : 0,
@@ -90,8 +95,6 @@ export default function MarcheDetailPage() {
         });
 
         // Récupérer les données de progression des fascicules
-        // Pour cet exemple, nous utiliserons des données simulées
-        // En production, ces données proviendraient d'une requête à la base de données
         const fascicules = [
           { nom: "Lot 1 - Génie Civil", progression: 75 },
           { nom: "Lot 2 - Turbines", progression: 40 }
@@ -131,7 +134,7 @@ export default function MarcheDetailPage() {
       console.log("Nettoyage de l'effet MarcheDetailPage");
       isMounted = false;
     };
-  }, [id, toast, dataLoaded]); // Ajout de dataLoaded comme dépendance pour éviter les rechargements
+  }, [memoKey, toast]); // Utiliser memoKey au lieu de id et dataLoaded
 
   // Fonction pour obtenir la couleur de statut (wrapped dans useCallback pour éviter les re-rendus inutiles)
   const getStatusColor = useCallback((statut: string) => {
