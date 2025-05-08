@@ -9,19 +9,7 @@ import { FileText, Search, Plus, Filter } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-
-// Type définition pour un marché
-interface Marche {
-  id: string;
-  titre: string;
-  description: string;
-  client: string;
-  statut: 'En cours' | 'Terminé' | 'En attente';
-  dateCreation: string;
-  budget: string;
-  image?: string;
-  user_id?: string;
-}
+import { Marche } from '@/services/types';
 
 export default function MarchesPage() {
   const navigate = useNavigate();
@@ -36,6 +24,7 @@ export default function MarchesPage() {
     const fetchMarches = async () => {
       setLoading(true);
       try {
+        console.log("Récupération des marchés...");
         // Utiliser le client Supabase typé pour accéder à la table marches
         const { data, error } = await supabase
           .from('marches')
@@ -43,8 +32,11 @@ export default function MarchesPage() {
           .order('datecreation', { ascending: false });
         
         if (error) {
+          console.error("Erreur Supabase lors de la récupération des marchés:", error);
           throw error;
         }
+        
+        console.log("Données brutes reçues:", data);
         
         // Formater les données pour correspondre au type Marche
         const formattedMarches = data.map((marche: any) => ({
@@ -52,13 +44,17 @@ export default function MarchesPage() {
           titre: marche.titre,
           description: marche.description || '',
           client: marche.client || '',
-          statut: marche.statut as 'En cours' | 'Terminé' | 'En attente',
-          dateCreation: marche.datecreation ? new Date(marche.datecreation).toLocaleDateString('fr-FR') : '',
+          statut: marche.statut,
+          datecreation: marche.datecreation ? new Date(marche.datecreation).toLocaleDateString('fr-FR') : '',
           budget: marche.budget || '',
           image: marche.image,
-          user_id: marche.user_id
+          logo: marche.logo,
+          reference: marche.reference,
+          user_id: marche.user_id,
+          created_at: marche.created_at
         }));
         
+        console.log("Marchés formatés:", formattedMarches);
         setMarches(formattedMarches);
       } catch (error) {
         console.error('Erreur lors du chargement des marchés:', error);
@@ -78,7 +74,7 @@ export default function MarchesPage() {
   // Filtrer les marchés en fonction du terme de recherche
   const filteredMarches = marches.filter(marche => 
     marche.titre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    marche.client.toLowerCase().includes(searchTerm.toLowerCase())
+    (marche.client && marche.client.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const handleMarcheClick = (marcheId: string) => {
@@ -89,7 +85,7 @@ export default function MarchesPage() {
     navigate('/marches/creation');
   };
 
-  const getStatusColor = (statut: 'En cours' | 'Terminé' | 'En attente') => {
+  const getStatusColor = (statut: string) => {
     switch(statut) {
       case 'En cours': return 'bg-btp-blue';
       case 'Terminé': return 'bg-btp-success';
@@ -170,7 +166,7 @@ export default function MarchesPage() {
                     </div>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{marche.client}</TableCell>
-                  <TableCell className="hidden md:table-cell">{marche.dateCreation}</TableCell>
+                  <TableCell className="hidden md:table-cell">{marche.datecreation}</TableCell>
                   <TableCell className="hidden md:table-cell">{marche.budget}</TableCell>
                   <TableCell>
                     <div className="flex items-center">

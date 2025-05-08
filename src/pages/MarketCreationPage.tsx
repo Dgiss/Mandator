@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/layout/PageLayout';
@@ -13,6 +12,7 @@ import useFormOperations from '@/hooks/use-form-operations';
 import { Image, Upload, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { Marche } from '@/services/types';
 
 export default function MarketCreationPage() {
   const navigate = useNavigate();
@@ -22,9 +22,10 @@ export default function MarketCreationPage() {
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const marketFormSchema = {
-    title: {
+    titre: {
       required: true,
       minLength: 5,
       errorMessage: "Le titre est requis et doit comporter au moins 5 caractères"
@@ -43,13 +44,6 @@ export default function MarketCreationPage() {
       min: 1000,
       errorMessage: "Le budget doit être un nombre supérieur à 1000"
     },
-    startDate: {
-      required: true,
-      errorMessage: "La date de début est requise"
-    },
-    endDate: {
-      required: false
-    },
     description: {
       required: true,
       minLength: 20,
@@ -65,12 +59,10 @@ export default function MarketCreationPage() {
     isSubmitting,
     setFieldValue
   } = useFormOperations({
-    title: '',
+    titre: '',
     reference: '',
     client: '',
     budget: '',
-    startDate: '',
-    endDate: '',
     description: '',
     hasAttachments: false,
     isPublic: false
@@ -163,6 +155,9 @@ export default function MarketCreationPage() {
       return;
     }
 
+    setSubmitting(true);
+    console.log("Début de création du marché");
+    
     try {
       // Télécharger les images si elles existent
       let coverImagePath = null;
@@ -176,9 +171,10 @@ export default function MarketCreationPage() {
         logoPath = await uploadImage(logoFile, 'logos');
       }
       
-      // Préparer les données pour Supabase
-      const marcheData = {
-        titre: data.title,
+      // Préparer les données pour Supabase - assurez-vous que les noms correspondent
+      // exactement aux colonnes dans la base de données
+      const marcheData: Partial<Marche> = {
+        titre: data.titre,
         description: data.description,
         client: data.client,
         statut: 'En attente',
@@ -192,16 +188,18 @@ export default function MarketCreationPage() {
       
       console.log("Données du marché à insérer:", marcheData);
 
-      // Insérer le marché dans la base de données en utilisant le client typé
+      // Insérer le marché dans la base de données
       const { data: newMarche, error } = await supabase
         .from('marches')
         .insert([marcheData])
         .select();
       
       if (error) {
-        console.error('Erreur détaillée:', error);
+        console.error('Erreur détaillée lors de la création du marché:', error);
         throw error;
       }
+      
+      console.log("Marché créé avec succès:", newMarche);
       
       toast({
         title: "Marché créé avec succès",
@@ -222,6 +220,8 @@ export default function MarketCreationPage() {
         description: error.message || "Une erreur s'est produite lors de la création du marché",
         variant: "destructive"
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -313,16 +313,16 @@ export default function MarketCreationPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label htmlFor="title" className="text-sm font-medium">Titre du marché*</label>
+                <label htmlFor="titre" className="text-sm font-medium">Titre du marché*</label>
                 <Input
-                  id="title"
-                  name="title"
-                  value={values.title}
+                  id="titre"
+                  name="titre"
+                  value={values.titre}
                   onChange={handleChange}
                   placeholder="Ex: Construction d'une école primaire"
-                  className={errors.title ? "border-red-500" : ""}
+                  className={errors.titre ? "border-red-500" : ""}
                 />
-                {errors.title && <p className="text-sm text-red-500">{errors.title}</p>}
+                {errors.titre && <p className="text-sm text-red-500">{errors.titre}</p>}
               </div>
 
               <div className="space-y-2">
@@ -363,32 +363,6 @@ export default function MarketCreationPage() {
                   className={errors.budget ? "border-red-500" : ""}
                 />
                 {errors.budget && <p className="text-sm text-red-500">{errors.budget}</p>}
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="startDate" className="text-sm font-medium">Date de début*</label>
-                <Input
-                  id="startDate"
-                  name="startDate"
-                  type="date"
-                  value={values.startDate}
-                  onChange={handleChange}
-                  className={errors.startDate ? "border-red-500" : ""}
-                />
-                {errors.startDate && <p className="text-sm text-red-500">{errors.startDate}</p>}
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="endDate" className="text-sm font-medium">Date de fin (estimée)</label>
-                <Input
-                  id="endDate"
-                  name="endDate"
-                  type="date"
-                  value={values.endDate}
-                  onChange={handleChange}
-                  className={errors.endDate ? "border-red-500" : ""}
-                />
-                {errors.endDate && <p className="text-sm text-red-500">{errors.endDate}</p>}
               </div>
 
               <div className="space-y-2 md:col-span-2">
@@ -440,8 +414,12 @@ export default function MarketCreationPage() {
               <Button variant="outline" onClick={() => navigate('/marches')}>
                 Annuler
               </Button>
-              <Button type="submit" variant="btpPrimary" disabled={isSubmitting}>
-                {isSubmitting ? "Enregistrement..." : "Créer le marché"}
+              <Button 
+                type="submit" 
+                variant="btpPrimary" 
+                disabled={isSubmitting || submitting}
+              >
+                {isSubmitting || submitting ? "Enregistrement..." : "Créer le marché"}
               </Button>
             </div>
           </form>

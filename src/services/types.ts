@@ -1,5 +1,4 @@
 
-
 export interface Version {
   id: string;
   document_id: string;
@@ -55,7 +54,7 @@ export interface Marche {
   description?: string | null;
   client?: string | null;
   statut: string;
-  datecreation?: string | null;
+  datecreation?: string | null;  // Ensure this matches the database column name
   budget?: string | null;
   image?: string | null;
   reference?: string | null;
@@ -63,4 +62,3 @@ export interface Marche {
   user_id?: string | null;
   created_at?: string | null;
 }
-
