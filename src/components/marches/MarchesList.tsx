@@ -38,38 +38,6 @@ const MarchesList: React.FC<MarchesListProps> = ({
     }
   };
 
-  // Render loading skeleton
-  const renderLoadingSkeleton = (
-    <TableRow>
-      <TableCell colSpan={5} className="p-0">
-        <div className="space-y-3 p-4">
-          {Array(5).fill(0).map((_, index) => (
-            <div key={index} className="flex items-center space-x-4">
-              <Skeleton className="h-12 w-12 rounded-md" />
-              <div className="space-y-2 flex-1">
-                <Skeleton className="h-4 w-[250px]" />
-                <Skeleton className="h-4 w-[200px]" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </TableCell>
-    </TableRow>
-  );
-
-  // Render error state
-  const renderError = error ? (
-    <TableRow>
-      <TableCell colSpan={5}>
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Erreur</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      </TableCell>
-    </TableRow>
-  ) : null;
-
   // Debug output
   console.log("MarchesList - Props received:", { 
     marchesCount: marches ? marches.length : 0, 
@@ -77,6 +45,72 @@ const MarchesList: React.FC<MarchesListProps> = ({
     error,
     marchesData: marches
   });
+
+  // Render loading skeleton
+  if (loading) {
+    return (
+      <div className="rounded-lg border shadow bg-white overflow-hidden">
+        <Table>
+          <TableHeader className="bg-gray-50">
+            <TableRow>
+              <TableHead>Marché</TableHead>
+              <TableHead className="hidden md:table-cell">Client</TableHead>
+              <TableHead className="hidden md:table-cell">Date</TableHead>
+              <TableHead className="hidden md:table-cell">Budget</TableHead>
+              <TableHead>Statut</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow>
+              <TableCell colSpan={5} className="p-0">
+                <div className="space-y-3 p-4">
+                  {Array(5).fill(0).map((_, index) => (
+                    <div key={index} className="flex items-center space-x-4">
+                      <Skeleton className="h-12 w-12 rounded-md" />
+                      <div className="space-y-2 flex-1">
+                        <Skeleton className="h-4 w-[250px]" />
+                        <Skeleton className="h-4 w-[200px]" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
+    );
+  }
+
+  // Render error state
+  if (error) {
+    return (
+      <div className="rounded-lg border shadow bg-white overflow-hidden">
+        <Table>
+          <TableHeader className="bg-gray-50">
+            <TableRow>
+              <TableHead>Marché</TableHead>
+              <TableHead className="hidden md:table-cell">Client</TableHead>
+              <TableHead className="hidden md:table-cell">Date</TableHead>
+              <TableHead className="hidden md:table-cell">Budget</TableHead>
+              <TableHead>Statut</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow>
+              <TableCell colSpan={5}>
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Erreur</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-lg border shadow bg-white overflow-hidden">
@@ -91,11 +125,7 @@ const MarchesList: React.FC<MarchesListProps> = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {loading ? (
-            renderLoadingSkeleton
-          ) : error ? (
-            renderError
-          ) : marches.length > 0 ? (
+          {marches.length > 0 ? (
             marches.map((marche) => (
               <TableRow 
                 key={marche.id} 
@@ -125,14 +155,14 @@ const MarchesList: React.FC<MarchesListProps> = ({
           ) : (
             <TableRow>
               <TableCell colSpan={5} className="h-24 text-center">
-                {marches.length === 0 ? "Aucun marché trouvé. Cliquez sur 'Nouveau marché' pour en créer un." : "Aucun résultat trouvé pour votre recherche."}
+                {loading ? "Chargement..." : "Aucun marché trouvé. Cliquez sur 'Nouveau marché' pour en créer un."}
               </TableCell>
             </TableRow>
           )}
         </TableBody>
       </Table>
       
-      {!loading && !error && marches.length > 0 && (
+      {marches.length > 0 && (
         <div className="flex justify-between items-center p-4 bg-gray-50 text-sm text-gray-500 border-t">
           <div>Total dans la base: <span className="font-medium">{marches.length} marchés</span></div>
           <div>Affichés: <span className="font-medium">{marches.length} marchés</span></div>
