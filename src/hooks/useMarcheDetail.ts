@@ -64,13 +64,16 @@ export const useMarcheDetail = (id: string | undefined): UseMarcheDetailReturn =
     enabled: !!id,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 1,
-    onError: (error) => {
-      console.error("Erreur lors du chargement des données du marché:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les données du marché",
-        variant: "destructive",
-      });
+    // Remove onError property and use onSettled instead
+    onSettled: (data, error) => {
+      if (error) {
+        console.error("Erreur lors du chargement des données du marché:", error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les données du marché",
+          variant: "destructive",
+        });
+      }
     }
   });
 
