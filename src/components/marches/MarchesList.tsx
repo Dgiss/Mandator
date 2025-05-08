@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { FileText } from 'lucide-react';
 import { Marche } from '@/services/types';
@@ -70,6 +69,14 @@ const MarchesList: React.FC<MarchesListProps> = ({
       </TableCell>
     </TableRow>
   ) : null;
+
+  // Debug output
+  console.log("MarchesList - Props received:", { 
+    marchesCount: marches ? marches.length : 0, 
+    loading, 
+    error,
+    marchesData: marches
+  });
 
   return (
     <div className="rounded-lg border shadow bg-white overflow-hidden">
