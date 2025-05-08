@@ -1,4 +1,5 @@
 
+
 export interface Version {
   id: string;
   document_id: string;
@@ -47,3 +48,19 @@ export interface UserProfile {
   entreprise?: string | null;
   role_utilisateur?: string | null;
 }
+
+export interface Marche {
+  id: string;
+  titre: string;
+  description?: string | null;
+  client?: string | null;
+  statut: string;
+  datecreation?: string | null;
+  budget?: string | null;
+  image?: string | null;
+  reference?: string | null;
+  logo?: string | null;
+  user_id?: string | null;
+  created_at?: string | null;
+}
+

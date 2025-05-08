@@ -40,7 +40,7 @@ export default function MarchesPage() {
         const { data, error } = await supabase
           .from('marches')
           .select('*')
-          .order('dateCreation', { ascending: false });
+          .order('datecreation', { ascending: false });
         
         if (error) {
           throw error;
@@ -53,7 +53,7 @@ export default function MarchesPage() {
           description: marche.description || '',
           client: marche.client || '',
           statut: marche.statut as 'En cours' | 'Terminé' | 'En attente',
-          dateCreation: new Date(marche.dateCreation).toLocaleDateString('fr-FR'),
+          dateCreation: marche.datecreation ? new Date(marche.datecreation).toLocaleDateString('fr-FR') : '',
           budget: marche.budget || '',
           image: marche.image,
           user_id: marche.user_id
