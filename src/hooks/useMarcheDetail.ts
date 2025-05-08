@@ -64,9 +64,9 @@ export const useMarcheDetail = (id: string | undefined): UseMarcheDetailReturn =
     enabled: !!id,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 1,
-    // Remove onError property and use onSettled instead
-    onSettled: (data, error) => {
-      if (error) {
+    // Use meta to handle errors
+    meta: {
+      onError: (error: Error) => {
         console.error("Erreur lors du chargement des données du marché:", error);
         toast({
           title: "Erreur",

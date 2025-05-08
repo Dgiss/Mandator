@@ -360,7 +360,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
                   <FormLabel>Fascicule (optionnel)</FormLabel>
                   <Select 
                     onValueChange={field.onChange} 
-                    value={field.value || ''}
+                    value={field.value || undefined}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -368,7 +368,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">Aucun fascicule</SelectItem>
+                      <SelectItem value="none">Aucun fascicule</SelectItem>
                       {fascicules.map(fascicule => (
                         <SelectItem key={fascicule.id} value={fascicule.id}>
                           {fascicule.nom}
