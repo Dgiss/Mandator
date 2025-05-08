@@ -1,3 +1,4 @@
+
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -83,8 +84,5 @@ const App = () => {
     </QueryClientProvider>
   );
 };
-
-// Vérifier et créer les buckets de stockage nécessaires au démarrage de l'application
-ensureStorageBucketsExist().catch(console.error);
 
 export default App;
