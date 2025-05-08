@@ -17,7 +17,6 @@ import { cn } from '@/lib/utils';
 interface MarcheCreationFormProps {
   values: {
     titre: string;
-    reference: string;
     client: string;
     budget: string;
     description: string;
@@ -93,19 +92,6 @@ const MarcheCreationForm: React.FC<MarcheCreationFormProps> = ({
             className={errors.titre ? "border-red-500" : ""}
           />
           {errors.titre && <p className="text-sm text-red-500">{errors.titre}</p>}
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="reference" className="text-sm font-medium">Référence*</label>
-          <Input
-            id="reference"
-            name="reference"
-            value={values.reference}
-            onChange={handleChange}
-            placeholder="Ex: MP-2023-045"
-            className={errors.reference ? "border-red-500" : ""}
-          />
-          {errors.reference && <p className="text-sm text-red-500">{errors.reference}</p>}
         </div>
 
         <div className="space-y-2">
