@@ -5,11 +5,13 @@ import PageLayout from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
-import { FileText, Search, Plus, Filter } from 'lucide-react';
+import { FileText, Search, Plus, Filter, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { Marche } from '@/services/types';
 import { fetchMarches } from '@/services/marchesService';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function MarchesPage() {
   const navigate = useNavigate();
@@ -18,18 +20,23 @@ export default function MarchesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [marches, setMarches] = useState<Marche[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [totalCount, setTotalCount] = useState<number>(0);
 
   // Chargement des marchés depuis Supabase
   useEffect(() => {
     const loadMarches = async () => {
       setLoading(true);
+      setError(null);
       try {
         const data = await fetchMarches();
         
         console.log("Marchés chargés:", data);
         setMarches(data);
+        setTotalCount(data.length);
       } catch (error) {
         console.error('Erreur lors du chargement des marchés:', error);
+        setError("Impossible de récupérer la liste des marchés. Veuillez réessayer ultérieurement.");
         toast({
           title: "Erreur",
           description: "Impossible de récupérer la liste des marchés",
@@ -87,10 +94,44 @@ export default function MarchesPage() {
     </Button>
   );
 
+  // Render loading skeleton
+  const renderLoadingSkeleton = () => (
+    <TableRow>
+      <TableCell colSpan={5}>
+        <div className="space-y-3">
+          {Array(5).fill(0).map((_, index) => (
+            <div key={index} className="flex items-center space-x-4">
+              <Skeleton className="h-12 w-12 rounded-md" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-[250px]" />
+                <Skeleton className="h-4 w-[200px]" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+
+  // Render error state
+  const renderError = () => (
+    <TableRow>
+      <TableCell colSpan={5}>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Erreur</AlertTitle>
+          <AlertDescription>
+            {error}
+          </AlertDescription>
+        </Alert>
+      </TableCell>
+    </TableRow>
+  );
+
   return (
     <PageLayout 
       title="Gestion des Marchés" 
-      description="Consultez et gérez l'ensemble de vos marchés publics"
+      description={`Consultez et gérez l'ensemble de vos marchés publics (${totalCount} marchés au total)`}
       actions={pageActions}
     >
       <div className="mb-6 flex flex-col sm:flex-row justify-between gap-4">
@@ -124,13 +165,9 @@ export default function MarchesPage() {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
-                  <div className="flex justify-center items-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-btp-blue"></div>
-                  </div>
-                </TableCell>
-              </TableRow>
+              renderLoadingSkeleton()
+            ) : error ? (
+              renderError()
             ) : filteredMarches.length > 0 ? (
               filteredMarches.map((marche) => (
                 <TableRow 
@@ -169,6 +206,13 @@ export default function MarchesPage() {
             )}
           </TableBody>
         </Table>
+        
+        {!loading && !error && filteredMarches.length > 0 && (
+          <div className="flex justify-between items-center p-4 bg-gray-50 text-sm text-gray-500 border-t">
+            <div>Total: <span className="font-medium">{totalCount} marchés</span></div>
+            <div>Affichés: <span className="font-medium">{filteredMarches.length} marchés</span></div>
+          </div>
+        )}
       </div>
     </PageLayout>
   );
