@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -5,6 +6,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import ImageUpload from './ImageUpload';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { CalendarIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface MarcheCreationFormProps {
   values: {
@@ -15,6 +23,8 @@ interface MarcheCreationFormProps {
     description: string;
     hasAttachments: boolean;
     isPublic: boolean;
+    datecreation: Date | undefined;
+    statut: string;
   };
   errors: Record<string, string>;
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
@@ -44,6 +54,8 @@ const MarcheCreationForm: React.FC<MarcheCreationFormProps> = ({
   onSubmit
 }) => {
   const navigate = useNavigate();
+
+  const statuts = ["En attente", "En cours", "Terminé"];
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -121,6 +133,56 @@ const MarcheCreationForm: React.FC<MarcheCreationFormProps> = ({
             className={errors.budget ? "border-red-500" : ""}
           />
           {errors.budget && <p className="text-sm text-red-500">{errors.budget}</p>}
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="datecreation" className="text-sm font-medium">Date de création</label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !values.datecreation && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {values.datecreation ? (
+                  format(values.datecreation, 'P', { locale: fr })
+                ) : (
+                  <span>Sélectionner une date</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={values.datecreation}
+                onSelect={(date) => setFieldValue('datecreation', date)}
+                initialFocus
+                locale={fr}
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="statut" className="text-sm font-medium">Statut</label>
+          <Select 
+            value={values.statut} 
+            onValueChange={(value) => setFieldValue('statut', value)}
+          >
+            <SelectTrigger id="statut">
+              <SelectValue placeholder="Sélectionner un statut" />
+            </SelectTrigger>
+            <SelectContent>
+              {statuts.map((statut) => (
+                <SelectItem key={statut} value={statut}>
+                  {statut}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2 md:col-span-2">

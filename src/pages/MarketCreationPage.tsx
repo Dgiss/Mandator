@@ -67,7 +67,9 @@ export default function MarketCreationPage() {
     budget: '',
     description: '',
     hasAttachments: false,
-    isPublic: false
+    isPublic: false,
+    datecreation: undefined,
+    statut: 'En attente'
   }, marketFormSchema);
 
   const onSubmit = async (data: any) => {
@@ -100,18 +102,21 @@ export default function MarketCreationPage() {
         console.log("Logo téléchargé:", logoPath);
       }
       
+      // Formatage de la date si elle existe
+      const formattedDate = data.datecreation ? new Date(data.datecreation).toISOString() : null;
+      
       // Créer un objet qui correspond exactement à ce que Supabase attend
-      // S'assurer que le champ 'titre' est toujours présent car il est requis
       const marcheData = {
-        titre: data.titre,  // Champ requis
+        titre: data.titre,
         description: data.description,
         client: data.client,
-        statut: 'En attente',
+        statut: data.statut,
         budget: `${data.budget} €`,
         image: coverImagePath,
         logo: logoPath,
         user_id: user.id,
-        reference: data.reference
+        reference: data.reference,
+        datecreation: formattedDate
       };
       
       console.log("Données du marché à insérer:", marcheData);
