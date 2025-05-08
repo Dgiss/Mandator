@@ -1,15 +1,22 @@
 
 import React from 'react';
-import { Card } from '@/components/ui/card';
-import { File, Calendar } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { FileText, ArrowRight } from 'lucide-react';
 
 interface Document {
   id: string;
   nom: string;
   type: string;
   statut: string;
-  dateUpload?: string | null;
-  created_at?: string | null;
+  version: string;
+  dateUpload?: string;
+  taille?: string;
+  description?: string;
+  fascicule_id?: string;
+  marche_id: string;
+  created_at?: string;
+  file_path?: string;
 }
 
 interface DocumentsRecentsCardProps {
@@ -18,65 +25,54 @@ interface DocumentsRecentsCardProps {
   onViewAllClick: (e: React.MouseEvent) => void;
 }
 
-const DocumentsRecentsCard: React.FC<DocumentsRecentsCardProps> = ({ 
-  documentsRecents, 
+const DocumentsRecentsCard: React.FC<DocumentsRecentsCardProps> = ({
+  documentsRecents,
   formatDate,
-  onViewAllClick 
+  onViewAllClick
 }) => {
-  // Fonction pour obtenir une couleur pour le type de document
-  const getTypeColor = (type: string) => {
-    switch(type.toUpperCase()) {
-      case 'PDF': return 'text-red-500';
-      case 'DOC': case 'DOCX': return 'text-blue-500';
-      case 'XLS': case 'XLSX': return 'text-green-500';
-      case 'PPT': case 'PPTX': return 'text-orange-500';
-      case 'DWG': return 'text-purple-500';
-      default: return 'text-gray-500';
+  // Get document icon based on type
+  const getDocumentIcon = (type: string) => {
+    switch(type.toLowerCase()) {
+      case 'pdf': return <FileText className="h-5 w-5 text-red-500" />;
+      case 'doc': return <FileText className="h-5 w-5 text-blue-500" />;
+      case 'xls': return <FileText className="h-5 w-5 text-green-500" />;
+      default: return <FileText className="h-5 w-5 text-gray-500" />;
     }
   };
 
   return (
-    <Card className="p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xl font-semibold">Documents Récents</h3>
-        <a href="#" 
-           onClick={onViewAllClick} 
-           className="text-btp-blue text-sm hover:underline">
-          Voir tout
-        </a>
-      </div>
-      
-      <div className="space-y-4">
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-xl font-semibold">Documents Récents</CardTitle>
+        <Button variant="ghost" size="sm" className="h-8 px-2 text-btp-blue" onClick={onViewAllClick}>
+          Voir tout <ArrowRight className="ml-1 h-4 w-4" />
+        </Button>
+      </CardHeader>
+      <CardContent>
         {documentsRecents.length > 0 ? (
-          documentsRecents.map((doc) => (
-            <div key={doc.id} className="flex items-start">
-              <div className="bg-gray-100 p-2 rounded mr-3">
-                <File className={`h-5 w-5 ${getTypeColor(doc.type)}`} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-medium truncate">{doc.nom}</h4>
-                <div className="flex items-center text-xs text-gray-500 mt-1">
-                  <Calendar className="h-3 w-3 mr-1" />
-                  <span>{formatDate(doc.dateUpload || doc.created_at)}</span>
+          <ul className="space-y-4">
+            {documentsRecents.map((doc) => (
+              <li key={doc.id} className="flex items-start">
+                <div className="mr-3 mt-0.5">
+                  {getDocumentIcon(doc.type)}
                 </div>
-              </div>
-              <div className="ml-2">
-                <span className={`px-2 py-0.5 text-xs rounded-full ${
-                  doc.statut === 'Approuvé' ? 'bg-green-100 text-green-800' : 
-                  doc.statut === 'En révision' ? 'bg-amber-100 text-amber-800' : 
-                  'bg-blue-100 text-blue-800'
-                }`}>
-                  {doc.statut}
-                </span>
-              </div>
-            </div>
-          ))
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900">{doc.nom}</h4>
+                  <div className="flex flex-wrap gap-2 mt-1 text-sm text-gray-500">
+                    <span>Version {doc.version}</span>
+                    <span>·</span>
+                    <span>{formatDate(doc.created_at || null)}</span>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
         ) : (
-          <p className="text-center py-4 text-gray-500">
-            Aucun document récent
-          </p>
+          <div className="text-center py-6">
+            <p className="text-gray-500">Aucun document récent</p>
+          </div>
         )}
-      </div>
+      </CardContent>
     </Card>
   );
 };

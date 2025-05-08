@@ -1,7 +1,5 @@
 
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 
 import HomePage from "./pages/HomePage"; 
@@ -18,21 +16,12 @@ import { AppSettingsProvider } from "./contexts/AppSettingsContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import PrivateRoute from "./components/auth/PrivateRoute";
 import { trackPageView } from "./utils/analytics";
-
-// Create query client with enhanced configuration
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      retry: 1,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes
-    },
-  },
-});
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
 // Router change handler component
 const RouterChangeHandler = () => {
+  const location = useLocation();
+  
   useEffect(() => {
     // Scroll to top on route change
     window.scrollTo(0, 0);
@@ -49,35 +38,31 @@ const RouterChangeHandler = () => {
 // Application main component with properly nested providers
 const App = () => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AppSettingsProvider>
-        <AuthProvider>
-          <CRMProvider>
-            <BrowserRouter>
-              <TooltipProvider>
-                <RouterChangeHandler />
-                <Routes>
-                  <Route path="/" element={<Navigate to="/home" replace />} />
-                  <Route path="/auth" element={<AuthPage />} />
-                  <Route path="/home" element={<PrivateRoute><HomePage /></PrivateRoute>} />
-                  <Route path="/marches" element={<PrivateRoute><MarchesPage /></PrivateRoute>} />
-                  <Route path="/marches/:id" element={<PrivateRoute><MarcheDetailPage /></PrivateRoute>} />
-                  <Route path="/marches/creation" element={<PrivateRoute><MarketCreationPage /></PrivateRoute>} />
-                  <Route path="/questions-reponses" element={<PrivateRoute><QuestionsReponsesPage /></PrivateRoute>} />
-                  <Route path="/parametres" element={
-                    <PrivateRoute>
-                      <div className="container mx-auto p-6"><h1 className="text-2xl font-bold">Paramètres</h1></div>
-                    </PrivateRoute>
-                  } />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-                <Toaster />
-              </TooltipProvider>
-            </BrowserRouter>
-          </CRMProvider>
-        </AuthProvider>
-      </AppSettingsProvider>
-    </QueryClientProvider>
+    <AppSettingsProvider>
+      <AuthProvider>
+        <CRMProvider>
+          <TooltipProvider>
+            <RouterChangeHandler />
+            <Routes>
+              <Route path="/" element={<Navigate to="/home" replace />} />
+              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/home" element={<PrivateRoute><HomePage /></PrivateRoute>} />
+              <Route path="/marches" element={<PrivateRoute><MarchesPage /></PrivateRoute>} />
+              <Route path="/marches/:id" element={<PrivateRoute><MarcheDetailPage /></PrivateRoute>} />
+              <Route path="/marches/creation" element={<PrivateRoute><MarketCreationPage /></PrivateRoute>} />
+              <Route path="/questions-reponses" element={<PrivateRoute><QuestionsReponsesPage /></PrivateRoute>} />
+              <Route path="/parametres" element={
+                <PrivateRoute>
+                  <div className="container mx-auto p-6"><h1 className="text-2xl font-bold">Paramètres</h1></div>
+                </PrivateRoute>
+              } />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <Toaster />
+          </TooltipProvider>
+        </CRMProvider>
+      </AuthProvider>
+    </AppSettingsProvider>
   );
 };
 

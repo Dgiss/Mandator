@@ -17,18 +17,26 @@ interface FasciculeProgress {
   progression: number;
 }
 
-interface DocumentRecent {
+interface Document {
   id: string;
-  document_id: string;
+  nom: string;
+  type: string;
+  statut: string;
   version: string;
-  date_creation: string | null;
+  dateUpload?: string;
+  taille?: string;
+  description?: string;
+  fascicule_id?: string;
+  marche_id: string;
+  created_at?: string;
+  file_path?: string;
 }
 
 interface MarcheApercuContentProps {
   documentStats: DocumentStats;
   visasEnAttente: Visa[];
   fasciculeProgress: FasciculeProgress[];
-  documentsRecents: DocumentRecent[];
+  documentsRecents: Document[];
   formatDate: (dateString: string | null) => string;
   setActiveTab: (tab: string) => void;
 }

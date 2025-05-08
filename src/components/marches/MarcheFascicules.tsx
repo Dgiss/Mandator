@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ interface Fascicule {
   dateMaj: string;
   progression: number;
   description?: string;
+  marche_id: string;
 }
 
 export default function MarcheFascicules({ marcheId }: MarcheFasciculesProps) {
@@ -50,7 +52,8 @@ export default function MarcheFascicules({ marcheId }: MarcheFasciculesProps) {
         nombreDocuments: fascicule.nombreDocuments || 0,
         dateMaj: fascicule.dateMaj || new Date().toLocaleDateString('fr-FR'),
         progression: fascicule.progression || 0,
-        description: fascicule.description
+        description: fascicule.description,
+        marche_id: fascicule.marche_id
       }));
       
       setFascicules(formattedData);

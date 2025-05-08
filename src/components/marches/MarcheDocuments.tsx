@@ -30,6 +30,7 @@ interface Document {
   taille: string;
   description?: string;
   fasciculeId?: string;
+  marche_id: string;
 }
 
 export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
@@ -59,7 +60,8 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
         dateUpload: doc.dateUpload || new Date().toLocaleDateString('fr-FR'),
         taille: doc.taille || '0 KB',
         description: doc.description,
-        fasciculeId: doc.fascicule_id
+        fasciculeId: doc.fascicule_id,
+        marche_id: doc.marche_id
       }));
       
       setDocuments(formattedData);
