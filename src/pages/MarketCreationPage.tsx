@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/layout/PageLayout';
@@ -192,10 +193,10 @@ export default function MarketCreationPage() {
         console.log("Logo téléchargé:", logoPath);
       }
       
-      // Fix the TypeScript error by explicitly creating an object with the required properties
-      // Ensure that titre is explicitly provided since it's required
+      // Créer un objet qui correspond exactement à ce que Supabase attend
+      // S'assurer que le champ 'titre' est toujours présent car il est requis
       const marcheData = {
-        titre: data.titre, // This is required
+        titre: data.titre,  // Champ requis
         description: data.description,
         client: data.client,
         statut: 'En attente',

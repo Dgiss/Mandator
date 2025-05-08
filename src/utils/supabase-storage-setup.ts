@@ -22,7 +22,7 @@ export const ensureStorageBucketsExist = async (): Promise<void> => {
     if (!buckets || !buckets.find(bucket => bucket.name === 'marches')) {
       console.log('Création du bucket marches...');
       
-      // Créer le bucket avec le moins d'options possibles pour éviter les erreurs
+      // Créer le bucket en le définissant comme public pour faciliter l'accès aux fichiers
       const { error: createError } = await supabase.storage.createBucket('marches', {
         public: true
       });
