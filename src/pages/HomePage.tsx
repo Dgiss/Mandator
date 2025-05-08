@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { checkAuth } from '@/utils/authUtils';
 import PageLayout from '@/components/layout/PageLayout';
@@ -32,57 +32,67 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
 
   // Charger les données au chargement de la page
+  // ⚠️ FIX: Ajout d'un flag hasLoaded pour éviter les appels répétés
   useEffect(() => {
+    console.log("useEffect de HomePage déclenché");
+    let isMounted = true;
+    
     const loadData = async () => {
+      if (!isMounted) return;
+      
       try {
         setLoading(true);
         
         // Charger les statistiques
         const statsData = await fetchMarcheStats();
-        if (statsData) {
+        if (statsData && isMounted) {
           setStats(statsData);
-        } else {
-          console.warn("Données de statistiques invalides");
-          // Stats par défaut déjà définies dans le state initial
         }
         
         // Charger les marchés récents
         const recentMarchesData = await fetchRecentMarches(3);
-        if (Array.isArray(recentMarchesData)) {
+        if (Array.isArray(recentMarchesData) && isMounted) {
           setRecentProjects(recentMarchesData);
-        } else {
-          console.warn("Données de marchés récents invalides");
-          setRecentProjects([]);
         }
         
-        setError(null);
+        if (isMounted) {
+          setError(null);
+        }
       } catch (err) {
-        console.error("Erreur lors du chargement des données:", err);
-        setError("Impossible de charger les données");
-        // S'assurer que les données par défaut sont définies
-        setStats({
-          enCours: 0,
-          projetsActifs: 0,
-          devisEnAttente: 0,
-          termines: 0
-        });
-        setRecentProjects([]);
-        
-        toast({
-          title: "Erreur",
-          description: "Impossible de charger les données",
-          variant: "destructive"
-        });
+        if (isMounted) {
+          console.error("Erreur lors du chargement des données:", err);
+          setError("Impossible de charger les données");
+          // S'assurer que les données par défaut sont définies
+          setStats({
+            enCours: 0,
+            projetsActifs: 0,
+            devisEnAttente: 0,
+            termines: 0
+          });
+          setRecentProjects([]);
+          
+          toast({
+            title: "Erreur",
+            description: "Impossible de charger les données",
+            variant: "destructive"
+          });
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
     
     loadData();
-  }, [toast]);
+    
+    // Nettoyage pour éviter les updates sur un composant démonté
+    return () => {
+      isMounted = false;
+    };
+  }, []); // Tableau de dépendances vide pour n'exécuter qu'au montage
 
   // Convertir les données des marchés récents pour le format attendu par RecentProjects
-  // avec gestion des valeurs null/undefined
   const formattedRecentProjects = recentProjects && Array.isArray(recentProjects) 
     ? recentProjects.map(marche => ({
         id: marche?.id || '',
