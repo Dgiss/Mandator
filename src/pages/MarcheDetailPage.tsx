@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/layout/PageLayout';
@@ -132,7 +131,7 @@ export default function MarcheDetailPage() {
       console.log("Nettoyage de l'effet MarcheDetailPage");
       isMounted = false;
     };
-  }, [id, toast]); // Uniquement dépendre de l'ID et du toast
+  }, [id, toast, dataLoaded]); // Ajout de dataLoaded comme dépendance pour éviter les rechargements
 
   // Fonction pour obtenir la couleur de statut (wrapped dans useCallback pour éviter les re-rendus inutiles)
   const getStatusColor = useCallback((statut: string) => {
@@ -178,9 +177,6 @@ export default function MarcheDetailPage() {
       </PageLayout>
     );
   }
-
-  // REMOVED DUPLICATE FUNCTION DECLARATIONS
-  // Note: We're now using the functions defined above with useCallback
 
   return (
     <PageLayout>

@@ -24,12 +24,23 @@ export const ensureStorageBucketsExist = async () => {
         });
         
         if (createError) {
-          console.error("Erreur lors de la création du bucket 'marches':", createError);
+          // Si l'erreur n'est pas liée à un bucket déjà existant, la logger
+          if (!createError.message.includes("already exists")) {
+            console.error("Erreur lors de la création du bucket 'marches':", createError);
+          } else {
+            console.log("Le bucket 'marches' existe déjà (signalé par l'API)");
+          }
         } else {
           console.log("Bucket 'marches' créé avec succès:", data);
         }
       } catch (bucketError) {
-        console.error("Exception lors de la création du bucket 'marches':", bucketError);
+        // Vérifier si l'erreur est due au fait que le bucket existe déjà
+        if (bucketError instanceof Error && 
+            bucketError.message.includes("already exists")) {
+          console.log("Le bucket 'marches' existe déjà");
+        } else {
+          console.error("Exception lors de la création du bucket 'marches':", bucketError);
+        }
       }
     } else {
       console.log("Le bucket 'marches' existe déjà");
