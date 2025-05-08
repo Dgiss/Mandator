@@ -5,9 +5,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 
 import HomePage from "./pages/HomePage"; 
-import DashboardPage from "./pages/DashboardPage";
 import MarketCreationPage from "./pages/MarketCreationPage";
-import FormsPage from "./pages/FormsPage";
 import MarchesPage from "./pages/MarchesPage";
 import MarcheDetailPage from "./pages/MarcheDetailPage";
 import QuestionsReponsesPage from "./pages/QuestionsReponsesPage";
@@ -62,12 +60,10 @@ const App = () => {
                   <Route path="/" element={<Navigate to="/home" replace />} />
                   <Route path="/auth" element={<AuthPage />} />
                   <Route path="/home" element={<PrivateRoute><HomePage /></PrivateRoute>} />
-                  <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
                   <Route path="/marches" element={<PrivateRoute><MarchesPage /></PrivateRoute>} />
                   <Route path="/marches/:id" element={<PrivateRoute><MarcheDetailPage /></PrivateRoute>} />
                   <Route path="/marches/creation" element={<PrivateRoute><MarketCreationPage /></PrivateRoute>} />
                   <Route path="/questions-reponses" element={<PrivateRoute><QuestionsReponsesPage /></PrivateRoute>} />
-                  <Route path="/formulaires" element={<PrivateRoute><FormsPage /></PrivateRoute>} />
                   <Route path="/parametres" element={
                     <PrivateRoute>
                       <div className="container mx-auto p-6"><h1 className="text-2xl font-bold">Paramètres</h1></div>
