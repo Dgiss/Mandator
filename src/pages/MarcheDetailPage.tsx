@@ -179,24 +179,8 @@ export default function MarcheDetailPage() {
     );
   }
 
-  const getStatusColor = (statut: string) => {
-    switch(statut) {
-      case 'En cours': return 'bg-btp-blue text-white';
-      case 'Terminé': return 'bg-green-500 text-white';
-      case 'En attente': return 'bg-amber-500 text-white';
-      default: return 'bg-gray-500 text-white';
-    }
-  };
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'Non spécifiée';
-    try {
-      return new Date(dateString).toLocaleDateString('fr-FR');
-    } catch (error) {
-      console.error('Erreur lors du formatage de la date:', error, dateString);
-      return dateString;
-    }
-  };
+  // REMOVED DUPLICATE FUNCTION DECLARATIONS
+  // Note: We're now using the functions defined above with useCallback
 
   return (
     <PageLayout>
