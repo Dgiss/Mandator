@@ -44,4 +44,31 @@ export interface Visa {
   created_at?: string | null;
 }
 
+// Type pour un fascicule 
+export interface Fascicule {
+  id: string;
+  nom: string;
+  nombredocuments: number;
+  datemaj: string;
+  progression: number;
+  description?: string;
+  marche_id: string;
+}
+
+// Type pour un document
+export interface Document {
+  id: string;
+  nom: string;
+  type: string;
+  statut: string;
+  version: string;
+  dateUpload?: string;
+  taille?: string;
+  description?: string;
+  fascicule_id?: string;
+  marche_id: string;
+  file_path?: string;
+  created_at?: string;
+}
+
 // Vous pouvez ajouter d'autres types ici si nécessaire

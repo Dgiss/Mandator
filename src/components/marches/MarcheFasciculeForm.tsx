@@ -39,8 +39,8 @@ import { useQuery } from '@tanstack/react-query';
 interface Fascicule {
   id: string;
   nom: string;
-  nombreDocuments: number;
-  dateMaj: string;
+  nombredocuments: number;
+  datemaj: string;
   progression: number;
   description?: string;
   marche_id: string;
@@ -57,7 +57,7 @@ const fasciculeFormSchema = z.object({
   name: z.string().min(1, { message: 'Le nom est requis' }),
   description: z.string().min(1, { message: 'La description est requise' }),
   marche_id: z.string().min(1, { message: 'Le marché est requis' }),
-  nombreDocuments: z.coerce.number().min(0).default(0),
+  nombredocuments: z.coerce.number().min(0).default(0),
   progression: z.number().min(0).max(100).default(0)
 });
 
@@ -92,7 +92,7 @@ const MarcheFasciculeForm: React.FC<FasciculeFormProps> = ({
       name: '',
       description: '',
       marche_id: marcheId,
-      nombreDocuments: 0,
+      nombredocuments: 0,
       progression: 0
     }
   });
@@ -104,7 +104,7 @@ const MarcheFasciculeForm: React.FC<FasciculeFormProps> = ({
         name: editingFascicule.nom,
         description: editingFascicule.description || '',
         marche_id: editingFascicule.marche_id || marcheId,
-        nombreDocuments: editingFascicule.nombreDocuments || 0,
+        nombredocuments: editingFascicule.nombredocuments || 0,
         progression: editingFascicule.progression || 0
       });
       setOpen(true);
@@ -122,9 +122,9 @@ const MarcheFasciculeForm: React.FC<FasciculeFormProps> = ({
         nom: values.name,
         description: values.description,
         marche_id: values.marche_id,
-        nombreDocuments: values.nombreDocuments,
+        nombredocuments: values.nombredocuments,
         progression: values.progression,
-        dateMaj: new Date().toLocaleDateString('fr-FR')
+        datemaj: new Date().toLocaleDateString('fr-FR')
       };
       
       let result;
@@ -267,7 +267,7 @@ const MarcheFasciculeForm: React.FC<FasciculeFormProps> = ({
             
             <FormField
               control={form.control}
-              name="nombreDocuments"
+              name="nombredocuments"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Nombre de documents</FormLabel>
