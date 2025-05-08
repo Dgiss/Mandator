@@ -1,11 +1,15 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { checkAuth } from '@/utils/authUtils';
 import PageLayout from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
 import { FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+
+// Import les services
+import { fetchMarcheStats, fetchRecentMarches, MarcheStats } from '@/services/statsService';
+import { Marche } from '@/services/types';
 
 // Import the components
 import StatsCards from '@/components/home/StatsCards';
@@ -15,50 +19,78 @@ import QuickActions from '@/components/home/QuickActions';
 export default function HomePage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // États pour stocker les données
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<MarcheStats>({
+    enCours: 0,
+    projetsActifs: 0,
+    devisEnAttente: 0,
+    termines: 0
+  });
+  const [recentProjects, setRecentProjects] = useState<Marche[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  // Stats data matching the image
-  const stats = [
+  // Charger les données au chargement de la page
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        
+        // Charger les statistiques
+        const statsData = await fetchMarcheStats();
+        setStats(statsData);
+        
+        // Charger les marchés récents
+        const recentMarchesData = await fetchRecentMarches(3);
+        setRecentProjects(recentMarchesData);
+        
+        setError(null);
+      } catch (err) {
+        console.error("Erreur lors du chargement des données:", err);
+        setError("Impossible de charger les données");
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les données",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadData();
+  }, [toast]);
+
+  // Convertir les données des marchés récents pour le format attendu par RecentProjects
+  const formattedRecentProjects = recentProjects.map(marche => ({
+    id: marche.id,
+    name: marche.titre,
+    client: marche.client || 'Non spécifié',
+    status: marche.statut
+  }));
+
+  // Stats pour les cartes
+  const statsCards = [
     { 
       title: "Marchés en cours",
-      value: 12,
+      value: stats.enCours,
       icon: <FileText className="h-6 w-6 text-btp-blue bg-blue-100 p-1 rounded-full" />
     },
     { 
       title: "Projets actifs",
-      value: 7,
+      value: stats.projetsActifs,
       icon: <FileText className="h-6 w-6 text-btp-blue bg-blue-100 p-1 rounded-full" />
     },
     { 
       title: "Devis en attente",
-      value: 5,
+      value: stats.devisEnAttente,
       icon: <FileText className="h-6 w-6 text-btp-blue bg-blue-100 p-1 rounded-full" />
     },
     { 
       title: "Marchés terminés",
-      value: 23,
+      value: stats.termines,
       icon: <FileText className="h-6 w-6 text-btp-blue bg-blue-100 p-1 rounded-full" />
-    },
-  ];
-
-  // Recent projects data matching the image
-  const recentProjects = [
-    { 
-      id: 1, 
-      name: "Rénovation Mairie", 
-      client: "Ville de Lyon", 
-      status: "En cours" 
-    },
-    { 
-      id: 2, 
-      name: "Construction école", 
-      client: "Département du Rhône", 
-      status: "En attente" 
-    },
-    { 
-      id: 3, 
-      name: "Réfection voirie", 
-      client: "Métropole de Lyon", 
-      status: "En cours" 
     },
   ];
 
@@ -85,13 +117,13 @@ export default function HomePage() {
       actions={pageActions}
     >
       {/* Stats Cards */}
-      <StatsCards stats={stats} />
+      <StatsCards stats={statsCards} loading={loading} />
       
       {/* Main Content - Two Columns */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Recent Projects Column */}
         <div className="lg:col-span-2">
-          <RecentProjects projects={recentProjects} />
+          <RecentProjects projects={formattedRecentProjects} loading={loading} />
         </div>
         
         {/* Actions Column */}
