@@ -1,6 +1,5 @@
-
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom'; // Remplacé next/navigation par react-router-dom
 import { Button } from '@/components/ui/button';
 import { PlusIcon, FilterIcon, FileText } from 'lucide-react';
 import { fetchMarches } from '@/services/marcheService';
@@ -11,7 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 
 export default function MarchesPage() {
-  const router = useRouter();
+  const navigate = useNavigate(); // Remplacé useRouter par useNavigate
   const [marches, setMarches] = useState<Marche[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -105,11 +104,11 @@ export default function MarchesPage() {
 
   const handleMarcheClick = (marcheId: string) => {
     console.log("Navigation vers le marché:", marcheId);
-    router.push(`/marches/${marcheId}`);
+    navigate(`/marches/${marcheId}`); // Modifié pour utiliser navigate au lieu de router.push
   };
 
   const handleNewMarche = () => {
-    router.push('/marches/nouveau');
+    navigate('/marches/nouveau'); // Modifié pour utiliser navigate au lieu de router.push
   };
 
   const formatDate = (dateString: string | null) => {
@@ -177,7 +176,6 @@ export default function MarchesPage() {
       </div>
 
       {/* Debug Panel - Décommenter pour voir les problèmes */}
-      {/* 
       <div className="mb-4 p-4 bg-gray-100 rounded-lg">
         <h3 className="font-bold">État du chargement des données:</h3>
         <p>État loading: {loading ? 'true' : 'false'}</p>
@@ -185,7 +183,6 @@ export default function MarchesPage() {
         <p>Erreur: {error || 'Aucune'}</p>
         <p>Premier marché: {marches.length > 0 ? JSON.stringify(marches[0], null, 2) : 'Aucun'}</p>
       </div>
-      */}
 
       {/* LISTE DES MARCHÉS */}
       <div className="rounded-lg border shadow bg-white overflow-hidden">
