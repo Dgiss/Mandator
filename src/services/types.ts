@@ -50,11 +50,11 @@ export interface UserProfile {
 
 export interface Marche {
   id: string;
-  titre: string;
+  titre: string;  // This must remain required as it's required in the database
   description?: string | null;
   client?: string | null;
   statut: string;
-  datecreation?: string | null;  // Ensure this matches the database column name
+  datecreation?: string | null;
   budget?: string | null;
   image?: string | null;
   reference?: string | null;

@@ -171,9 +171,9 @@ export default function MarketCreationPage() {
         logoPath = await uploadImage(logoFile, 'logos');
       }
       
-      // Préparer les données pour Supabase - assurez-vous que les noms correspondent
-      // exactement aux colonnes dans la base de données
-      const marcheData: Partial<Marche> = {
+      // Préparer les données pour Supabase - nous devons garantir que 'titre' est présent
+      // car c'est une colonne NOT NULL dans la base de données
+      const marcheData = {
         titre: data.titre,
         description: data.description,
         client: data.client,
@@ -183,15 +183,16 @@ export default function MarketCreationPage() {
         logo: logoPath,
         user_id: user.id,
         reference: data.reference,
-        datecreation: new Date().toISOString() // Utilisez datecreation au lieu de dateCreation
+        datecreation: new Date().toISOString()
       };
       
       console.log("Données du marché à insérer:", marcheData);
 
-      // Insérer le marché dans la base de données
+      // Insérer le marché dans la base de données - Correction ici
+      // Nous passons directement l'objet, pas un tableau d'objets
       const { data: newMarche, error } = await supabase
         .from('marches')
-        .insert([marcheData])
+        .insert(marcheData)
         .select();
       
       if (error) {
