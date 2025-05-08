@@ -40,7 +40,6 @@ export const useMarcheDetail = (id: string | undefined): UseMarcheDetailReturn =
   });
   const [fasciculeProgress, setFasciculeProgress] = useState<FasciculeProgress[]>([]);
   const [documentsRecents, setDocumentsRecents] = useState<any[]>([]);
-  const [dataLoaded, setDataLoaded] = useState(false);
 
   // Clé de mémorisation pour éviter des appels inutiles
   const memoKey = useMemo(() => id || 'undefined', [id]);
@@ -49,9 +48,6 @@ export const useMarcheDetail = (id: string | undefined): UseMarcheDetailReturn =
     console.log("useEffect de useMarcheDetail déclenché avec id:", id);
     if (!id) return;
     
-    // Si les données sont déjà chargées, ne pas les recharger
-    if (dataLoaded) return;
-
     let isMounted = true;
     
     const loadMarcheData = async () => {
@@ -95,8 +91,6 @@ export const useMarcheDetail = (id: string | undefined): UseMarcheDetailReturn =
         
         const validVersionsData = Array.isArray(versionsData) ? versionsData : [];
         setDocumentsRecents(validVersionsData.slice(0, 3)); // Limiter à 3 pour l'affichage
-        
-        setDataLoaded(true);
       } catch (error) {
         if (!isMounted) return;
         
@@ -119,7 +113,7 @@ export const useMarcheDetail = (id: string | undefined): UseMarcheDetailReturn =
       console.log("Nettoyage de l'effet useMarcheDetail");
       isMounted = false;
     };
-  }, [memoKey, toast]);
+  }, [memoKey, toast]); // Utiliser memoKey comme dépendance et inclure toast
 
   // Fonction pour obtenir la couleur de statut
   const getStatusColor = useCallback((statut: string) => {
