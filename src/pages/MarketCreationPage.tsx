@@ -131,24 +131,10 @@ export default function MarketCreationPage() {
       const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
       const filePath = `${path}/${fileName}`;
       
-      // Vérifier que le bucket existe
+      // Check that the bucket exists
       const { data: buckets } = await supabase.storage.listBuckets();
       console.log("Buckets disponibles avant upload:", buckets);
       
-      // Si le bucket 'marches' n'existe pas, essayer de le créer
-      if (!buckets || !buckets.find(b => b.name === 'marches')) {
-        console.log("Le bucket 'marches' n'existe pas, tentative de création...");
-        const { error: createError } = await supabase.storage.createBucket('marches', {
-          public: true
-        });
-        
-        if (createError) {
-          console.error("Erreur lors de la création du bucket:", createError);
-          throw new Error(`Impossible de créer le bucket: ${createError.message}`);
-        }
-      }
-      
-      console.log(`Upload du fichier ${filePath} dans le bucket 'marches'...`);
       const { error: uploadError, data: uploadData } = await supabase.storage
         .from('marches')
         .upload(filePath, file, {
@@ -164,12 +150,12 @@ export default function MarketCreationPage() {
       console.log("Upload réussi:", uploadData);
       
       // Récupérer l'URL publique de l'image
-      const { data: { publicUrl } } = supabase.storage
+      const { data } = supabase.storage
         .from('marches')
         .getPublicUrl(filePath);
       
-      console.log("URL publique générée:", publicUrl);
-      return publicUrl;
+      console.log("URL publique générée:", data.publicUrl);
+      return data.publicUrl;
     } catch (error) {
       console.error('Erreur détaillée lors du téléchargement de l\'image:', error);
       return null;
@@ -208,7 +194,7 @@ export default function MarketCreationPage() {
       
       // Préparer les données pour l'insertion dans la base de données
       // S'assurer que tous les champs correspondent aux colonnes de la table
-      const marcheData = {
+      const marcheData: Partial<Marche> = {
         titre: data.titre,
         description: data.description,
         client: data.client,
@@ -218,7 +204,6 @@ export default function MarketCreationPage() {
         logo: logoPath,
         user_id: user.id,
         reference: data.reference,
-        datecreation: new Date().toISOString()
       };
       
       console.log("Données du marché à insérer:", marcheData);

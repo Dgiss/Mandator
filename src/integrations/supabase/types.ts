@@ -96,6 +96,7 @@ export type Database = {
           description: string | null
           id: string
           image: string | null
+          logo: string | null
           statut: string
           titre: string
           user_id: string | null
@@ -108,6 +109,7 @@ export type Database = {
           description?: string | null
           id?: string
           image?: string | null
+          logo?: string | null
           statut?: string
           titre: string
           user_id?: string | null
@@ -120,6 +122,7 @@ export type Database = {
           description?: string | null
           id?: string
           image?: string | null
+          logo?: string | null
           statut?: string
           titre?: string
           user_id?: string | null
