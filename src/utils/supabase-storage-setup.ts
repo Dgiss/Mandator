@@ -32,12 +32,11 @@ export const ensureStorageBucketsExist = async (): Promise<void> => {
         
         // Mettre à jour les politiques d'accès du bucket pour le rendre public
         try {
-          const { error: policyError } = await supabase.storage.from('marches').getPublicUrl('test.txt');
-          if (policyError) {
-            console.error('Erreur lors de la mise à jour des politiques du bucket:', policyError);
-          }
+          // La méthode getPublicUrl ne retourne pas d'erreur, elle génère juste une URL
+          const { data } = supabase.storage.from('marches').getPublicUrl('test.txt');
+          console.log('URL publique générée pour test:', data.publicUrl);
         } catch (policyErr) {
-          console.error('Exception lors de la mise à jour des politiques:', policyErr);
+          console.error('Exception lors de la génération de l\'URL publique:', policyErr);
         }
       }
     } else {
