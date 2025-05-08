@@ -1,29 +1,16 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
-import { isValidEmail } from '../utils/crm-operations';
+import { ValidationConfig, FormOperationsResult } from './types';
+import { validateField } from './validation';
 
-interface FieldValidation {
-  required?: boolean;
-  minLength?: number;
-  maxLength?: number;
-  pattern?: RegExp;
-  isEmail?: boolean;
-  isNumber?: boolean;
-  min?: number;
-  max?: number;
-  custom?: (value: any) => boolean;
-  errorMessage?: string;
-}
-
-interface ValidationConfig {
-  [key: string]: FieldValidation;
-}
-
+/**
+ * Custom hook for form operations with validation
+ */
 export const useFormOperations = <T extends Record<string, any>>(
   initialValues: T,
   validationConfig: ValidationConfig = {}
-) => {
+): FormOperationsResult<T> => {
   const [values, setValues] = useState<T>(initialValues);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -92,54 +79,6 @@ export const useFormOperations = <T extends Record<string, any>>(
       }
     }
   }, [validationConfig]);
-  
-  // Validate a single field
-  const validateField = (field: string, value: any, rules: FieldValidation): string | null => {
-    if (rules.required && (!value && value !== false && value !== 0)) {
-      return rules.errorMessage || `Ce champ est obligatoire`;
-    }
-    
-    if (value !== null && value !== undefined) {
-      const strValue = String(value);
-      
-      if (rules.minLength && strValue.length < rules.minLength) {
-        return rules.errorMessage || `Minimum ${rules.minLength} caractères requis`;
-      }
-      
-      if (rules.maxLength && strValue.length > rules.maxLength) {
-        return rules.errorMessage || `Maximum ${rules.maxLength} caractères autorisés`;
-      }
-      
-      if (rules.pattern && !rules.pattern.test(strValue)) {
-        return rules.errorMessage || `Format invalide`;
-      }
-      
-      if (rules.isEmail && !isValidEmail(strValue)) {
-        return rules.errorMessage || `Email invalide`;
-      }
-      
-      if (rules.isNumber) {
-        const numValue = Number(value);
-        if (isNaN(numValue)) {
-          return rules.errorMessage || `Veuillez entrer un nombre valide`;
-        }
-        
-        if (rules.min !== undefined && numValue < rules.min) {
-          return rules.errorMessage || `La valeur minimale est ${rules.min}`;
-        }
-        
-        if (rules.max !== undefined && numValue > rules.max) {
-          return rules.errorMessage || `La valeur maximale est ${rules.max}`;
-        }
-      }
-      
-      if (rules.custom && !rules.custom(value)) {
-        return rules.errorMessage || `Valeur invalide`;
-      }
-    }
-    
-    return null;
-  };
   
   // Validate all form fields
   const validateForm = useCallback((): boolean => {
@@ -215,7 +154,7 @@ export const useFormOperations = <T extends Record<string, any>>(
     setFieldValue,
     resetForm,
     validateForm,
-    validateField
+    validateField: validateField
   };
 };
 

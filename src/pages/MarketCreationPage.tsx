@@ -6,7 +6,7 @@ import PageHeader from '@/components/layout/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import useFormOperations from '@/hooks/use-form-operations';
+import useFormOperations from '@/hooks/form/use-form-operations';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { ensureStorageBucketsExist } from '@/utils/supabase-storage-setup';
