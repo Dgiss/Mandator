@@ -34,10 +34,6 @@ export default function MarketCreationPage() {
       minLength: 5,
       errorMessage: "Le titre est requis et doit comporter au moins 5 caractères"
     },
-    reference: {
-      required: true,
-      errorMessage: "La référence est requise"
-    },
     client: {
       required: true,
       errorMessage: "Le client est requis"
@@ -62,7 +58,6 @@ export default function MarketCreationPage() {
     setFieldValue
   } = useFormOperations({
     titre: '',
-    reference: '',
     client: '',
     budget: '',
     description: '',
@@ -115,7 +110,6 @@ export default function MarketCreationPage() {
         image: coverImagePath,
         logo: logoPath,
         user_id: user.id,
-        reference: data.reference,
         datecreation: formattedDate
       };
       

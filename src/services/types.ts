@@ -12,7 +12,6 @@ export interface Marche {
   logo?: string | null;
   user_id?: string | null;
   created_at?: string | null;
-  reference?: string | null;
 }
 
 // Type pour une version de document

@@ -51,13 +51,18 @@ export const createMarche = async (marcheData: {
   description?: string | null;
   client?: string | null;
   statut: string;
+  datecreation?: string | null;
   budget?: string | null;
   image?: string | null;
   logo?: string | null;
   user_id?: string | null;
-  reference?: string | null;
 }): Promise<Marche | null> => {
   try {
+    // Ajout de la date de création si non fournie
+    if (!marcheData.datecreation) {
+      marcheData.datecreation = new Date().toISOString();
+    }
+    
     console.log("Création d'un nouveau marché avec les données:", marcheData);
     
     const { data, error } = await supabase
