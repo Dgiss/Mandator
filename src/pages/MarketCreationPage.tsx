@@ -192,10 +192,10 @@ export default function MarketCreationPage() {
         console.log("Logo téléchargé:", logoPath);
       }
       
-      // Préparer les données pour l'insertion dans la base de données
-      // S'assurer que tous les champs correspondent aux colonnes de la table
-      const marcheData: Partial<Marche> = {
-        titre: data.titre,
+      // Fix the TypeScript error by explicitly creating an object with the required properties
+      // Ensure that titre is explicitly provided since it's required
+      const marcheData = {
+        titre: data.titre, // This is required
         description: data.description,
         client: data.client,
         statut: 'En attente',
@@ -203,7 +203,7 @@ export default function MarketCreationPage() {
         image: coverImagePath,
         logo: logoPath,
         user_id: user.id,
-        reference: data.reference,
+        reference: data.reference
       };
       
       console.log("Données du marché à insérer:", marcheData);

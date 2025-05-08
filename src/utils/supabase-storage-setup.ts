@@ -23,7 +23,9 @@ export const ensureStorageBucketsExist = async (): Promise<void> => {
       console.log('Création du bucket marches...');
       
       // Créer le bucket avec le moins d'options possibles pour éviter les erreurs
-      const { error: createError } = await supabase.storage.createBucket('marches');
+      const { error: createError } = await supabase.storage.createBucket('marches', {
+        public: true
+      });
       
       if (createError) {
         console.error('Erreur lors de la création du bucket marches:', createError);
