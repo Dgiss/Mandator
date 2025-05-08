@@ -55,9 +55,9 @@ export interface Database {
           nom: string;
           description: string | null;
           marche_id: string;
-          nombreDocuments: number | null;
+          nombredocuments: number | null;  // Changed from nombreDocuments
           progression: number | null;
-          dateMaj: string | null;
+          datemaj: string | null;  // Changed from dateMaj
           created_at: string | null;
         };
         Insert: {
@@ -65,9 +65,9 @@ export interface Database {
           nom: string;
           description?: string | null;
           marche_id: string;
-          nombreDocuments?: number | null;
+          nombredocuments?: number | null;  // Changed from nombreDocuments
           progression?: number | null;
-          dateMaj?: string | null;
+          datemaj?: string | null;  // Changed from dateMaj
           created_at?: string | null;
         };
         Update: {
@@ -75,9 +75,9 @@ export interface Database {
           nom?: string;
           description?: string | null;
           marche_id?: string;
-          nombreDocuments?: number | null;
+          nombredocuments?: number | null;  // Changed from nombreDocuments
           progression?: number | null;
-          dateMaj?: string | null;
+          datemaj?: string | null;  // Changed from dateMaj
           created_at?: string | null;
         };
         Relationships: [];

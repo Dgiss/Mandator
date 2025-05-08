@@ -14,19 +14,10 @@ import { Folder, FileText, Plus, MoreHorizontal, Edit, Eye } from 'lucide-react'
 import MarcheFasciculeForm from './MarcheFasciculeForm';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { Fascicule } from '@/services/types';
 
 interface MarcheFasciculesProps {
   marcheId: string;
-}
-
-interface Fascicule {
-  id: string;
-  nom: string;
-  nombredocuments: number;
-  datemaj: string;
-  progression: number;
-  description?: string;
-  marche_id: string;
 }
 
 export default function MarcheFascicules({ marcheId }: MarcheFasciculesProps) {
