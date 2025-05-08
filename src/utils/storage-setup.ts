@@ -27,3 +27,21 @@ export async function ensureStorageBucketExists() {
     console.error("Error in storage setup:", error);
   }
 }
+
+// Utility function to check bucket existence and create if needed
+export async function checkBucket(name: string) {
+  try {
+    const { data } = await supabase.storage.listBuckets();
+    if (!data || !data.some(b => b.name === name)) {
+      await supabase.storage.createBucket(name, {
+        public: false,
+        fileSizeLimit: 10485760 // 10MB
+      });
+    }
+    return true;
+  } catch (error) {
+    // Ignore errors that might occur if the bucket already exists
+    console.error(`Error checking/creating bucket ${name}:`, error);
+    return false;
+  }
+}

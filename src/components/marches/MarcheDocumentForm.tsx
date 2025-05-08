@@ -34,6 +34,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useDropzone } from 'react-dropzone';
 
 interface Document {
   id: string;
@@ -78,6 +79,30 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Sanitize filename function to remove accents and special characters
+  const sanitizeFileName = (name: string) => {
+    return name.normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9.]/g, '-');
+  };
+
+  // Function to check and create bucket if needed
+  const ensureBucketExists = async (bucketName: string) => {
+    try {
+      const { data: buckets } = await supabase.storage.listBuckets();
+      if (buckets && !buckets.some(b => b.name === bucketName)) {
+        await supabase.storage.createBucket(bucketName, {
+          public: false,
+          fileSizeLimit: 10485760 // 10MB limit
+        });
+      }
+      return true;
+    } catch (error) {
+      console.error("Error checking/creating bucket:", error);
+      return false;
+    }
+  };
 
   // Récupérer la liste des marchés pour le dropdown
   const { data: marches = [] } = useQuery({
@@ -161,17 +186,15 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         fileExtension = selectedFile.name.split('.').pop()?.toUpperCase() || '';
         fileSize = (selectedFile.size / 1024 / 1024).toFixed(2) + ' MB';
         
-        // Verify storage bucket exists or create it
-        const { data: buckets } = await supabase.storage.listBuckets();
-        if (!buckets?.find(bucket => bucket.name === 'documents')) {
-          await supabase.storage.createBucket('documents', {
-            public: false,
-            fileSizeLimit: 10485760 // 10MB limit
-          });
+        // Ensure the documents bucket exists
+        const bucketExists = await ensureBucketExists('documents');
+        if (!bucketExists) {
+          throw new Error('Impossible de créer ou d\'accéder au bucket de stockage');
         }
         
-        // Upload file to Supabase Storage
-        const fileNameWithTimestamp = `${Date.now()}_${selectedFile.name}`;
+        // Upload file to Supabase Storage with sanitized filename
+        const sanitizedFileName = sanitizeFileName(selectedFile.name);
+        const fileNameWithTimestamp = `${Date.now()}_${sanitizedFileName}`;
         const { data: fileData, error: fileError } = await supabase.storage
           .from('documents')
           .upload(`marches/${marcheId}/${fileNameWithTimestamp}`, selectedFile);
@@ -227,7 +250,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         if (countData) {
           await supabase
             .from('fascicules')
-            .update({ nombreDocuments: countData.length })
+            .update({ nombredocuments: countData.length })
             .eq('id', values.fascicule_id);
         }
       }
@@ -262,17 +285,31 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      // Set document type based on file extension
-      const fileType = file.name.split('.').pop()?.toUpperCase() || '';
-      if (fileType) {
-        form.setValue('type', fileType);
+  // Set up react-dropzone
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop: (acceptedFiles) => {
+      if (acceptedFiles.length > 0) {
+        setSelectedFile(acceptedFiles[0]);
+        // Set document type based on file extension
+        const fileType = acceptedFiles[0].name.split('.').pop()?.toUpperCase() || '';
+        if (fileType) {
+          form.setValue('type', fileType);
+        }
       }
-    }
-  };
+    },
+    accept: {
+      'application/pdf': ['.pdf'],
+      'application/msword': ['.doc'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/vnd.ms-excel': ['.xls'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/png': ['.png'],
+      'application/vnd.dwg': ['.dwg']
+    },
+    maxFiles: 1,
+    maxSize: 10485760, // 10MB
+  });
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
@@ -488,23 +525,17 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
                 <FormItem>
                   <FormLabel>Fichier {!editingDocument && "*"}</FormLabel>
                   <FormControl>
-                    <div className="flex items-center justify-center w-full">
-                      <label htmlFor="file-upload" className="flex flex-col items-center justify-center w-full h-24 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                    <div {...getRootProps()} className="flex items-center justify-center w-full">
+                      <div className={`flex flex-col items-center justify-center w-full h-24 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer ${isDragActive ? 'bg-gray-100' : 'bg-gray-50'} hover:bg-gray-100 transition-colors`}>
                         <div className="flex flex-col items-center justify-center pt-5 pb-6">
                           <Upload className="w-8 h-8 mb-3 text-gray-500" />
                           <p className="mb-2 text-sm text-gray-500">
-                            <span className="font-semibold">Cliquez pour téléverser</span>
+                            <span className="font-semibold">Cliquez ou glissez-déposez</span>
                           </p>
                           <p className="text-xs text-gray-500">PDF, DOC, XLS, DWG (MAX. 10Mo)</p>
                         </div>
-                        <input
-                          id="file-upload"
-                          type="file"
-                          className="hidden"
-                          onChange={handleFileChange}
-                          accept=".pdf,.doc,.docx,.xls,.xlsx,.dwg,.jpg,.jpeg,.png"
-                        />
-                      </label>
+                        <input {...getInputProps()} id="file-upload" />
+                      </div>
                     </div>
                   </FormControl>
                   {selectedFile && (

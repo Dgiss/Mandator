@@ -22,8 +22,8 @@ interface MarcheFasciculesProps {
 interface Fascicule {
   id: string;
   nom: string;
-  nombreDocuments: number;
-  dateMaj: string;
+  nombredocuments: number;
+  datemaj: string;
   progression: number;
   description?: string;
   marche_id: string;
@@ -49,8 +49,8 @@ export default function MarcheFascicules({ marcheId }: MarcheFasciculesProps) {
       const formattedData = data.map(fascicule => ({
         id: fascicule.id,
         nom: fascicule.nom,
-        nombreDocuments: fascicule.nombreDocuments || 0,
-        dateMaj: fascicule.dateMaj || new Date().toLocaleDateString('fr-FR'),
+        nombredocuments: fascicule.nombredocuments || 0,
+        datemaj: fascicule.datemaj || new Date().toLocaleDateString('fr-FR'),
         progression: fascicule.progression || 0,
         description: fascicule.description,
         marche_id: fascicule.marche_id
@@ -125,10 +125,10 @@ export default function MarcheFascicules({ marcheId }: MarcheFasciculesProps) {
                     <TableCell className="hidden md:table-cell">
                       <div className="flex items-center">
                         <FileText className="h-4 w-4 mr-1 text-gray-400" />
-                        <span>{fascicule.nombreDocuments}</span>
+                        <span>{fascicule.nombredocuments}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell">{fascicule.dateMaj}</TableCell>
+                    <TableCell className="hidden md:table-cell">{fascicule.datemaj}</TableCell>
                     <TableCell>
                       <div>
                         <div className="flex items-center justify-between mb-1">
