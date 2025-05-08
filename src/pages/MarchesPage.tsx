@@ -25,6 +25,7 @@ export default function MarchesPage() {
 
   // Chargement des marchés depuis Supabase
   useEffect(() => {
+    console.log("useEffect de MarchesPage déclenché");
     let isMounted = true;
     
     const loadMarches = async () => {
@@ -75,7 +76,7 @@ export default function MarchesPage() {
     return () => {
       isMounted = false;
     };
-  }, [toast]);
+  }, []); // Dépendances vides pour n'exécuter qu'au montage
 
   // Mémoisation de la liste filtrée avec gestion des valeurs null/undefined
   const filteredMarches = useMemo(() => {

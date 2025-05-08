@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
@@ -52,28 +52,41 @@ export default function MarcheDetailPage() {
   });
   const [fasciculeProgress, setFasciculeProgress] = useState<{nom: string, progression: number}[]>([]);
   const [documentsRecents, setDocumentsRecents] = useState<any[]>([]);
+  const [dataLoaded, setDataLoaded] = useState(false); // Pour éviter les appels multiples
 
   // Récupération des données du marché et des statistiques
   useEffect(() => {
-    if (!id) return;
+    console.log("useEffect de MarcheDetailPage déclenché avec id:", id);
+    if (!id || dataLoaded) return;
 
+    let isMounted = true;
+    
     const loadMarcheData = async () => {
+      if (!isMounted) return;
+      
       setLoading(true);
       try {
+        console.log("Chargement des données du marché:", id);
         // Récupérer les informations du marché
         const marcheData = await fetchMarcheById(id);
+        
+        if (!isMounted) return;
         setMarche(marcheData);
 
         // Récupérer les visas en attente pour ce marché
         const visasData = await visasService.getVisasByMarcheId(id);
-        const filteredVisas = visasData.filter((visa: any) => visa.statut === 'En attente');
+        if (!isMounted) return;
+        
+        const filteredVisas = visasData && Array.isArray(visasData) 
+          ? visasData.filter((visa: any) => visa.statut === 'En attente')
+          : [];
         setVisasEnAttente(filteredVisas.slice(0, 3)); // Limiter à 3 pour l'affichage
 
         // Calculer les statistiques des documents
         // Ces données seraient normalement récupérées via des requêtes spécifiques
         setDocumentStats({
-          total: visasData.length,
-          approuves: visasData.filter((visa: any) => visa.statut === 'Approuvé').length,
+          total: Array.isArray(visasData) ? visasData.length : 0,
+          approuves: Array.isArray(visasData) ? visasData.filter((visa: any) => visa.statut === 'Approuvé').length : 0,
           enAttente: filteredVisas.length
         });
 
@@ -84,13 +97,22 @@ export default function MarcheDetailPage() {
           { nom: "Lot 1 - Génie Civil", progression: 75 },
           { nom: "Lot 2 - Turbines", progression: 40 }
         ];
+        if (!isMounted) return;
         setFasciculeProgress(fascicules);
 
         // Récupérer les documents récents
         const versionsData = await versionsService.getVersionsByMarcheId(id);
-        setDocumentsRecents(versionsData.slice(0, 3)); // Limiter à 3 pour l'affichage
+        if (!isMounted) return;
+        
+        // S'assurer que versionsData est un tableau avant de l'utiliser
+        const validVersionsData = Array.isArray(versionsData) ? versionsData : [];
+        setDocumentsRecents(validVersionsData.slice(0, 3)); // Limiter à 3 pour l'affichage
+        
+        setDataLoaded(true); // Marquer les données comme chargées pour éviter les rechargements inutiles
 
       } catch (error) {
+        if (!isMounted) return;
+        
         console.error("Erreur lors du chargement des données du marché:", error);
         toast({
           title: "Erreur",
@@ -98,13 +120,42 @@ export default function MarcheDetailPage() {
           variant: "destructive",
         });
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     loadMarcheData();
-  }, [id, toast]);
+    
+    return () => {
+      console.log("Nettoyage de l'effet MarcheDetailPage");
+      isMounted = false;
+    };
+  }, [id, toast]); // Uniquement dépendre de l'ID et du toast
 
+  // Fonction pour obtenir la couleur de statut (wrapped dans useCallback pour éviter les re-rendus inutiles)
+  const getStatusColor = useCallback((statut: string) => {
+    switch(statut) {
+      case 'En cours': return 'bg-btp-blue text-white';
+      case 'Terminé': return 'bg-green-500 text-white';
+      case 'En attente': return 'bg-amber-500 text-white';
+      default: return 'bg-gray-500 text-white';
+    }
+  }, []);
+
+  // Fonction de formatage de date (wrapped dans useCallback pour éviter les re-rendus inutiles)
+  const formatDate = useCallback((dateString: string | null) => {
+    if (!dateString) return 'Non spécifiée';
+    try {
+      return new Date(dateString).toLocaleDateString('fr-FR');
+    } catch (error) {
+      console.error('Erreur lors du formatage de la date:', error, dateString);
+      return dateString;
+    }
+  }, []);
+
+  // Reste du composant avec le rendu conditionnel
   if (loading) {
     return (
       <PageLayout>

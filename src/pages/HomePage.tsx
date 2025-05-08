@@ -30,33 +30,55 @@ export default function HomePage() {
   });
   const [recentProjects, setRecentProjects] = useState<Marche[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [dataLoaded, setDataLoaded] = useState(false); // Pour éviter les rechargements inutiles
 
   // Charger les données au chargement de la page
-  // ⚠️ FIX: Ajout d'un flag hasLoaded pour éviter les appels répétés
   useEffect(() => {
     console.log("useEffect de HomePage déclenché");
+    // Si les données sont déjà chargées, ne pas recharger
+    if (dataLoaded) {
+      console.log("Données déjà chargées, ignorer");
+      return;
+    }
+
     let isMounted = true;
     
     const loadData = async () => {
-      if (!isMounted) return;
+      if (!isMounted) {
+        console.log("Composant démonté, abandon du chargement");
+        return;
+      }
       
       try {
+        console.log("Début du chargement des données...");
         setLoading(true);
         
         // Charger les statistiques
         const statsData = await fetchMarcheStats();
-        if (statsData && isMounted) {
+        if (!isMounted) {
+          console.log("Composant démonté après fetchMarcheStats");
+          return;
+        }
+        
+        if (statsData) {
           setStats(statsData);
         }
         
         // Charger les marchés récents
         const recentMarchesData = await fetchRecentMarches(3);
-        if (Array.isArray(recentMarchesData) && isMounted) {
+        if (!isMounted) {
+          console.log("Composant démonté après fetchRecentMarches");
+          return;
+        }
+        
+        if (Array.isArray(recentMarchesData)) {
           setRecentProjects(recentMarchesData);
         }
         
         if (isMounted) {
           setError(null);
+          setDataLoaded(true); // Marquer les données comme chargées
+          console.log("Données chargées avec succès");
         }
       } catch (err) {
         if (isMounted) {
@@ -88,22 +110,27 @@ export default function HomePage() {
     
     // Nettoyage pour éviter les updates sur un composant démonté
     return () => {
+      console.log("Nettoyage de l'effet HomePage");
       isMounted = false;
     };
   }, []); // Tableau de dépendances vide pour n'exécuter qu'au montage
 
   // Convertir les données des marchés récents pour le format attendu par RecentProjects
-  const formattedRecentProjects = recentProjects && Array.isArray(recentProjects) 
-    ? recentProjects.map(marche => ({
-        id: marche?.id || '',
-        name: marche?.titre || 'Sans titre',
-        client: marche?.client || 'Non spécifié',
-        status: marche?.statut || 'Non défini'
-      }))
-    : [];
+  const formattedRecentProjects = useMemo(() => {
+    if (!recentProjects || !Array.isArray(recentProjects)) {
+      return [];
+    }
+    
+    return recentProjects.map(marche => ({
+      id: marche?.id || '',
+      name: marche?.titre || 'Sans titre',
+      client: marche?.client || 'Non spécifié',
+      status: marche?.statut || 'Non défini'
+    }));
+  }, [recentProjects]);
 
-  // Stats pour les cartes
-  const statsCards = [
+  // Stats pour les cartes - mémoiser pour éviter les recréations inutiles
+  const statsCards = useMemo(() => [
     { 
       title: "Marchés en cours",
       value: stats ? stats.enCours : 0,
@@ -124,12 +151,12 @@ export default function HomePage() {
       value: stats ? stats.termines : 0,
       icon: <FileText className="h-6 w-6 text-btp-blue bg-blue-100 p-1 rounded-full" />
     },
-  ];
+  ], [stats]);
 
   // Function to handle navigation
-  const handleNavigation = (path: string) => {
+  const handleNavigation = useCallback((path: string) => {
     navigate(path);
-  };
+  }, [navigate]);
 
   // Actions for the page
   const pageActions = (
