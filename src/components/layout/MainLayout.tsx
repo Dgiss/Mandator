@@ -17,12 +17,9 @@ import { Button } from '@/components/ui/button';
 import { 
   FileText, 
   Home, 
-  LayoutDashboard, 
   MessageSquare, 
-  FormInput, 
   Settings, 
-  LogOut, 
-  Users 
+  LogOut
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -86,15 +83,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               </SidebarMenuItem>
               
               <SidebarMenuItem>
-                <SidebarMenuButton isActive={isActive('/dashboard')} tooltip="Tableau de bord" asChild>
-                  <Link to="/dashboard">
-                    <LayoutDashboard className="size-4" />
-                    <span>Tableau de bord</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              
-              <SidebarMenuItem>
                 <SidebarMenuButton isActive={isActive('/marches')} tooltip="Marchés" asChild>
                   <Link to="/marches">
                     <FileText className="size-4" />
@@ -108,24 +96,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   <Link to="/questions-reponses">
                     <MessageSquare className="size-4" />
                     <span>Questions/Réponses</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              
-              <SidebarMenuItem>
-                <SidebarMenuButton isActive={isActive('/formulaires')} tooltip="Formulaires" asChild>
-                  <Link to="/formulaires">
-                    <FormInput className="size-4" />
-                    <span>Formulaires</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              
-              <SidebarMenuItem>
-                <SidebarMenuButton isActive={isActive('/clients')} tooltip="Clients" asChild>
-                  <Link to="/clients">
-                    <Users className="size-4" />
-                    <span>Clients</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
