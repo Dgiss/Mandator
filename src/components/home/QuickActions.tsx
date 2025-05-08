@@ -13,7 +13,7 @@ const QuickActions: React.FC = () => {
       <h3 className="text-lg font-medium mb-4">Actions rapides</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Button 
-          onClick={() => navigate('/marches/create')}
+          onClick={() => navigate('/marches/creation')}
           variant="btpPrimary"
           className="flex items-center justify-center gap-2"
         >

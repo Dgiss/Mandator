@@ -7,9 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { FileText, Search, Plus, Filter } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Marche } from '@/services/types';
+import { fetchMarches } from '@/services/marchesService';
 
 export default function MarchesPage() {
   const navigate = useNavigate();
@@ -21,41 +21,13 @@ export default function MarchesPage() {
 
   // Chargement des marchés depuis Supabase
   useEffect(() => {
-    const fetchMarches = async () => {
+    const loadMarches = async () => {
       setLoading(true);
       try {
-        console.log("Récupération des marchés...");
-        // Utiliser le client Supabase typé pour accéder à la table marches
-        const { data, error } = await supabase
-          .from('marches')
-          .select('*')
-          .order('datecreation', { ascending: false });
+        const data = await fetchMarches();
         
-        if (error) {
-          console.error("Erreur Supabase lors de la récupération des marchés:", error);
-          throw error;
-        }
-        
-        console.log("Données brutes reçues:", data);
-        
-        // Formater les données pour correspondre au type Marche
-        const formattedMarches = data.map((marche: any) => ({
-          id: marche.id,
-          titre: marche.titre,
-          description: marche.description || '',
-          client: marche.client || '',
-          statut: marche.statut,
-          datecreation: marche.datecreation ? new Date(marche.datecreation).toLocaleDateString('fr-FR') : '',
-          budget: marche.budget || '',
-          image: marche.image,
-          logo: marche.logo,
-          reference: marche.reference,
-          user_id: marche.user_id,
-          created_at: marche.created_at
-        }));
-        
-        console.log("Marchés formatés:", formattedMarches);
-        setMarches(formattedMarches);
+        console.log("Marchés chargés:", data);
+        setMarches(data);
       } catch (error) {
         console.error('Erreur lors du chargement des marchés:', error);
         toast({
@@ -68,7 +40,7 @@ export default function MarchesPage() {
       }
     };
 
-    fetchMarches();
+    loadMarches();
   }, [toast]);
 
   // Filtrer les marchés en fonction du terme de recherche
@@ -91,6 +63,16 @@ export default function MarchesPage() {
       case 'Terminé': return 'bg-btp-success';
       case 'En attente': return 'bg-btp-warning';
       default: return 'bg-gray-500';
+    }
+  };
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '';
+    try {
+      return new Date(dateString).toLocaleDateString('fr-FR');
+    } catch (error) {
+      console.error('Erreur lors du formatage de la date:', error, dateString);
+      return dateString;
     }
   };
 
@@ -166,7 +148,7 @@ export default function MarchesPage() {
                     </div>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{marche.client}</TableCell>
-                  <TableCell className="hidden md:table-cell">{marche.datecreation}</TableCell>
+                  <TableCell className="hidden md:table-cell">{formatDate(marche.datecreation)}</TableCell>
                   <TableCell className="hidden md:table-cell">{marche.budget}</TableCell>
                   <TableCell>
                     <div className="flex items-center">

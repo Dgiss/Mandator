@@ -18,7 +18,25 @@ export const fetchMarches = async (): Promise<Marche[]> => {
     }
     
     console.log("Marchés récupérés:", data);
-    return data as Marche[];
+    
+    // S'assurer que les données sont bien formatées avant de les retourner
+    // Cela peut aider à résoudre les problèmes d'affichage
+    const formattedMarches = data.map((marche: any) => ({
+      id: marche.id,
+      titre: marche.titre,
+      description: marche.description,
+      client: marche.client,
+      statut: marche.statut,
+      datecreation: marche.datecreation,
+      budget: marche.budget,
+      image: marche.image,
+      logo: marche.logo,
+      user_id: marche.user_id,
+      created_at: marche.created_at
+    }));
+    
+    console.log("Marchés formatés:", formattedMarches);
+    return formattedMarches as Marche[];
   } catch (error) {
     console.error('Exception lors de la récupération des marchés:', error);
     throw error;
