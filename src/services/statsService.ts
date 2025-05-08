@@ -31,7 +31,7 @@ export const fetchMarcheStats = async (): Promise<MarcheStats> => {
       throw error;
     }
     
-    // Calculer les statistiques
+    // Valeurs par défaut en cas de problème
     const stats: MarcheStats = {
       enCours: 0,
       projetsActifs: 0,
@@ -39,9 +39,10 @@ export const fetchMarcheStats = async (): Promise<MarcheStats> => {
       termines: 0
     };
     
-    // Compter les marchés par statut
+    // Compter les marchés par statut si data existe et est un tableau
     if (marches && Array.isArray(marches)) {
       marches.forEach((marche: Marche) => {
+        // Utiliser une valeur par défaut si statut est undefined ou null
         const statut = marche.statut ? marche.statut.toLowerCase() : '';
         
         if (statut === 'en cours') {
@@ -54,13 +55,21 @@ export const fetchMarcheStats = async (): Promise<MarcheStats> => {
           stats.termines++;
         }
       });
+    } else {
+      console.warn("Données de marchés invalides pour les statistiques:", marches);
     }
     
     console.log("Statistiques calculées:", stats);
     return stats;
   } catch (error) {
     console.error('Exception lors de la récupération des statistiques:', error);
-    throw error;
+    // En cas d'erreur, retourner des statistiques vides
+    return {
+      enCours: 0,
+      projetsActifs: 0,
+      devisEnAttente: 0,
+      termines: 0
+    };
   }
 };
 
@@ -68,6 +77,11 @@ export const fetchMarcheStats = async (): Promise<MarcheStats> => {
 export const fetchRecentMarches = async (limit: number = 3): Promise<Marche[]> => {
   try {
     console.log(`Récupération des ${limit} marchés les plus récents...`);
+    
+    if (!supabase) {
+      console.error("Client Supabase non initialisé");
+      return [];
+    }
     
     const { data, error } = await supabase
       .from('marches')
@@ -80,10 +94,31 @@ export const fetchRecentMarches = async (limit: number = 3): Promise<Marche[]> =
       throw error;
     }
     
-    console.log("Marchés récents récupérés:", data);
-    return data as Marche[];
+    // Vérifier que data est valide
+    if (!data || !Array.isArray(data)) {
+      console.warn("Données de marchés récents invalides:", data);
+      return [];
+    }
+    
+    // Formater les marchés pour s'assurer que toutes les propriétés sont définies
+    const formattedData = data.map((marche: any) => ({
+      id: marche.id || '',
+      titre: marche.titre || 'Sans titre',
+      description: marche.description || '',
+      client: marche.client || 'Non spécifié',
+      statut: marche.statut || 'Non défini',
+      datecreation: marche.datecreation || null,
+      budget: marche.budget || 'Non défini',
+      image: marche.image || null,
+      logo: marche.logo || null,
+      user_id: marche.user_id || null,
+      created_at: marche.created_at || null
+    }));
+    
+    console.log("Marchés récents récupérés:", formattedData);
+    return formattedData as Marche[];
   } catch (error) {
     console.error('Exception lors de la récupération des marchés récents:', error);
-    throw error;
+    return [];
   }
 };

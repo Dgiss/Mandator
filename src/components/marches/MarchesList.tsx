@@ -20,30 +20,37 @@ const MarchesList: React.FC<MarchesListProps> = ({
   error, 
   onMarcheClick 
 }) => {
+  // Vérifier si marches est défini avant de l'utiliser
+  const validMarches = Array.isArray(marches) ? marches : [];
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '';
     try {
       return new Date(dateString).toLocaleDateString('fr-FR');
     } catch (error) {
-      return dateString;
+      console.warn('Erreur lors du formatage de la date:', dateString);
+      return dateString || '';
     }
   };
 
-  const getStatusColor = (statut: string) => {
-    switch(statut) {
-      case 'En cours': return 'bg-btp-blue';
-      case 'Terminé': return 'bg-btp-success';
-      case 'En attente': return 'bg-btp-warning';
+  const getStatusColor = (statut: string = '') => {
+    // Protection contre les valeurs nulles ou undefined
+    if (!statut) return 'bg-gray-500';
+
+    switch(statut.toLowerCase()) {
+      case 'en cours': return 'bg-btp-blue';
+      case 'terminé': return 'bg-btp-success';
+      case 'en attente': return 'bg-btp-warning';
       default: return 'bg-gray-500';
     }
   };
 
   // Debug output
   console.log("MarchesList - Props received:", { 
-    marchesCount: marches ? marches.length : 0, 
+    marchesCount: validMarches ? validMarches.length : 0, 
     loading, 
     error,
-    marchesData: marches
+    marchesData: validMarches
   });
 
   // Render loading skeleton
@@ -64,7 +71,7 @@ const MarchesList: React.FC<MarchesListProps> = ({
             <TableRow>
               <TableCell colSpan={5} className="p-0">
                 <div className="space-y-3 p-4">
-                  {Array(5).fill(0).map((_, index) => (
+                  {Array(3).fill(0).map((_, index) => (
                     <div key={index} className="flex items-center space-x-4">
                       <Skeleton className="h-12 w-12 rounded-md" />
                       <div className="space-y-2 flex-1">
@@ -125,29 +132,29 @@ const MarchesList: React.FC<MarchesListProps> = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {marches.length > 0 ? (
-            marches.map((marche) => (
+          {validMarches.length > 0 ? (
+            validMarches.map((marche) => (
               <TableRow 
-                key={marche.id} 
+                key={marche.id || `marche-${Math.random()}`} 
                 className="cursor-pointer hover:bg-gray-50 border-t"
-                onClick={() => onMarcheClick(marche.id)}
+                onClick={() => marche.id && onMarcheClick(marche.id)}
               >
                 <TableCell className="font-medium">
                   <div className="flex items-center">
                     <FileText className="h-5 w-5 mr-2 text-btp-blue flex-shrink-0" />
                     <div>
-                      <p className="font-medium text-gray-900">{marche.titre}</p>
-                      <p className="text-sm text-gray-500 md:hidden">{marche.client}</p>
+                      <p className="font-medium text-gray-900">{marche.titre || 'Sans titre'}</p>
+                      <p className="text-sm text-gray-500 md:hidden">{marche.client || 'Non spécifié'}</p>
                     </div>
                   </div>
                 </TableCell>
-                <TableCell className="hidden md:table-cell">{marche.client}</TableCell>
+                <TableCell className="hidden md:table-cell">{marche.client || 'Non spécifié'}</TableCell>
                 <TableCell className="hidden md:table-cell">{formatDate(marche.datecreation)}</TableCell>
-                <TableCell className="hidden md:table-cell">{marche.budget}</TableCell>
+                <TableCell className="hidden md:table-cell">{marche.budget || 'Non défini'}</TableCell>
                 <TableCell>
                   <div className="flex items-center">
                     <div className={`h-2.5 w-2.5 rounded-full ${getStatusColor(marche.statut)} mr-2 flex-shrink-0`}></div>
-                    <span>{marche.statut}</span>
+                    <span>{marche.statut || 'Non défini'}</span>
                   </div>
                 </TableCell>
               </TableRow>
@@ -155,17 +162,17 @@ const MarchesList: React.FC<MarchesListProps> = ({
           ) : (
             <TableRow>
               <TableCell colSpan={5} className="h-24 text-center">
-                {loading ? "Chargement..." : "Aucun marché trouvé. Cliquez sur 'Nouveau marché' pour en créer un."}
+                Aucun marché trouvé. Cliquez sur 'Nouveau marché' pour en créer un.
               </TableCell>
             </TableRow>
           )}
         </TableBody>
       </Table>
       
-      {marches.length > 0 && (
+      {validMarches.length > 0 && (
         <div className="flex justify-between items-center p-4 bg-gray-50 text-sm text-gray-500 border-t">
-          <div>Total dans la base: <span className="font-medium">{marches.length} marchés</span></div>
-          <div>Affichés: <span className="font-medium">{marches.length} marchés</span></div>
+          <div>Total dans la base: <span className="font-medium">{validMarches.length} marchés</span></div>
+          <div>Affichés: <span className="font-medium">{validMarches.length} marchés</span></div>
         </div>
       )}
     </div>

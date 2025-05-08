@@ -39,16 +39,35 @@ export default function HomePage() {
         
         // Charger les statistiques
         const statsData = await fetchMarcheStats();
-        setStats(statsData);
+        if (statsData) {
+          setStats(statsData);
+        } else {
+          console.warn("Données de statistiques invalides");
+          // Stats par défaut déjà définies dans le state initial
+        }
         
         // Charger les marchés récents
         const recentMarchesData = await fetchRecentMarches(3);
-        setRecentProjects(recentMarchesData);
+        if (Array.isArray(recentMarchesData)) {
+          setRecentProjects(recentMarchesData);
+        } else {
+          console.warn("Données de marchés récents invalides");
+          setRecentProjects([]);
+        }
         
         setError(null);
       } catch (err) {
         console.error("Erreur lors du chargement des données:", err);
         setError("Impossible de charger les données");
+        // S'assurer que les données par défaut sont définies
+        setStats({
+          enCours: 0,
+          projetsActifs: 0,
+          devisEnAttente: 0,
+          termines: 0
+        });
+        setRecentProjects([]);
+        
         toast({
           title: "Erreur",
           description: "Impossible de charger les données",
@@ -63,33 +82,36 @@ export default function HomePage() {
   }, [toast]);
 
   // Convertir les données des marchés récents pour le format attendu par RecentProjects
-  const formattedRecentProjects = recentProjects.map(marche => ({
-    id: marche.id,
-    name: marche.titre,
-    client: marche.client || 'Non spécifié',
-    status: marche.statut
-  }));
+  // avec gestion des valeurs null/undefined
+  const formattedRecentProjects = recentProjects && Array.isArray(recentProjects) 
+    ? recentProjects.map(marche => ({
+        id: marche?.id || '',
+        name: marche?.titre || 'Sans titre',
+        client: marche?.client || 'Non spécifié',
+        status: marche?.statut || 'Non défini'
+      }))
+    : [];
 
   // Stats pour les cartes
   const statsCards = [
     { 
       title: "Marchés en cours",
-      value: stats.enCours,
+      value: stats ? stats.enCours : 0,
       icon: <FileText className="h-6 w-6 text-btp-blue bg-blue-100 p-1 rounded-full" />
     },
     { 
       title: "Projets actifs",
-      value: stats.projetsActifs,
+      value: stats ? stats.projetsActifs : 0,
       icon: <FileText className="h-6 w-6 text-btp-blue bg-blue-100 p-1 rounded-full" />
     },
     { 
       title: "Devis en attente",
-      value: stats.devisEnAttente,
+      value: stats ? stats.devisEnAttente : 0,
       icon: <FileText className="h-6 w-6 text-btp-blue bg-blue-100 p-1 rounded-full" />
     },
     { 
       title: "Marchés terminés",
-      value: stats.termines,
+      value: stats ? stats.termines : 0,
       icon: <FileText className="h-6 w-6 text-btp-blue bg-blue-100 p-1 rounded-full" />
     },
   ];

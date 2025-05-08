@@ -19,10 +19,18 @@ interface RecentProjectsProps {
 
 const RecentProjects: React.FC<RecentProjectsProps> = ({ projects, loading = false }) => {
   const navigate = useNavigate();
+  
+  // Garantir que projects est un tableau valide
+  const validProjects = Array.isArray(projects) ? projects : [];
 
   // Return the status badge element based on status
   const getStatusBadge = (status: string) => {
-    if (!status) return null;
+    if (!status) return (
+      <span className="inline-flex items-center">
+        <span className="w-2 h-2 bg-gray-500 rounded-full mr-2"></span>
+        <span className="text-sm text-gray-600">Non défini</span>
+      </span>
+    );
     
     const statusLower = status.toLowerCase();
     if (statusLower === "en cours") {
@@ -65,20 +73,20 @@ const RecentProjects: React.FC<RecentProjectsProps> = ({ projects, loading = fal
               </div>
             ))}
           </div>
-        ) : projects.length > 0 ? (
+        ) : validProjects.length > 0 ? (
           // Afficher les vraies données
           <div className="space-y-4">
-            {projects.map(project => (
-              <div key={project.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-sm transition-shadow">
+            {validProjects.map(project => (
+              <div key={project.id || `project-${Math.random()}`} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-sm transition-shadow">
                 <div className="p-4 flex justify-between items-center">
                   <div>
-                    <h4 className="font-medium text-gray-800">{project.name}</h4>
-                    <p className="text-sm text-gray-600">Client: {project.client}</p>
+                    <h4 className="font-medium text-gray-800">{project.name || 'Sans nom'}</h4>
+                    <p className="text-sm text-gray-600">Client: {project.client || 'Non spécifié'}</p>
                   </div>
                   <div className="flex items-center">
                     {getStatusBadge(project.status)}
                     <button 
-                      onClick={() => navigate(`/marches/${project.id}`)}
+                      onClick={() => project.id && navigate(`/marches/${project.id}`)}
                       className="ml-4 p-1 text-gray-400 hover:text-gray-600 rounded"
                     >
                       <ChevronRight className="h-5 w-5" />

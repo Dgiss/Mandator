@@ -7,7 +7,7 @@ import { Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { Marche } from '@/services/types';
-import { fetchMarches } from '@/services/marchesService';
+import { fetchMarches } from '@/services/marcheService';
 import MarchesList from '@/components/marches/MarchesList';
 import MarchesFilters from '@/components/marches/MarchesFilters';
 
@@ -37,6 +37,15 @@ export default function MarchesPage() {
         
         if (!isMounted) return;
         
+        // Vérifier que data est un tableau valide
+        if (!data || !Array.isArray(data)) {
+          console.warn("Les données reçues ne sont pas un tableau valide:", data);
+          setMarches([]);
+          setTotalCount(0);
+          setError("Format de données invalide");
+          return;
+        }
+        
         console.log("Marchés chargés:", data);
         setMarches(data);
         setTotalCount(data.length);
@@ -45,6 +54,10 @@ export default function MarchesPage() {
         
         console.error('Erreur lors du chargement des marchés:', error);
         setError("Impossible de récupérer la liste des marchés. Veuillez réessayer ultérieurement.");
+        // S'assurer que marches est un tableau vide en cas d'erreur
+        setMarches([]);
+        setTotalCount(0);
+        
         toast({
           title: "Erreur",
           description: "Impossible de récupérer la liste des marchés",
@@ -64,16 +77,25 @@ export default function MarchesPage() {
     };
   }, [toast]);
 
-  // Mémoisation de la liste filtrée
+  // Mémoisation de la liste filtrée avec gestion des valeurs null/undefined
   const filteredMarches = useMemo(() => {
-    return marches.filter(marche => 
-      marche.titre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (marche.client && marche.client.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    if (!marches || !Array.isArray(marches)) return [];
+    
+    return marches.filter(marche => {
+      const titre = (marche.titre || '').toLowerCase();
+      const client = (marche.client || '').toLowerCase();
+      const term = searchTerm.toLowerCase();
+      
+      return titre.includes(term) || client.includes(term);
+    });
   }, [marches, searchTerm]);
 
   // Gestionnaires d'événements
   const handleMarcheClick = useCallback((marcheId: string) => {
+    if (!marcheId) {
+      console.warn("ID de marché invalide:", marcheId);
+      return;
+    }
     navigate(`/marches/${marcheId}`);
   }, [navigate]);
 
