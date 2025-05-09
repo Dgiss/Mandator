@@ -96,11 +96,6 @@ export interface Database {
           created_at: string | null;
           reference: string | null;
           logo: string | null;
-          // Ces champs ne sont pas présents dans la base de données
-          // dateDebut?: string | null;
-          // dateFin?: string | null;
-          // hasAttachments?: boolean | null;
-          // isPublic?: boolean | null;
         };
         Insert: {
           id?: string;
@@ -312,6 +307,39 @@ export interface Database {
           date_creation?: string | null;
           attachment_path?: string | null;
           created_at?: string | null;
+        };
+        Relationships: [];
+      };
+      document_attachments: {
+        Row: {
+          id: string;
+          document_id: string;
+          version_id: string | null;
+          file_name: string;
+          file_path: string;
+          file_type: string;
+          file_size: string;
+          uploaded_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          document_id: string;
+          version_id?: string | null;
+          file_name: string;
+          file_path: string;
+          file_type: string;
+          file_size: string;
+          uploaded_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          document_id?: string;
+          version_id?: string | null;
+          file_name?: string;
+          file_path?: string;
+          file_type?: string;
+          file_size?: string;
+          uploaded_at?: string | null;
         };
         Relationships: [];
       };

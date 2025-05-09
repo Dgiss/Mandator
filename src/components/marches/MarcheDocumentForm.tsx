@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Dialog, 
@@ -240,7 +239,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         }
         
         if (data && data[0]) {
-          uploadedAttachments.push(data[0] as DocumentAttachment);
+          uploadedAttachments.push(data[0] as unknown as DocumentAttachment);
         }
       }
       

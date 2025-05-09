@@ -9,6 +9,54 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      document_attachments: {
+        Row: {
+          document_id: string
+          file_name: string
+          file_path: string
+          file_size: string
+          file_type: string
+          id: string
+          uploaded_at: string | null
+          version_id: string | null
+        }
+        Insert: {
+          document_id: string
+          file_name: string
+          file_path: string
+          file_size: string
+          file_type: string
+          id?: string
+          uploaded_at?: string | null
+          version_id?: string | null
+        }
+        Update: {
+          document_id?: string
+          file_name?: string
+          file_path?: string
+          file_size?: string
+          file_type?: string
+          id?: string
+          uploaded_at?: string | null
+          version_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_attachments_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_attachments_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           created_at: string | null

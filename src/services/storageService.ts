@@ -1,5 +1,6 @@
 
 import { supabase } from '@/lib/supabase';
+import { Database } from '@/types/supabase';
 
 // Fonction pour télécharger une image sur Supabase Storage
 export const uploadImage = async (file: File, path: string): Promise<string | null> => {
@@ -142,6 +143,7 @@ export const ensureBucketExists = async (bucketName: string): Promise<boolean> =
 // Fonction pour récupérer les pièces jointes d'un document
 export const getDocumentAttachments = async (documentId: string) => {
   try {
+    // Using type-safe approach with our Database type
     const { data, error } = await supabase
       .from('document_attachments')
       .select('*')

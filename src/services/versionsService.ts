@@ -1,6 +1,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { Version, DocumentAttachment } from './types';
+import { Database } from '@/types/supabase';
 
 export const versionsService = {
   // Récupérer toutes les versions pour un marché
