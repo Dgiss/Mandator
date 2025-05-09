@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,7 +25,7 @@ interface Document {
   type: string;
   statut: 'Approuvé' | 'En révision' | 'Soumis pour visa' | 'Rejeté';
   version: string;
-  dateUpload: string;  // Changed to match the new column name case
+  dateupload: string;  // Changed to match DB column name (lowercase)
   taille: string;
   description?: string;
   fasciculeId?: string;
@@ -57,7 +56,7 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
         type: doc.type,
         statut: doc.statut as 'Approuvé' | 'En révision' | 'Soumis pour visa' | 'Rejeté',
         version: doc.version,
-        dateUpload: doc.dateUpload || new Date().toLocaleDateString('fr-FR'),  // Using the corrected column name
+        dateupload: doc.dateupload || new Date().toLocaleDateString('fr-FR'),  // Using the lowercase column name
         taille: doc.taille || '0 KB',
         description: doc.description,
         fasciculeId: doc.fascicule_id,
@@ -221,7 +220,7 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
                       {doc.statut}
                     </span>
                   </TableCell>
-                  <TableCell className="hidden md:table-cell">{doc.dateUpload}</TableCell>
+                  <TableCell className="hidden md:table-cell">{doc.dateupload}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end space-x-1">
                       <Button 

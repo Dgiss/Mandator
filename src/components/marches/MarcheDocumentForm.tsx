@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Dialog, 
@@ -35,6 +34,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDropzone } from 'react-dropzone';
+import { checkBucket, sanitizeFileName } from '@/utils/storage-setup';
 
 interface Document {
   id: string;
@@ -42,7 +42,7 @@ interface Document {
   type: string;
   statut: 'Approuvé' | 'En révision' | 'Soumis pour visa' | 'Rejeté';
   version: string;
-  dateUpload: string;
+  dateupload: string;
   taille: string;
   description?: string;
   fascicule_id?: string;
@@ -88,7 +88,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
   };
 
   // Function to check and create bucket if needed
-  const ensureBucketExists = async (bucketName: string) => {
+  const checkBucket = async (bucketName: string) => {
     try {
       const { data: buckets } = await supabase.storage.listBuckets();
       if (buckets && !buckets.some(b => b.name === bucketName)) {
@@ -187,7 +187,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         fileSize = (selectedFile.size / 1024 / 1024).toFixed(2) + ' MB';
         
         // Ensure the documents bucket exists
-        const bucketExists = await ensureBucketExists('documents');
+        const bucketExists = await checkBucket('documents');
         if (!bucketExists) {
           throw new Error('Impossible de créer ou d\'accéder au bucket de stockage');
         }
@@ -215,7 +215,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         description: values.description || null,
         fascicule_id: values.fascicule_id === 'none' ? null : values.fascicule_id,
         marche_id: values.marche_id,
-        dateUpload: new Date().toISOString(),  // Make sure to use the correct case here
+        dateupload: new Date().toISOString(),  // Changed to match DB column name (lowercase)
         taille: selectedFile ? fileSize : (isEditing ? editingDocument.taille : '0 KB'),
         file_path: filePath || (isEditing ? editingDocument['file_path'] : null)
       };

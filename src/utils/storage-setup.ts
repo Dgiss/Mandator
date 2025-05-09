@@ -7,30 +7,40 @@ export async function ensureStorageBucketExists() {
     const { data: buckets } = await supabase.storage.listBuckets();
     
     if (!buckets?.find(bucket => bucket.name === 'documents')) {
-      // Create the documents bucket if it doesn't exist
-      const { error } = await supabase.storage.createBucket('documents', {
-        public: false, // Set to true if you want files to be publicly accessible
-        fileSizeLimit: 10485760 // 10MB limit
-      });
-      
-      if (error) {
-        console.error("Error creating documents bucket:", error);
-      } else {
-        console.log("Documents bucket created successfully");
+      try {
+        // Create the documents bucket if it doesn't exist
+        const { error } = await supabase.storage.createBucket('documents', {
+          public: false, // Set to true if you want files to be publicly accessible
+          fileSizeLimit: 10485760 // 10MB limit
+        });
+        
+        if (error && !error.message.includes("already exists")) {
+          console.error("Error creating documents bucket:", error);
+        } else {
+          console.log("Documents bucket created successfully or already exists");
+        }
+      } catch (bucketError) {
+        // Ignore errors that might occur if the bucket already exists
+        console.log("Bucket operation attempted:", bucketError);
       }
     }
     
     if (!buckets?.find(bucket => bucket.name === 'fascicule-attachments')) {
-      // Create the fascicule-attachments bucket if it doesn't exist
-      const { error } = await supabase.storage.createBucket('fascicule-attachments', {
-        public: false, // Set to false for security, files are accessed via signed URLs
-        fileSizeLimit: 20971520 // 20MB limit
-      });
-      
-      if (error) {
-        console.error("Error creating fascicule-attachments bucket:", error);
-      } else {
-        console.log("Fascicule-attachments bucket created successfully");
+      try {
+        // Create the fascicule-attachments bucket if it doesn't exist
+        const { error } = await supabase.storage.createBucket('fascicule-attachments', {
+          public: false, // Set to false for security, files are accessed via signed URLs
+          fileSizeLimit: 20971520 // 20MB limit
+        });
+        
+        if (error && !error.message.includes("already exists")) {
+          console.error("Error creating fascicule-attachments bucket:", error);
+        } else {
+          console.log("Fascicule-attachments bucket created successfully or already exists");
+        }
+      } catch (bucketError) {
+        // Ignore errors that might occur if the bucket already exists
+        console.log("Bucket operation attempted:", bucketError);
       }
     }
   } catch (error) {
@@ -43,14 +53,22 @@ export async function checkBucket(name: string) {
   try {
     const { data } = await supabase.storage.listBuckets();
     if (!data || !data.some(b => b.name === name)) {
-      await supabase.storage.createBucket(name, {
-        public: false,
-        fileSizeLimit: 20971520 // 20MB
-      });
+      try {
+        await supabase.storage.createBucket(name, {
+          public: false,
+          fileSizeLimit: 20971520 // 20MB
+        });
+      } catch (createError: any) {
+        // Ignore errors if the bucket already exists
+        if (!createError.message.includes("already exists")) {
+          console.error(`Error creating bucket ${name}:`, createError);
+          return false;
+        }
+      }
     }
     return true;
   } catch (error) {
-    // Ignore errors that might occur if the bucket already exists
+    // Log errors that might occur during the operation
     console.error(`Error checking/creating bucket ${name}:`, error);
     return false;
   }
