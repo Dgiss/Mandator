@@ -15,22 +15,10 @@ import { FileText, Plus, Search, Download, Filter, Eye, Edit } from 'lucide-reac
 import MarcheDocumentForm from './MarcheDocumentForm';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { Document } from '@/services/types';
 
 interface MarcheDocumentsProps {
   marcheId: string;
-}
-
-interface Document {
-  id: string;
-  nom: string;
-  type: string;
-  statut: 'Approuvé' | 'En révision' | 'Soumis pour visa' | 'Rejeté';
-  version: string;
-  dateUpload: string;  // Changed from dateupload to dateUpload
-  taille: string;
-  description?: string;
-  fasciculeId?: string;
-  marche_id: string;
 }
 
 export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
@@ -57,11 +45,12 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
         type: doc.type,
         statut: doc.statut as 'Approuvé' | 'En révision' | 'Soumis pour visa' | 'Rejeté',
         version: doc.version,
-        dateUpload: doc.dateUpload || new Date().toLocaleDateString('fr-FR'),  // Updated to use dateUpload
+        dateUpload: doc.dateUpload || new Date().toLocaleDateString('fr-FR'),
         taille: doc.taille || '0 KB',
         description: doc.description,
-        fasciculeId: doc.fascicule_id,
-        marche_id: doc.marche_id
+        fascicule_id: doc.fascicule_id,
+        marche_id: doc.marche_id,
+        file_path: doc.file_path
       }));
       
       setDocuments(formattedData);
