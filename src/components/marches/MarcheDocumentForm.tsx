@@ -203,7 +203,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         description: values.description || null,
         fascicule_id: values.fascicule_id === 'none' ? null : values.fascicule_id,
         marche_id: values.marche_id,
-        dateupload: new Date().toISOString(),  // Changed to match DB column name (lowercase)
+        dateupload: new Date().toISOString(),
         taille: selectedFile ? fileSize : (isEditing ? editingDocument.taille : '0 KB'),
         file_path: filePath || (isEditing ? editingDocument['file_path'] : null)
       };
@@ -224,7 +224,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         result = await supabase
           .from('documents')
           .insert([documentData])
-          .select('id');
+          .select();
           
         if (result.data && result.data.length > 0) {
           documentId = result.data[0].id;
@@ -232,6 +232,8 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
           // Automatically create a version when a document is created
           if (documentId && selectedFile) {
             try {
+              console.log('Creating initial version for document:', documentId);
+              
               // Import versionsService and create a new version
               const { versionsService } = await import('@/services/versionsService');
               
@@ -239,7 +241,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
               // For now, use a placeholder or get from a context
               const currentUser = "Utilisateur"; // Replace with actual user info when auth is implemented
               
-              await versionsService.addVersion({
+              const versionData = {
                 document_id: documentId,
                 marche_id: values.marche_id,
                 version: values.version,
@@ -248,7 +250,11 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
                 commentaire: "Version initiale créée automatiquement",
                 file_path: filePath,
                 statut: "Actif"
-              }, selectedFile);
+              };
+              
+              console.log('Creating version with data:', versionData);
+              
+              await versionsService.addVersion(versionData);
               
               console.log("Version initiale créée automatiquement");
             } catch (versionError) {

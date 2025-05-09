@@ -12,8 +12,11 @@ export const versionsService = {
       .eq('marche_id', marcheId)
       .order('date_creation', { ascending: false });
 
-    if (error) throw error;
-    return data;
+    if (error) {
+      console.error('Error fetching versions:', error);
+      throw error;
+    }
+    return data || [];
   },
 
   // Récupérer toutes les versions pour un document
@@ -25,13 +28,17 @@ export const versionsService = {
       .eq('document_id', documentId)
       .order('date_creation', { ascending: false });
 
-    if (error) throw error;
-    return data;
+    if (error) {
+      console.error('Error fetching document versions:', error);
+      throw error;
+    }
+    return data || [];
   },
 
   // Ajouter une nouvelle version
   async addVersion(version: Version, file?: File) {
     try {
+      console.log('Adding new version:', version);
       let filePath = version.file_path || null;
 
       // Si un fichier est fourni, le télécharger d'abord
@@ -56,6 +63,19 @@ export const versionsService = {
         if (uploadError) throw uploadError;
       }
 
+      // Log the data being sent to the database
+      console.log('Inserting version with data:', {
+        document_id: version.document_id,
+        marche_id: version.marche_id,
+        version: version.version,
+        cree_par: version.cree_par,
+        taille: version.taille,
+        commentaire: version.commentaire,
+        file_path: filePath,
+        date_creation: new Date().toISOString(),
+        statut: version.statut || 'Actif'
+      });
+
       // Insérer la version dans la base de données
       const { data, error } = await supabase
         .from('versions')
@@ -72,7 +92,12 @@ export const versionsService = {
         }])
         .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error inserting version:', error);
+        throw error;
+      }
+      
+      console.log('Version created successfully:', data);
       return data[0];
     } catch (error) {
       console.error('Erreur lors de la création de la version:', error);

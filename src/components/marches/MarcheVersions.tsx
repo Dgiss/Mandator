@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { versionsService } from '@/services/versionsService';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 interface MarcheVersionsProps {
   marcheId: string;
@@ -40,47 +41,58 @@ interface Version {
 
 export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [versions, setVersions] = useState<Version[]>([]);
-  const [loading, setLoading] = useState(true);
   const [sortConfig, setSortConfig] = useState<{ key: keyof Version | null, direction: 'asc' | 'desc' | null }>({ 
     key: 'dateCreation', 
     direction: 'desc' 
   });
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
+  // Use React Query to fetch and manage versions data
+  const { 
+    data: versions = [], 
+    isLoading: loading,
+    error
+  } = useQuery({
+    queryKey: ['versions', marcheId],
+    queryFn: async () => {
+      try {
+        console.log('Fetching versions for marché:', marcheId);
+        const data = await versionsService.getVersionsByMarcheId(marcheId);
+        console.log('Versions fetched:', data);
+        
+        // Formater les données pour correspondre à notre interface
+        const formattedVersions = data.map((item: any) => ({
+          id: item.id,
+          document: item.documents?.nom || "Document inconnu",
+          version: item.version,
+          creePar: item.cree_par,
+          dateCreation: new Date(item.date_creation).toLocaleDateString('fr-FR'),
+          taille: item.taille || "N/A",
+          commentaire: item.commentaire || "",
+          file_path: item.file_path
+        }));
+        
+        return formattedVersions;
+      } catch (err) {
+        console.error('Error in versions query:', err);
+        throw err;
+      }
+    },
+    staleTime: 30000 // 30 seconds
+  });
+
+  // Handle error if present
   useEffect(() => {
-    loadVersions();
-  }, [marcheId]);
-
-  const loadVersions = async () => {
-    try {
-      setLoading(true);
-      const data = await versionsService.getVersionsByMarcheId(marcheId);
-      
-      // Formater les données pour correspondre à notre interface
-      const formattedVersions = data.map((item: any) => ({
-        id: item.id,
-        document: item.documents?.nom || "Document inconnu",
-        version: item.version,
-        creePar: item.cree_par,
-        dateCreation: new Date(item.date_creation).toLocaleDateString('fr-FR'),
-        taille: item.taille || "N/A",
-        commentaire: item.commentaire || "",
-        file_path: item.file_path
-      }));
-      
-      setVersions(formattedVersions);
-    } catch (error) {
-      console.error('Error loading versions:', error);
+    if (error) {
+      console.error('Error fetching versions:', error);
       toast({
         title: "Erreur",
         description: "Impossible de charger les versions",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [error, toast]);
 
   // Fonction de tri
   const sortedVersions = React.useMemo(() => {
@@ -138,6 +150,11 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
       URL.revokeObjectURL(url);
       a.remove();
       
+      toast({
+        title: "Succès",
+        description: "Téléchargement démarré",
+        variant: "success",
+      });
     } catch (error) {
       console.error('Error downloading file:', error);
       toast({
@@ -152,6 +169,12 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
     <div className="pt-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h2 className="text-2xl font-semibold">Historique des versions</h2>
+        <Button 
+          variant="outline" 
+          onClick={() => queryClient.invalidateQueries({ queryKey: ['versions', marcheId] })}
+        >
+          Rafraîchir
+        </Button>
       </div>
 
       <div className="mb-6 flex flex-col sm:flex-row gap-4">
