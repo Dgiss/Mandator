@@ -20,17 +20,17 @@ import { Check, X } from 'lucide-react';
 import { versionsService } from '@/services/versionsService';
 import { Version } from '@/services/types';
 import { useQueryClient } from '@tanstack/react-query';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface MarcheVisaDialogProps {
   version: Version;
   onVisaComplete?: () => void;
-  userRole: string;
+  userRole?: string;
 }
 
 const MarcheVisaDialog: React.FC<MarcheVisaDialogProps> = ({ 
   version, 
   onVisaComplete,
-  userRole
 }) => {
   const [open, setOpen] = useState(false);
   const [decision, setDecision] = useState<'approuve' | 'rejete'>('approuve');
@@ -38,9 +38,12 @@ const MarcheVisaDialog: React.FC<MarcheVisaDialogProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Utiliser notre nouveau hook pour la gestion des rôles
+  const { canVisa } = useUserRole();
 
   // Role check - only MOE can process visa
-  const canProcessVisa = userRole === 'MOE' && version.statut === 'En attente de visa';
+  const canProcessVisa = canVisa && version.statut === 'En attente de visa';
 
   const handleVisa = async () => {
     if (!canProcessVisa) {

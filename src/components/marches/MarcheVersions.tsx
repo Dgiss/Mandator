@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import MarcheDiffusionDialog from './MarcheDiffusionDialog';
 import MarcheVisaDialog from './MarcheVisaDialog';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface MarcheVersionsProps {
   marcheId: string;
@@ -29,8 +30,10 @@ interface MarcheVersionsProps {
 
 export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [userRole, setUserRole] = useState<'MANDATAIRE' | 'MOE' | 'STANDARD'>('STANDARD');
   const { toast } = useToast();
+
+  // Utiliser notre nouveau hook pour la gestion des rôles
+  const { role, loading: roleLoading } = useUserRole();
 
   // Fetch versions using React Query
   const { data: versionsData = [], isLoading, refetch } = useQuery({
@@ -40,27 +43,6 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
 
   // Cast versions data to our Version type for safer handling
   const versions = versionsData as Version[];
-
-  // Fetch the current user's role
-  useEffect(() => {
-    const fetchUserRole = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        // For demonstration, we're hardcoding the role based on email
-        // In a real application, this would come from your user profiles or roles table
-        if (user.email?.includes('mandataire')) {
-          setUserRole('MANDATAIRE');
-        } else if (user.email?.includes('moe')) {
-          setUserRole('MOE');
-        } else {
-          setUserRole('STANDARD');
-        }
-      }
-    };
-    
-    fetchUserRole();
-  }, []);
 
   const filteredVersions = versions.filter((version: Version) => {
     // Handle potential null or error documents case
@@ -149,6 +131,11 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
     <div className="pt-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-semibold">Versions des documents</h2>
+        {!roleLoading && (
+          <div className="px-4 py-2 bg-gray-100 rounded-md text-sm">
+            Rôle utilisateur : <span className="font-bold">{role}</span>
+          </div>
+        )}
       </div>
 
       <div className="mb-6 relative">
@@ -174,7 +161,7 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
+            {isLoading || roleLoading ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8">
                   <div className="flex justify-center">
@@ -239,7 +226,6 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
                         <MarcheDiffusionDialog 
                           version={version}
                           onDiffusionComplete={refetch}
-                          userRole={userRole}
                         />
                       )}
                       
@@ -248,7 +234,6 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
                         <MarcheVisaDialog 
                           version={version}
                           onVisaComplete={refetch}
-                          userRole={userRole}
                         />
                       )}
                     </div>

@@ -16,17 +16,17 @@ import { FileText, Send, Upload, X } from 'lucide-react';
 import { versionsService } from '@/services/versionsService';
 import { Version } from '@/services/types';
 import { useQueryClient } from '@tanstack/react-query';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface MarcheDiffusionDialogProps {
   version: Version;
   onDiffusionComplete?: () => void;
-  userRole: string;
+  userRole?: string;
 }
 
 const MarcheDiffusionDialog: React.FC<MarcheDiffusionDialogProps> = ({ 
   version, 
   onDiffusionComplete,
-  userRole
 }) => {
   const [open, setOpen] = useState(false);
   const [commentaire, setCommentaire] = useState('');
@@ -35,8 +35,11 @@ const MarcheDiffusionDialog: React.FC<MarcheDiffusionDialogProps> = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Utiliser notre nouveau hook pour la gestion des rôles
+  const { canDiffuse } = useUserRole();
+
   // Role check - only MANDATAIRE can diffuse
-  const canDiffuse = userRole === 'MANDATAIRE' && version.statut === 'En attente de diffusion';
+  const canDiffuseThis = canDiffuse && version.statut === 'En attente de diffusion';
 
   // React-dropzone setup
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -55,7 +58,7 @@ const MarcheDiffusionDialog: React.FC<MarcheDiffusionDialogProps> = ({
   });
 
   const handleDiffuse = async () => {
-    if (!canDiffuse) {
+    if (!canDiffuseThis) {
       toast({
         title: "Accès non autorisé",
         description: "Seul le MANDATAIRE peut diffuser les documents.",
@@ -115,7 +118,7 @@ const MarcheDiffusionDialog: React.FC<MarcheDiffusionDialogProps> = ({
         <Button 
           variant="outline" 
           className="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700"
-          disabled={!canDiffuse}
+          disabled={!canDiffuseThis}
         >
           <Send className="h-4 w-4 mr-2" /> Diffuser
         </Button>

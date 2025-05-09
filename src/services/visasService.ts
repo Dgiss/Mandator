@@ -174,5 +174,38 @@ export const visasService = {
 
     if (error) throw error;
     return data;
+  },
+
+  // Récupérer le rôle de l'utilisateur actuel
+  async getCurrentUserRole() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    
+    // Récupérer le profil avec le rôle
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    
+    if (error) {
+      console.error('Erreur lors de la récupération du rôle:', error);
+      return 'STANDARD'; // Rôle par défaut
+    }
+    
+    // Normaliser le rôle en majuscules pour la cohérence
+    return data?.role ? String(data.role).toUpperCase() : 'STANDARD';
+  },
+  
+  // Vérifier si l'utilisateur peut diffuser un document (MANDATAIRE uniquement)
+  async canUserDiffuse() {
+    const role = await this.getCurrentUserRole();
+    return role === 'MANDATAIRE';
+  },
+  
+  // Vérifier si l'utilisateur peut viser un document (MOE uniquement)
+  async canUserVisa() {
+    const role = await this.getCurrentUserRole();
+    return role === 'MOE';
   }
 };
