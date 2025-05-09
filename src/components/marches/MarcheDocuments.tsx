@@ -43,7 +43,7 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
         id: doc.id,
         nom: doc.nom,
         type: doc.type,
-        statut: doc.statut as 'Approuvé' | 'En révision' | 'Soumis pour visa' | 'Rejeté',
+        statut: doc.statut,
         version: doc.version,
         dateupload: doc.dateupload || new Date().toLocaleDateString('fr-FR'),
         taille: doc.taille || '0 KB',
@@ -77,7 +77,7 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
   );
 
   // Obtenir la couleur de fond en fonction du statut
-  const getStatusColor = (statut: Document['statut']) => {
+  const getStatusColor = (statut: string) => {
     switch(statut) {
       case 'Approuvé': return 'bg-green-100 text-green-700';
       case 'En révision': return 'bg-orange-100 text-orange-700';

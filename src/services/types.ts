@@ -1,5 +1,6 @@
 
 
+
 // Type pour un marché
 export interface Marche {
   id: string;
@@ -61,9 +62,9 @@ export interface Document {
   id: string;
   nom: string;
   type: string;
-  statut: 'Approuvé' | 'En révision' | 'Soumis pour visa' | 'Rejeté' | string;
+  statut: string; // Changed from union type to string to match Supabase
   version: string;
-  dateupload?: string;
+  dateupload?: string; // Changed from dateUpload to dateupload to match Supabase
   taille?: string;
   description?: string;
   fascicule_id?: string;
@@ -73,3 +74,4 @@ export interface Document {
 }
 
 // Vous pouvez ajouter d'autres types ici si nécessaire
+
