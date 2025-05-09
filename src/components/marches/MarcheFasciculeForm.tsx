@@ -28,23 +28,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
-import { Plus, Edit } from 'lucide-react';
+import { Plus, Edit, Upload, X, File } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
-
-interface Fascicule {
-  id: string;
-  nom: string;
-  nombredocuments: number;
-  datemaj: string;
-  progression: number;
-  description?: string;
-  marche_id: string;
-}
+import { useDropzone } from 'react-dropzone';
+import { checkBucket } from '@/utils/storage-setup';
+import { Fascicule } from '@/services/types';
 
 interface FasciculeFormProps {
   marcheId: string;
@@ -63,6 +56,12 @@ const fasciculeFormSchema = z.object({
 
 type FasciculeFormValues = z.infer<typeof fasciculeFormSchema>;
 
+// Helper function to sanitize file names
+const sanitizeFileName = (name: string) => name
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^a-zA-Z0-9.]/g, '-');
+
 const MarcheFasciculeForm: React.FC<FasciculeFormProps> = ({ 
   marcheId, 
   onFasciculeCreated, 
@@ -70,6 +69,8 @@ const MarcheFasciculeForm: React.FC<FasciculeFormProps> = ({
   setEditingFascicule 
 }) => {
   const [open, setOpen] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
 
   // Récupérer la liste des marchés pour le dropdown
@@ -97,6 +98,14 @@ const MarcheFasciculeForm: React.FC<FasciculeFormProps> = ({
     }
   });
 
+  // Initialize dropzone
+  const { getRootProps, getInputProps } = useDropzone({
+    onDrop: acceptedFiles => {
+      setFiles(prevFiles => [...prevFiles, ...acceptedFiles]);
+    },
+    multiple: true
+  });
+
   // Update form when editing a fascicule or when marcheId changes
   useEffect(() => {
     if (editingFascicule) {
@@ -113,8 +122,52 @@ const MarcheFasciculeForm: React.FC<FasciculeFormProps> = ({
     }
   }, [editingFascicule, marcheId, form]);
 
+  // Remove a file from the list
+  const removeFile = (indexToRemove: number) => {
+    setFiles(files.filter((_, index) => index !== indexToRemove));
+  };
+
+  // Upload files to Supabase storage
+  const uploadFiles = async (fasciculeId: string) => {
+    if (files.length === 0) return [];
+
+    // Ensure bucket exists
+    await checkBucket('fascicule-attachments');
+    
+    const uploadPromises = files.map(async (file) => {
+      try {
+        const fileName = `${Date.now()}_${sanitizeFileName(file.name)}`;
+        const filePath = `${fasciculeId}/${fileName}`;
+        
+        const { data, error } = await supabase.storage
+          .from('fascicule-attachments')
+          .upload(filePath, file);
+          
+        if (error) throw error;
+        
+        return {
+          name: file.name,
+          path: filePath,
+          type: file.type,
+          size: file.size
+        };
+      } catch (error) {
+        console.error("Error uploading file:", error);
+        toast({
+          title: "Erreur",
+          description: `Échec du téléchargement de ${file.name}`,
+          variant: "destructive",
+        });
+        return null;
+      }
+    });
+    
+    return (await Promise.all(uploadPromises)).filter(Boolean);
+  };
+
   const onSubmit = async (values: FasciculeFormValues) => {
     const isEditing = !!editingFascicule;
+    setUploading(true);
     
     try {
       // Prepare data for database
@@ -128,22 +181,63 @@ const MarcheFasciculeForm: React.FC<FasciculeFormProps> = ({
       };
       
       let result;
+      let fasciculeId;
       
       if (isEditing) {
         // Update existing fascicule
+        fasciculeId = editingFascicule.id;
         result = await supabase
           .from('fascicules')
           .update(fasciculeData)
-          .eq('id', editingFascicule.id);
+          .eq('id', fasciculeId);
       } else {
         // Insert new fascicule
         result = await supabase
           .from('fascicules')
-          .insert([fasciculeData]);
+          .insert([fasciculeData])
+          .select();
+          
+        if (result.data && result.data.length > 0) {
+          fasciculeId = result.data[0].id;
+        }
       }
       
       if (result.error) {
         throw new Error(result.error.message);
+      }
+      
+      // Upload files if any
+      if (files.length > 0 && fasciculeId) {
+        const uploadedFiles = await uploadFiles(fasciculeId);
+        
+        // Register attachments in documents table
+        if (uploadedFiles.length > 0) {
+          const documentsToInsert = uploadedFiles.map(file => ({
+            nom: file.name,
+            type: file.type.split('/').pop() || 'document',
+            statut: 'Nouveau',
+            version: '1.0',
+            taille: `${Math.round(file.size / 1024)} KB`,
+            marche_id: values.marche_id,
+            fascicule_id: fasciculeId,
+            dateUpload: new Date().toISOString(),
+            file_path: file.path,
+            description: `Pièce jointe pour le fascicule: ${values.name}`
+          }));
+          
+          const { error: docError } = await supabase
+            .from('documents')
+            .insert(documentsToInsert);
+            
+          if (docError) {
+            console.error("Error registering attachments:", docError);
+            toast({
+              title: "Attention",
+              description: "Les fichiers ont été téléversés mais n'ont pas pu être enregistrés dans la base de documents",
+              variant: "warning",
+            });
+          }
+        }
       }
       
       toast({
@@ -157,6 +251,7 @@ const MarcheFasciculeForm: React.FC<FasciculeFormProps> = ({
       form.reset();
       setOpen(false);
       setEditingFascicule(null);
+      setFiles([]);
       
       if (onFasciculeCreated) {
         onFasciculeCreated();
@@ -168,6 +263,8 @@ const MarcheFasciculeForm: React.FC<FasciculeFormProps> = ({
         description: "Une erreur s'est produite lors de l'opération sur le fascicule",
         variant: "destructive",
       });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -175,6 +272,7 @@ const MarcheFasciculeForm: React.FC<FasciculeFormProps> = ({
     if (!newOpen) {
       setEditingFascicule(null);
       form.reset();
+      setFiles([]);
     }
     setOpen(newOpen);
   };
@@ -198,7 +296,7 @@ const MarcheFasciculeForm: React.FC<FasciculeFormProps> = ({
         </Button>
       </DialogTrigger>
       
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[650px]">
         <DialogHeader>
           <DialogTitle>{dialogTitle}</DialogTitle>
         </DialogHeader>
@@ -307,12 +405,64 @@ const MarcheFasciculeForm: React.FC<FasciculeFormProps> = ({
                 </FormItem>
               )}
             />
+
+            {/* File upload section */}
+            <div className="space-y-4">
+              <FormLabel>Pièces jointes</FormLabel>
+              <div 
+                {...getRootProps()} 
+                className="border-2 border-dashed border-gray-300 rounded-md p-6 cursor-pointer hover:bg-gray-50 transition-colors"
+              >
+                <input {...getInputProps()} />
+                <div className="flex flex-col items-center justify-center text-center">
+                  <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                  <p className="text-sm font-medium">Cliquez ou glissez-déposez vos fichiers ici</p>
+                  <p className="text-xs text-gray-500 mt-1">PDF, DOC, DOCX, XLS, XLSX, Images</p>
+                </div>
+              </div>
+              
+              {files.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="text-sm font-medium mb-2">Fichiers sélectionnés ({files.length})</h4>
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                    {files.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded border">
+                        <div className="flex items-center">
+                          <File className="w-4 h-4 mr-2 flex-shrink-0" />
+                          <span className="text-sm truncate max-w-[300px]">{file.name}</span>
+                          <span className="text-xs text-gray-500 ml-2">({(file.size / 1024).toFixed(1)} KB)</span>
+                        </div>
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0" 
+                          onClick={() => removeFile(index)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             
             <DialogFooter className="mt-6">
-              <Button variant="outline" type="button" onClick={() => handleOpenChange(false)}>
+              <Button 
+                variant="outline" 
+                type="button" 
+                onClick={() => handleOpenChange(false)}
+                disabled={uploading}
+              >
                 Annuler
               </Button>
-              <Button type="submit">{submitButtonText}</Button>
+              <Button 
+                type="submit" 
+                disabled={uploading}
+              >
+                {uploading ? "Téléchargement en cours..." : submitButtonText}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

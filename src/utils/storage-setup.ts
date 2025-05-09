@@ -17,10 +17,20 @@ export async function ensureStorageBucketExists() {
         console.error("Error creating documents bucket:", error);
       } else {
         console.log("Documents bucket created successfully");
-        
-        // Create RLS policies for the bucket
-        // These policies will be needed to be set up in your Supabase dashboard
-        // or through SQL migrations if needed
+      }
+    }
+    
+    if (!buckets?.find(bucket => bucket.name === 'fascicule-attachments')) {
+      // Create the fascicule-attachments bucket if it doesn't exist
+      const { error } = await supabase.storage.createBucket('fascicule-attachments', {
+        public: false, // Set to false for security, files are accessed via signed URLs
+        fileSizeLimit: 20971520 // 20MB limit
+      });
+      
+      if (error) {
+        console.error("Error creating fascicule-attachments bucket:", error);
+      } else {
+        console.log("Fascicule-attachments bucket created successfully");
       }
     }
   } catch (error) {
@@ -35,7 +45,7 @@ export async function checkBucket(name: string) {
     if (!data || !data.some(b => b.name === name)) {
       await supabase.storage.createBucket(name, {
         public: false,
-        fileSizeLimit: 10485760 // 10MB
+        fileSizeLimit: 20971520 // 20MB
       });
     }
     return true;
@@ -45,3 +55,9 @@ export async function checkBucket(name: string) {
     return false;
   }
 }
+
+// Utility function to sanitize file names
+export const sanitizeFileName = (name: string) => name
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^a-zA-Z0-9.]/g, '-');

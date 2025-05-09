@@ -10,20 +10,40 @@ import {
   TableBody, 
   TableCell 
 } from '@/components/ui/table';
-import { Folder, FileText, Plus, MoreHorizontal, Edit, Eye } from 'lucide-react';
+import { Folder, FileText, Plus, MoreHorizontal, Edit, Eye, Download } from 'lucide-react';
 import MarcheFasciculeForm from './MarcheFasciculeForm';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Fascicule } from '@/services/types';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface MarcheFasciculesProps {
   marcheId: string;
+}
+
+interface Document {
+  id: string;
+  nom: string;
+  type: string;
+  statut: string;
+  dateUpload?: string;
+  taille?: string;
+  file_path?: string;
 }
 
 export default function MarcheFascicules({ marcheId }: MarcheFasciculesProps) {
   const [fascicules, setFascicules] = useState<Fascicule[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingFascicule, setEditingFascicule] = useState<Fascicule | null>(null);
+  const [selectedFascicule, setSelectedFascicule] = useState<Fascicule | null>(null);
+  const [fasciculeDocuments, setFasciculeDocuments] = useState<Document[]>([]);
+  const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
+  const [loadingDocuments, setLoadingDocuments] = useState(false);
   const { toast } = useToast();
 
   // Fetch fascicules from Supabase
@@ -60,6 +80,31 @@ export default function MarcheFascicules({ marcheId }: MarcheFasciculesProps) {
     }
   };
 
+  // Fetch documents for a specific fascicule
+  const fetchFasciculeDocuments = async (fasciculeId: string) => {
+    setLoadingDocuments(true);
+    try {
+      const { data, error } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('fascicule_id', fasciculeId);
+      
+      if (error) throw error;
+      
+      setFasciculeDocuments(data || []);
+    } catch (error) {
+      console.error('Error fetching documents for fascicule:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de récupérer les documents du fascicule",
+        variant: "destructive",
+      });
+      setFasciculeDocuments([]);
+    } finally {
+      setLoadingDocuments(false);
+    }
+  };
+
   // Load fascicules on component mount
   useEffect(() => {
     fetchFascicules();
@@ -71,6 +116,70 @@ export default function MarcheFascicules({ marcheId }: MarcheFasciculesProps) {
 
   const handleFasciculeCreated = () => {
     fetchFascicules();
+  };
+
+  const handleViewDocuments = (fascicule: Fascicule) => {
+    setSelectedFascicule(fascicule);
+    fetchFasciculeDocuments(fascicule.id);
+    setDocumentDialogOpen(true);
+  };
+
+  // Download document from Supabase storage
+  const handleDownloadDocument = async (document: Document) => {
+    try {
+      if (!document.file_path) {
+        toast({
+          title: "Erreur",
+          description: "Le chemin du fichier est introuvable",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Get download URL
+      const { data, error } = await supabase.storage
+        .from('fascicule-attachments')
+        .download(document.file_path);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Create a download link using the browser's document object
+      const url = URL.createObjectURL(data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = document.nom;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Téléchargement réussi",
+        description: `Le fichier ${document.nom} a été téléchargé`,
+        variant: "success",
+      });
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de télécharger le document",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Get the document icon based on its type
+  const getDocumentIcon = (type: string) => {
+    const fileType = type?.toLowerCase();
+    
+    if (fileType?.includes('pdf')) return <FileText className="h-5 w-5 text-red-500" />;
+    if (fileType?.includes('word') || fileType?.includes('doc')) return <FileText className="h-5 w-5 text-blue-500" />;
+    if (fileType?.includes('excel') || fileType?.includes('sheet') || fileType?.includes('xls')) return <FileText className="h-5 w-5 text-green-500" />;
+    if (fileType?.includes('image') || fileType?.includes('png') || fileType?.includes('jpg') || fileType?.includes('jpeg')) return <FileText className="h-5 w-5 text-purple-500" />;
+    
+    return <FileText className="h-5 w-5 text-gray-500" />;
   };
 
   return (
@@ -94,7 +203,7 @@ export default function MarcheFascicules({ marcheId }: MarcheFasciculesProps) {
                 <TableHead className="hidden md:table-cell">Documents</TableHead>
                 <TableHead className="hidden md:table-cell">Dernière maj.</TableHead>
                 <TableHead>Progression</TableHead>
-                <TableHead className="w-[120px]">Actions</TableHead>
+                <TableHead className="w-[150px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -144,9 +253,14 @@ export default function MarcheFascicules({ marcheId }: MarcheFasciculesProps) {
                           <Edit className="h-4 w-4" />
                           <span className="sr-only">Modifier</span>
                         </Button>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0"
+                          onClick={() => handleViewDocuments(fascicule)}
+                        >
                           <Eye className="h-4 w-4" />
-                          <span className="sr-only">Voir</span>
+                          <span className="sr-only">Voir les documents</span>
                         </Button>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                           <MoreHorizontal className="h-4 w-4" />
@@ -167,6 +281,78 @@ export default function MarcheFascicules({ marcheId }: MarcheFasciculesProps) {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Document viewer dialog */}
+      <Dialog open={documentDialogOpen} onOpenChange={setDocumentDialogOpen}>
+        <DialogContent className="sm:max-w-[700px]">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedFascicule && (
+                <div className="flex items-center">
+                  <Folder className="h-5 w-5 mr-2 text-btp-blue" />
+                  Documents du fascicule: {selectedFascicule.nom}
+                </div>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="mt-4">
+            {loadingDocuments ? (
+              <div className="text-center py-8">
+                Chargement des documents...
+              </div>
+            ) : fasciculeDocuments.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nom</TableHead>
+                    <TableHead className="hidden md:table-cell">Type</TableHead>
+                    <TableHead className="hidden md:table-cell">Taille</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead className="w-[80px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {fasciculeDocuments.map((document) => (
+                    <TableRow key={document.id}>
+                      <TableCell>
+                        <div className="flex items-center">
+                          {getDocumentIcon(document.type)}
+                          <span className="ml-2">{document.nom}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">{document.type}</TableCell>
+                      <TableCell className="hidden md:table-cell">{document.taille}</TableCell>
+                      <TableCell>
+                        <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">
+                          {document.statut}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0"
+                          onClick={() => handleDownloadDocument(document)}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-8 border border-dashed rounded-md">
+                <FileText className="h-12 w-12 mx-auto text-gray-400 mb-3" />
+                <p className="text-gray-500">
+                  Aucun document attaché à ce fascicule
+                </p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
