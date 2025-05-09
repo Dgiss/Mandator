@@ -40,3 +40,40 @@ export const uploadImage = async (file: File, path: string): Promise<string | nu
     return null;
   }
 };
+
+// Fonction pour obtenir l'URL publique d'un fichier
+export const getPublicUrl = (bucket: string, filePath: string): string | null => {
+  try {
+    if (!filePath) return null;
+    
+    const { data } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(filePath);
+    
+    return data.publicUrl;
+  } catch (error) {
+    console.error('Erreur lors de la récupération de l\'URL publique:', error);
+    return null;
+  }
+};
+
+// Fonction pour supprimer un fichier du stockage
+export const deleteFile = async (bucket: string, filePath: string): Promise<boolean> => {
+  try {
+    if (!filePath) return false;
+    
+    const { error } = await supabase.storage
+      .from(bucket)
+      .remove([filePath]);
+    
+    if (error) {
+      console.error('Erreur lors de la suppression du fichier:', error);
+      throw error;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Erreur détaillée lors de la suppression du fichier:', error);
+    return false;
+  }
+};
