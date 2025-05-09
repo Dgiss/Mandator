@@ -60,9 +60,9 @@ export interface Document {
   id: string;
   nom: string;
   type: string;
-  statut: string;
+  statut: 'Approuvé' | 'En révision' | 'Soumis pour visa' | 'Rejeté' | string;
   version: string;
-  dateupload?: string; // Modifié de dateUpload à dateupload pour correspondre à la colonne Supabase
+  dateupload?: string;
   taille?: string;
   description?: string;
   fascicule_id?: string;
