@@ -145,14 +145,14 @@ export default function MarcheFascicules({ marcheId }: MarcheFasciculesProps) {
         throw error;
       }
       
-      // Create a download link using the window.document object
+      // Create a download link using the window.document object for better browser compatibility
       const url = URL.createObjectURL(data);
       const link = window.document.createElement('a');
       link.href = url;
       link.download = document.nom;
       window.document.body.appendChild(link);
       link.click();
-      link.remove();
+      window.document.body.removeChild(link);
       URL.revokeObjectURL(url);
       
       toast({
