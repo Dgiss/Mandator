@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Dialog, 
@@ -234,7 +233,7 @@ const MarcheFasciculeForm: React.FC<FasciculeFormProps> = ({
             toast({
               title: "Attention",
               description: "Les fichiers ont été téléversés mais n'ont pas pu être enregistrés dans la base de documents",
-              variant: "warning",
+              variant: "default", // Changed from "warning" to "default" to match accepted variants
             });
           }
         }
