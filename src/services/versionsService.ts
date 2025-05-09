@@ -107,7 +107,7 @@ export const versionsService = {
         commentaire: version.commentaire,
         file_path: filePath,
         date_creation: new Date().toISOString(),
-        statut: version.statut || 'Actif'
+        statut: version.statut || 'En attente de diffusion'
       });
 
       // Insérer la version dans la base de données
@@ -122,7 +122,7 @@ export const versionsService = {
           commentaire: version.commentaire,
           file_path: filePath,
           date_creation: new Date().toISOString(),
-          statut: version.statut || 'Actif'
+          statut: version.statut || 'En attente de diffusion'
         }])
         .select();
 
@@ -229,7 +229,7 @@ export const versionsService = {
         taille: fileSize,
         commentaire: "Version initiale créée automatiquement",
         file_path: filePath,
-        statut: "Actif"
+        statut: "En attente de diffusion"
       };
       
       console.log('Creating version with data:', versionData);
@@ -294,6 +294,124 @@ export const versionsService = {
 
     if (deleteError) throw deleteError;
     return true;
+  },
+
+  // Diffuser une version (MANDATAIRE uniquement)
+  async diffuseVersion(versionId: string, commentaire: string, file?: File) {
+    try {
+      // Récupérer les données de la version
+      const { data: versionData, error: versionError } = await supabase
+        .from('versions')
+        .select('document_id, marche_id')
+        .eq('id', versionId)
+        .single();
+
+      if (versionError) throw versionError;
+
+      // Téléverser un nouveau fichier si fourni
+      let filePath = null;
+      if (file) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${file.name}`;
+        filePath = `${versionData.marche_id}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('versions')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        // Mettre à jour le chemin du fichier
+        await supabase
+          .from('versions')
+          .update({ 
+            file_path: filePath,
+            taille: (file.size / 1024 / 1024).toFixed(2) + ' MB'
+          })
+          .eq('id', versionId);
+      }
+
+      // Mettre à jour le statut de la version à "En attente de visa"
+      const { error: updateError } = await supabase
+        .from('versions')
+        .update({ 
+          statut: 'En attente de visa',
+          commentaire: commentaire || 'Document diffusé'
+        })
+        .eq('id', versionId);
+
+      if (updateError) throw updateError;
+
+      // Mettre à jour également le statut du document
+      const { error: docUpdateError } = await supabase
+        .from('documents')
+        .update({ statut: 'En attente de visa' })
+        .eq('id', versionData.document_id);
+
+      if (docUpdateError) throw docUpdateError;
+
+      return { success: true };
+    } catch (error) {
+      console.error('Erreur lors de la diffusion de la version:', error);
+      return { success: false, error };
+    }
+  },
+
+  // Procédure de visa (MOE uniquement)
+  async processVisa(versionId: string, decision: 'approuve' | 'rejete', commentaire: string) {
+    try {
+      // Récupérer les données de la version
+      const { data: versionData, error: versionError } = await supabase
+        .from('versions')
+        .select('document_id, version, marche_id')
+        .eq('id', versionId)
+        .single();
+
+      if (versionError) throw versionError;
+
+      // Déterminer le nouveau statut
+      const nouveauStatut = decision === 'approuve' ? 'Approuvé' : 'Rejeté';
+
+      // Mettre à jour le statut de la version
+      const { error: updateError } = await supabase
+        .from('versions')
+        .update({ 
+          statut: nouveauStatut,
+          commentaire: `${commentaire || ''} (Décision: ${nouveauStatut})`
+        })
+        .eq('id', versionId);
+
+      if (updateError) throw updateError;
+
+      // Mettre à jour également le statut du document
+      const { error: docUpdateError } = await supabase
+        .from('documents')
+        .update({ statut: nouveauStatut })
+        .eq('id', versionData.document_id);
+
+      if (docUpdateError) throw docUpdateError;
+
+      // Si rejeté, créer automatiquement une nouvelle version (lettre suivante)
+      if (decision === 'rejete') {
+        // Obtenir la prochaine lettre de version
+        const nextLetter = await this.getNextVersionLetter(versionData.document_id);
+        
+        // Créer une nouvelle version en attente de diffusion
+        await this.addVersion({
+          document_id: versionData.document_id,
+          marche_id: versionData.marche_id,
+          version: nextLetter,
+          cree_par: "Système", // À remplacer par l'utilisateur réel
+          commentaire: `Nouvelle version suite au rejet de la version ${versionData.version}`,
+          statut: "En attente de diffusion"
+        });
+      }
+
+      return { success: true, nouveauStatut };
+    } catch (error) {
+      console.error('Erreur lors du traitement du visa:', error);
+      return { success: false, error };
+    }
   },
 
   // Télécharger un fichier de version

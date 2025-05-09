@@ -95,3 +95,26 @@ export interface Document {
   date_bpe?: string;
   attachments?: DocumentAttachment[]; // New field for attachments
 }
+
+// Types pour les rôles utilisateur
+export type UserRole = 'MANDATAIRE' | 'MOE' | 'STANDARD';
+
+// Type pour un utilisateur étendu avec rôle
+export interface UserWithRole {
+  id: string;
+  email?: string;
+  nom?: string;
+  prenom?: string;
+  role: UserRole;
+  entreprise?: string;
+}
+
+// Types de visa disponibles
+export type VisaType = 'VISA_SIMPLE' | 'BON_POUR_EXECUTION' | 'APPROUVE' | 'REJETE';
+
+// États possible d'un document dans le workflow
+export type DocumentStatus = 
+  | 'En attente de diffusion'
+  | 'En attente de visa'
+  | 'Approuvé'
+  | 'Rejeté';
