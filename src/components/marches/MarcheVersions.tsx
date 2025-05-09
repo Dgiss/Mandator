@@ -33,10 +33,13 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
   const { toast } = useToast();
 
   // Fetch versions using React Query
-  const { data: versions = [], isLoading, refetch } = useQuery({
+  const { data: versionsData = [], isLoading, refetch } = useQuery({
     queryKey: ['versions', marcheId],
     queryFn: () => versionsService.getVersionsByMarcheId(marcheId),
   });
+
+  // Cast versions data to our Version type for safer handling
+  const versions = versionsData as Version[];
 
   // Fetch the current user's role
   useEffect(() => {
@@ -60,7 +63,11 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
   }, []);
 
   const filteredVersions = versions.filter((version: Version) => {
-    const documentName = version.documents?.nom || '';
+    // Handle potential null or error documents case
+    const documentName = version.documents && 'nom' in version.documents 
+      ? version.documents.nom 
+      : '';
+    
     const searchFields = [
       documentName,
       version.version,
@@ -129,6 +136,15 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
     }
   };
 
+  // Helper function to safely get document name
+  const getDocumentName = (version: Version): string => {
+    if (!version.documents) return "Document sans nom";
+    if ('nom' in version.documents && version.documents.nom) {
+      return version.documents.nom;
+    }
+    return "Document sans nom";
+  };
+
   return (
     <div className="pt-6">
       <div className="flex justify-between items-center mb-6">
@@ -172,7 +188,7 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
                   <TableCell>
                     <div className="flex items-center">
                       <FileText className="h-5 w-5 text-gray-500 mr-2" />
-                      <span className="font-medium">{version.documents?.nom || "Document sans nom"}</span>
+                      <span className="font-medium">{getDocumentName(version)}</span>
                     </div>
                     {version.commentaire && (
                       <div className="text-sm text-gray-500 mt-1 line-clamp-1">
