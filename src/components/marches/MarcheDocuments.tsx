@@ -45,7 +45,7 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
         type: doc.type,
         statut: doc.statut as 'Approuvé' | 'En révision' | 'Soumis pour visa' | 'Rejeté',
         version: doc.version,
-        dateUpload: doc.dateUpload || new Date().toLocaleDateString('fr-FR'),
+        dateUpload: doc.dateupload || new Date().toLocaleDateString('fr-FR'),
         taille: doc.taille || '0 KB',
         description: doc.description,
         fascicule_id: doc.fascicule_id,
