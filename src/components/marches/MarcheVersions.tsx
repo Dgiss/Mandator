@@ -18,7 +18,8 @@ import {
   ArrowUpDown, 
   History,
   Download,
-  Eye
+  Eye,
+  RefreshCw
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { versionsService } from '@/services/versionsService';
@@ -52,7 +53,8 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
   const { 
     data: versions = [], 
     isLoading: loading,
-    error
+    error,
+    refetch
   } = useQuery({
     queryKey: ['versions', marcheId],
     queryFn: async () => {
@@ -65,7 +67,7 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
         const formattedVersions = data.map((item: any) => ({
           id: item.id,
           document: item.documents?.nom || "Document inconnu",
-          version: item.version, // Now this will be alphabetical (A, B, C, etc.)
+          version: item.version, // Version alphabétique (A, B, C, etc.)
           creePar: item.cree_par,
           dateCreation: new Date(item.date_creation).toLocaleDateString('fr-FR'),
           taille: item.taille || "N/A",
@@ -93,6 +95,16 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
       });
     }
   }, [error, toast]);
+
+  // Force refresh of versions data
+  const refreshVersions = () => {
+    queryClient.invalidateQueries({ queryKey: ['versions', marcheId] });
+    toast({
+      title: "Rafraîchissement",
+      description: "Actualisation des versions en cours",
+      variant: "default",
+    });
+  };
 
   // Fonction de tri
   const sortedVersions = React.useMemo(() => {
@@ -169,12 +181,16 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
     <div className="pt-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h2 className="text-2xl font-semibold">Historique des versions</h2>
-        <Button 
-          variant="outline" 
-          onClick={() => queryClient.invalidateQueries({ queryKey: ['versions', marcheId] })}
-        >
-          Rafraîchir
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={refreshVersions}
+            className="flex items-center"
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Rafraîchir
+          </Button>
+        </div>
       </div>
 
       <div className="mb-6 flex flex-col sm:flex-row gap-4">

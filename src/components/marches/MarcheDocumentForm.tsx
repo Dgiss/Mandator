@@ -36,6 +36,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDropzone } from 'react-dropzone';
 import { checkBucket, sanitizeFileName } from '@/utils/storage-setup';
 import { Document } from '@/services/types';
+import { versionsService } from '@/services/versionsService';
 
 interface DocumentFormProps {
   marcheId: string;
@@ -216,7 +217,8 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         result = await supabase
           .from('documents')
           .update(documentData)
-          .eq('id', editingDocument.id);
+          .eq('id', editingDocument.id)
+          .select();
           
         documentId = editingDocument.id;
       } else {
@@ -230,36 +232,15 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
           documentId = result.data[0].id;
           
           // Automatically create a version when a document is created
-          if (documentId && selectedFile) {
+          if (documentId) {
             try {
               console.log('Creating initial version for document:', documentId);
-              
-              // Import versionsService and create a new version
-              const { versionsService } = await import('@/services/versionsService');
               
               // Get the current user (would typically come from auth context)
               // For now, use a placeholder or get from a context
               const currentUser = "Utilisateur"; // Replace with actual user info when auth is implemented
               
-              // Use version A instead of numerical version
-              const versionLetter = 'A'; // Initial version is always A
-              
-              const versionData = {
-                document_id: documentId,
-                marche_id: values.marche_id,
-                version: versionLetter,
-                cree_par: currentUser,
-                taille: fileSize,
-                commentaire: "Version initiale créée automatiquement",
-                file_path: filePath,
-                statut: "Actif"
-              };
-              
-              console.log('Creating version with data:', versionData);
-              
-              await versionsService.addVersion(versionData);
-              
-              console.log("Version initiale A créée automatiquement");
+              await versionsService.createInitialVersion(result.data[0], filePath, fileSize);
             } catch (versionError) {
               console.error("Erreur lors de la création de la version:", versionError);
               // We don't throw here to avoid interrupting the document creation flow
@@ -293,7 +274,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         title: isEditing ? "Document modifié" : "Document créé",
         description: isEditing 
           ? "Le document a été modifié avec succès" 
-          : "Le document a été créé avec succès et une version initiale a été générée automatiquement",
+          : "Le document a été cré�� avec succès et une version initiale A a été générée automatiquement",
         variant: "success",
       });
       

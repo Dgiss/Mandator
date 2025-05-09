@@ -138,6 +138,38 @@ export const versionsService = {
     }
   },
 
+  // Créer automatiquement une version initiale pour un nouveau document
+  async createInitialVersion(documentData: any, filePath: string | null, fileSize: string) {
+    try {
+      console.log('Creating initial version for document:', documentData.id);
+      
+      // La version initiale est toujours "A"
+      const versionLetter = 'A';
+      
+      // Créer la version avec les données du document
+      const versionData = {
+        document_id: documentData.id,
+        marche_id: documentData.marche_id,
+        version: versionLetter,
+        cree_par: "Système", // Remplacer par les infos de l'utilisateur quand l'authentification sera implémentée
+        taille: fileSize,
+        commentaire: "Version initiale créée automatiquement",
+        file_path: filePath,
+        statut: "Actif"
+      };
+      
+      console.log('Creating version with data:', versionData);
+      
+      // Ajouter la version en utilisant la fonction existante
+      const result = await this.addVersion(versionData);
+      console.log("Version initiale A créée automatiquement:", result);
+      return result;
+    } catch (error) {
+      console.error("Erreur lors de la création de la version initiale:", error);
+      throw error;
+    }
+  },
+
   // Supprimer une version
   async deleteVersion(versionId: string) {
     // D'abord récupérer le chemin du fichier si présent
