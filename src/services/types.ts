@@ -28,6 +28,7 @@ export interface Version {
   created_at?: string | null;
   statut?: string | null;
   attachments?: DocumentAttachment[]; // New field for attachments
+  documents?: { nom: string }; // To handle document join in queries
 }
 
 // Type pour un visa
