@@ -13,6 +13,7 @@ export type Database = {
         Row: {
           created_at: string | null
           dateupload: string | null
+          dateupload_old: string | null
           description: string | null
           fascicule_id: string | null
           file_path: string | null
@@ -27,6 +28,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           dateupload?: string | null
+          dateupload_old?: string | null
           description?: string | null
           fascicule_id?: string | null
           file_path?: string | null
@@ -41,6 +43,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           dateupload?: string | null
+          dateupload_old?: string | null
           description?: string | null
           fascicule_id?: string | null
           file_path?: string | null

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Dialog, 
@@ -214,7 +215,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         description: values.description || null,
         fascicule_id: values.fascicule_id === 'none' ? null : values.fascicule_id,
         marche_id: values.marche_id,
-        dateUpload: new Date().toISOString(),
+        dateUpload: new Date().toISOString(),  // Make sure to use the correct case here
         taille: selectedFile ? fileSize : (isEditing ? editingDocument.taille : '0 KB'),
         file_path: filePath || (isEditing ? editingDocument['file_path'] : null)
       };
