@@ -33,7 +33,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, X, Paperclip } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Plus, Upload, FileText, Edit } from 'lucide-react';
@@ -45,7 +45,7 @@ import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDropzone } from 'react-dropzone';
 import { checkBucket, sanitizeFileName } from '@/utils/storage-setup';
-import { Document } from '@/services/types';
+import { Document, DocumentAttachment } from '@/services/types';
 import { versionsService } from '@/services/versionsService';
 
 interface DocumentFormProps {
@@ -57,7 +57,6 @@ interface DocumentFormProps {
 
 const documentFormSchema = z.object({
   name: z.string().min(1, { message: 'Le nom est requis' }),
-  version: z.string().min(1, { message: 'La version est requise' }),
   type: z.string().min(1, { message: 'Le type est requis' }),
   description: z.string().optional(),
   fascicule_id: z.string().optional(),
@@ -83,6 +82,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [attachments, setAttachments] = useState<File[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -144,7 +144,6 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
     resolver: zodResolver(documentFormSchema),
     defaultValues: {
       name: '',
-      version: '1.0',
       type: 'PDF',
       description: '',
       fascicule_id: undefined,
@@ -165,7 +164,6 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
     if (editingDocument) {
       form.reset({
         name: editingDocument.nom,
-        version: editingDocument.version,
         type: editingDocument.type,
         description: editingDocument.description || '',
         fascicule_id: editingDocument.fascicule_id || undefined,
@@ -192,6 +190,66 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
       refetchFascicules();
     }
   }, [watchedMarcheId, marcheId, refetchFascicules]);
+
+  // Handle attachments upload
+  const handleAttachmentUpload = async (documentId: string) => {
+    if (attachments.length === 0) return [];
+    
+    const uploadedAttachments: DocumentAttachment[] = [];
+    
+    try {
+      // Ensure the attachments bucket exists
+      const bucketExists = await checkBucket('attachments');
+      if (!bucketExists) {
+        throw new Error('Impossible de créer ou d\'accéder au bucket de stockage pour les pièces jointes');
+      }
+      
+      // Upload each attachment
+      for (const file of attachments) {
+        const sanitizedFileName = sanitizeFileName(file.name);
+        const fileNameWithTimestamp = `${Date.now()}_${sanitizedFileName}`;
+        const filePath = `documents/${documentId}/${fileNameWithTimestamp}`;
+        
+        const { data: fileData, error: fileError } = await supabase.storage
+          .from('attachments')
+          .upload(filePath, file);
+        
+        if (fileError) {
+          console.error(`Erreur lors du téléversement de la pièce jointe ${file.name}:`, fileError);
+          continue;
+        }
+        
+        const fileSize = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+        const fileType = file.name.split('.').pop()?.toUpperCase() || '';
+        
+        // Insert attachment record in database
+        const { data, error } = await supabase
+          .from('document_attachments')
+          .insert({
+            document_id: documentId,
+            file_name: file.name,
+            file_path: filePath,
+            file_type: fileType,
+            file_size: fileSize
+          })
+          .select();
+        
+        if (error) {
+          console.error(`Erreur lors de l'enregistrement de la pièce jointe ${file.name}:`, error);
+          continue;
+        }
+        
+        if (data && data[0]) {
+          uploadedAttachments.push(data[0] as DocumentAttachment);
+        }
+      }
+      
+      return uploadedAttachments;
+    } catch (error) {
+      console.error('Erreur lors du téléversement des pièces jointes:', error);
+      return [];
+    }
+  };
 
   const onSubmit = async (values: DocumentFormValues) => {
     const isEditing = !!editingDocument;
@@ -235,7 +293,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         nom: values.name,
         type: values.type,
         statut: 'En attente de diffusion', // Statut par défaut
-        version: values.version,
+        version: 'A', // Version par défaut pour un nouveau document
         description: values.description || null,
         fascicule_id: values.fascicule_id === 'none' ? null : values.fascicule_id,
         marche_id: values.marche_id,
@@ -294,6 +352,11 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         throw new Error(result.error.message);
       }
       
+      // Upload any attachments if we have a valid document ID
+      if (documentId && attachments.length > 0) {
+        await handleAttachmentUpload(documentId);
+      }
+      
       // If document is associated with a fascicule, update the fascicule's document count
       if (values.fascicule_id && values.fascicule_id !== 'none') {
         // Get current document count
@@ -325,6 +388,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
       
       form.reset();
       setSelectedFile(null);
+      setAttachments([]);
       setOpen(false);
       setEditingDocument(null);
       
@@ -341,7 +405,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
     }
   };
 
-  // Set up react-dropzone
+  // Set up react-dropzone for main document
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: (acceptedFiles) => {
       if (acceptedFiles.length > 0) {
@@ -367,11 +431,36 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
     maxSize: 10485760, // 10MB
   });
 
+  // Set up react-dropzone for attachments
+  const attachmentsDropzone = useDropzone({
+    onDrop: (acceptedFiles) => {
+      setAttachments(prev => [...prev, ...acceptedFiles]);
+    },
+    accept: {
+      'application/pdf': ['.pdf'],
+      'application/msword': ['.doc'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/vnd.ms-excel': ['.xls'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/png': ['.png'],
+      'application/vnd.dwg': ['.dwg'],
+      'application/zip': ['.zip']
+    },
+    maxSize: 10485760, // 10MB
+  });
+
+  // Remove an attachment from the list
+  const removeAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
       setEditingDocument(null);
       form.reset();
       setSelectedFile(null);
+      setAttachments([]);
     }
     setOpen(newOpen);
   };
@@ -553,7 +642,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
               />
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <FormField
                 control={form.control}
                 name="numero"
@@ -562,20 +651,6 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
                     <FormLabel>Numéro</FormLabel>
                     <FormControl>
                       <Input placeholder="Ex: 001" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="version"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Version*</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: 1.0" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -757,7 +832,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
               name="file"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Fichier {!editingDocument && "*"}</FormLabel>
+                  <FormLabel>Fichier principal {!editingDocument && "*"}</FormLabel>
                   <FormControl>
                     <div {...getRootProps()} className="flex items-center justify-center w-full">
                       <div className={`flex flex-col items-center justify-center w-full h-24 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer ${isDragActive ? 'bg-gray-100' : 'bg-gray-50'} hover:bg-gray-100 transition-colors`}>
@@ -785,6 +860,48 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
                 </FormItem>
               )}
             />
+
+            {/* Nouvelle section pour les pièces jointes */}
+            <div className="space-y-2">
+              <FormLabel>Pièces jointes (optionnel)</FormLabel>
+              <div {...attachmentsDropzone.getRootProps()} className="flex items-center justify-center w-full">
+                <div className={`flex flex-col items-center justify-center w-full h-24 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer ${attachmentsDropzone.isDragActive ? 'bg-gray-100' : 'bg-gray-50'} hover:bg-gray-100 transition-colors`}>
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <Paperclip className="w-8 h-8 mb-3 text-gray-500" />
+                    <p className="mb-2 text-sm text-gray-500">
+                      <span className="font-semibold">Ajouter des pièces jointes</span>
+                    </p>
+                    <p className="text-xs text-gray-500">PDF, DOC, XLS, ZIP, etc. (MAX. 10Mo par fichier)</p>
+                  </div>
+                  <input {...attachmentsDropzone.getInputProps()} />
+                </div>
+              </div>
+
+              {/* Liste des pièces jointes */}
+              {attachments.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-sm font-medium mb-2">Pièces jointes ({attachments.length})</p>
+                  <div className="space-y-1">
+                    {attachments.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+                        <div className="flex items-center space-x-2 truncate">
+                          <FileText className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm truncate">{file.name}</span>
+                          <span className="text-xs text-gray-500">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeAttachment(index)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             
             <DialogFooter className="mt-6">
               <Button variant="outline" type="button" onClick={() => handleOpenChange(false)}>

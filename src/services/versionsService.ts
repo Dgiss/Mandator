@@ -1,6 +1,6 @@
 
 import { supabase } from '@/lib/supabase';
-import { Version } from './types';
+import { Version, DocumentAttachment } from './types';
 
 export const versionsService = {
   // Récupérer toutes les versions pour un marché
@@ -69,7 +69,7 @@ export const versionsService = {
   },
 
   // Ajouter une nouvelle version
-  async addVersion(version: Version, file?: File) {
+  async addVersion(version: Version, file?: File, attachments?: File[]) {
     try {
       console.log('Adding new version:', version);
       let filePath = version.file_path || null;
@@ -130,11 +130,84 @@ export const versionsService = {
         throw error;
       }
       
+      // Si cette version a des pièces jointes, les traiter
+      if (attachments && attachments.length > 0 && data && data[0] && data[0].id) {
+        const versionId = data[0].id;
+        
+        // Téléverser chaque pièce jointe
+        for (const attachment of attachments) {
+          await this.addAttachmentToVersion(versionId, version.document_id, attachment);
+        }
+      }
+      
       console.log('Version created successfully:', data);
       return data[0];
     } catch (error) {
       console.error('Erreur lors de la création de la version:', error);
       throw error;
+    }
+  },
+
+  // Ajouter une pièce jointe à une version
+  async addAttachmentToVersion(versionId: string, documentId: string, file: File) {
+    try {
+      const fileExt = file.name.split('.').pop()?.toUpperCase() || '';
+      const fileSize = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+      const sanitizedFileName = file.name.replace(/\s+/g, '-');
+      const fileNameWithTimestamp = `${Date.now()}_${sanitizedFileName}`;
+      const filePath = `versions/${versionId}/${fileNameWithTimestamp}`;
+      
+      // Vérifier que le bucket attachments existe
+      const { data: buckets } = await supabase.storage.listBuckets();
+      if (!buckets || !buckets.some(b => b.name === 'attachments')) {
+        await supabase.storage.createBucket('attachments', {
+          public: false,
+          fileSizeLimit: 10485760 // 10MB limit
+        });
+      }
+      
+      // Télécharger le fichier
+      const { error: uploadError } = await supabase.storage
+        .from('attachments')
+        .upload(filePath, file);
+      
+      if (uploadError) throw uploadError;
+      
+      // Enregistrer l'attachement dans la base de données
+      const { error } = await supabase
+        .from('document_attachments')
+        .insert({
+          document_id: documentId,
+          version_id: versionId,
+          file_name: file.name,
+          file_path: filePath,
+          file_type: fileExt,
+          file_size: fileSize
+        });
+      
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout de la pièce jointe à la version:', error);
+      return false;
+    }
+  },
+
+  // Récupérer les pièces jointes d'une version
+  async getVersionAttachments(versionId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('document_attachments')
+        .select('*')
+        .eq('version_id', versionId)
+        .order('uploaded_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erreur lors de la récupération des pièces jointes de la version:', error);
+      return [];
     }
   },
 
@@ -188,6 +261,28 @@ export const versionsService = {
         .remove([versionData.file_path]);
 
       if (storageError) throw storageError;
+    }
+    
+    // Récupérer et supprimer les pièces jointes associées
+    const { data: attachments } = await supabase
+      .from('document_attachments')
+      .select('id, file_path')
+      .eq('version_id', versionId);
+    
+    if (attachments && attachments.length > 0) {
+      // Supprimer les fichiers du stockage
+      const filePaths = attachments.map(a => a.file_path).filter(Boolean);
+      if (filePaths.length > 0) {
+        await supabase.storage
+          .from('attachments')
+          .remove(filePaths);
+      }
+      
+      // Supprimer les enregistrements de pièces jointes
+      await supabase
+        .from('document_attachments')
+        .delete()
+        .eq('version_id', versionId);
     }
 
     // Enfin, supprimer l'enregistrement

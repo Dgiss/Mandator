@@ -27,6 +27,7 @@ export interface Version {
   file_path?: string | null;
   created_at?: string | null;
   statut?: string | null;
+  attachments?: DocumentAttachment[]; // New field for attachments
 }
 
 // Type pour un visa
@@ -55,6 +56,18 @@ export interface Fascicule {
   marche_id: string;
 }
 
+// Nouveau type pour les pièces jointes
+export interface DocumentAttachment {
+  id?: string;
+  document_id: string;
+  version_id?: string;
+  file_name: string;
+  file_path: string;
+  file_type: string;
+  file_size: string;
+  uploaded_at?: string;
+}
+
 // Type pour un document
 export interface Document {
   id: string;
@@ -80,6 +93,5 @@ export interface Document {
   numero?: string;
   date_diffusion?: string;
   date_bpe?: string;
+  attachments?: DocumentAttachment[]; // New field for attachments
 }
-
-// Vous pouvez ajouter d'autres types ici si nécessaire
