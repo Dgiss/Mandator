@@ -241,10 +241,13 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
               // For now, use a placeholder or get from a context
               const currentUser = "Utilisateur"; // Replace with actual user info when auth is implemented
               
+              // Use version A instead of numerical version
+              const versionLetter = 'A'; // Initial version is always A
+              
               const versionData = {
                 document_id: documentId,
                 marche_id: values.marche_id,
-                version: values.version,
+                version: versionLetter,
                 cree_par: currentUser,
                 taille: fileSize,
                 commentaire: "Version initiale créée automatiquement",
@@ -256,7 +259,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
               
               await versionsService.addVersion(versionData);
               
-              console.log("Version initiale créée automatiquement");
+              console.log("Version initiale A créée automatiquement");
             } catch (versionError) {
               console.error("Erreur lors de la création de la version:", versionError);
               // We don't throw here to avoid interrupting the document creation flow

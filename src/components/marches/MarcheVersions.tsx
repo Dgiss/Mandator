@@ -65,7 +65,7 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
         const formattedVersions = data.map((item: any) => ({
           id: item.id,
           document: item.documents?.nom || "Document inconnu",
-          version: item.version,
+          version: item.version, // Now this will be alphabetical (A, B, C, etc.)
           creePar: item.cree_par,
           dateCreation: new Date(item.date_creation).toLocaleDateString('fr-FR'),
           taille: item.taille || "N/A",

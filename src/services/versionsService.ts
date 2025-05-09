@@ -35,6 +35,39 @@ export const versionsService = {
     return data || [];
   },
 
+  // Générer la prochaine version alphabétique
+  async getNextVersionLetter(documentId: string) {
+    try {
+      // Récupérer la dernière version pour ce document
+      const { data, error } = await supabase
+        .from('versions')
+        .select('version')
+        .eq('document_id', documentId)
+        .order('date_creation', { ascending: false })
+        .limit(1);
+      
+      if (error) throw error;
+      
+      // Si aucune version n'existe, commencer par 'A'
+      if (!data || data.length === 0) {
+        return 'A';
+      }
+      
+      // Extraire la lettre de la dernière version
+      const lastVersion = data[0].version;
+      // Utiliser le code ASCII pour obtenir la prochaine lettre
+      // 'A' est 65, 'B' est 66, etc.
+      const lastLetter = lastVersion.charAt(lastVersion.length - 1);
+      const nextLetterCode = lastLetter.charCodeAt(0) + 1;
+      const nextLetter = String.fromCharCode(nextLetterCode);
+      
+      return nextLetter;
+    } catch (error) {
+      console.error('Error determining next version letter:', error);
+      return 'A'; // Par défaut, retourner 'A' en cas d'erreur
+    }
+  },
+
   // Ajouter une nouvelle version
   async addVersion(version: Version, file?: File) {
     try {
