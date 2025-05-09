@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,6 +37,7 @@ interface Version {
   taille: string;
   commentaire: string;
   file_path?: string;
+  statut: string;
 }
 
 export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
@@ -72,7 +72,8 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
           dateCreation: new Date(item.date_creation).toLocaleDateString('fr-FR'),
           taille: item.taille || "N/A",
           commentaire: item.commentaire || "",
-          file_path: item.file_path
+          file_path: item.file_path,
+          statut: item.statut || "Actif"
         }));
         
         return formattedVersions;
@@ -137,6 +138,16 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
     version.document.toLowerCase().includes(searchTerm.toLowerCase()) ||
     version.commentaire.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Obtenir la couleur de fond en fonction du statut
+  const getStatusColor = (statut: string) => {
+    switch(statut) {
+      case 'Actif': return 'bg-green-100 text-green-700';
+      case 'Obsolète': return 'bg-gray-100 text-gray-700';
+      case 'Supprimé': return 'bg-red-100 text-red-700';
+      default: return 'bg-blue-100 text-blue-700';
+    }
+  };
 
   // Télécharger un fichier de version
   const handleDownload = async (version: Version) => {
@@ -232,6 +243,7 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
                   <ArrowUpDown className="ml-1 h-3 w-3" />
                 </div>
               </TableHead>
+              <TableHead className="hidden md:table-cell">Statut</TableHead>
               <TableHead className="hidden md:table-cell">Commentaire</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -239,7 +251,7 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
+                <TableCell colSpan={7} className="text-center py-8">
                   Chargement des versions...
                 </TableCell>
               </TableRow>
@@ -260,6 +272,11 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{version.creePar}</TableCell>
                   <TableCell>{version.dateCreation}</TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(version.statut)}`}>
+                      {version.statut}
+                    </span>
+                  </TableCell>
                   <TableCell className="hidden md:table-cell max-w-xs truncate">
                     {version.commentaire}
                   </TableCell>
@@ -284,7 +301,7 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                   Aucune version trouvée
                 </TableCell>
               </TableRow>

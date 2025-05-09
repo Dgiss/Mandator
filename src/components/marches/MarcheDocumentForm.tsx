@@ -53,7 +53,16 @@ const documentFormSchema = z.object({
   description: z.string().optional(),
   fascicule_id: z.string().optional(),
   marche_id: z.string().min(1, { message: 'Le marché est requis' }),
-  file: z.any().optional()
+  file: z.any().optional(),
+  designation: z.string().optional(),
+  geographie: z.string().optional(),
+  phase: z.string().optional(),
+  emetteur: z.string().optional(),
+  numero_operation: z.string().optional(),
+  domaine_technique: z.string().optional(),
+  numero: z.string().optional(),
+  date_diffusion: z.date().optional().nullable(),
+  date_bpe: z.date().optional().nullable()
 });
 
 type DocumentFormValues = z.infer<typeof documentFormSchema>;
@@ -132,7 +141,16 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
       statut: 'En révision',
       description: '',
       fascicule_id: undefined,
-      marche_id: marcheId
+      marche_id: marcheId,
+      designation: '',
+      geographie: '',
+      phase: '',
+      emetteur: '',
+      numero_operation: '',
+      domaine_technique: '',
+      numero: '',
+      date_diffusion: null,
+      date_bpe: null
     }
   });
 
@@ -146,7 +164,16 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         statut: editingDocument.statut,
         description: editingDocument.description || '',
         fascicule_id: editingDocument.fascicule_id || undefined,
-        marche_id: editingDocument.marche_id || marcheId
+        marche_id: editingDocument.marche_id || marcheId,
+        designation: editingDocument.designation || '',
+        geographie: editingDocument.geographie || '',
+        phase: editingDocument.phase || '',
+        emetteur: editingDocument.emetteur || '',
+        numero_operation: editingDocument.numero_operation || '',
+        domaine_technique: editingDocument.domaine_technique || '',
+        numero: editingDocument.numero || '',
+        date_diffusion: editingDocument.date_diffusion ? new Date(editingDocument.date_diffusion) : null,
+        date_bpe: editingDocument.date_bpe ? new Date(editingDocument.date_bpe) : null
       });
       setOpen(true);
     } else if (marcheId) {
@@ -206,7 +233,16 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         marche_id: values.marche_id,
         dateupload: new Date().toISOString(),
         taille: selectedFile ? fileSize : (isEditing ? editingDocument.taille : '0 KB'),
-        file_path: filePath || (isEditing ? editingDocument['file_path'] : null)
+        file_path: filePath || (isEditing ? editingDocument['file_path'] : null),
+        designation: values.designation || null,
+        geographie: values.geographie || null,
+        phase: values.phase || null,
+        emetteur: values.emetteur || null,
+        numero_operation: values.numero_operation || null,
+        domaine_technique: values.domaine_technique || null,
+        numero: values.numero || null,
+        date_diffusion: values.date_diffusion ? values.date_diffusion.toISOString() : null,
+        date_bpe: values.date_bpe ? values.date_bpe.toISOString() : null
       };
       
       let result;
@@ -355,42 +391,44 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         </Button>
       </DialogTrigger>
       
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{dialogTitle}</DialogTitle>
         </DialogHeader>
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nom du document*</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Plan Coffrage R+1" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="version"
+                name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Version*</FormLabel>
+                    <FormLabel>Nom du document*</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ex: 1.0" {...field} />
+                      <Input placeholder="Ex: Plan Coffrage R+1" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
               
+              <FormField
+                control={form.control}
+                name="designation"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Désignation</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Désignation du document" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <div className="grid grid-cols-3 gap-4">
               <FormField
                 control={form.control}
                 name="type"
@@ -421,6 +459,224 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
                   </FormItem>
                 )}
               />
+              
+              <FormField
+                control={form.control}
+                name="domaine_technique"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Domaine technique</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      value={field.value || ''}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner un domaine" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="ARC">Architecture</SelectItem>
+                        <SelectItem value="STR">Structure</SelectItem>
+                        <SelectItem value="ELC">Électricité</SelectItem>
+                        <SelectItem value="PLB">Plomberie</SelectItem>
+                        <SelectItem value="CVC">CVC</SelectItem>
+                        <SelectItem value="VRD">VRD</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="phase"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phase</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      value={field.value || ''}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner une phase" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="ESQ">Esquisse</SelectItem>
+                        <SelectItem value="APS">Avant-Projet Sommaire</SelectItem>
+                        <SelectItem value="APD">Avant-Projet Définitif</SelectItem>
+                        <SelectItem value="PRO">Projet</SelectItem>
+                        <SelectItem value="DCE">Dossier de Consultation des Entreprises</SelectItem>
+                        <SelectItem value="EXE">Exécution</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="emetteur"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Émetteur</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Bureau d'études XYZ" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="numero_operation"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Numéro d'opération</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: OP-2023-01" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <div className="grid grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="numero"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Numéro</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: 001" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="version"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Version*</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: 1.0" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="geographie"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Géographie</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Bâtiment A, Niveau RDC" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="date_diffusion"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Date prévisionnelle de diffusion</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "dd/MM/yyyy")
+                            ) : (
+                              <span>Sélectionner une date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value || undefined}
+                          onSelect={field.onChange}
+                          disabled={(date) =>
+                            date < new Date("1900-01-01")
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="date_bpe"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Date prévisionnelle du BPE</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "dd/MM/yyyy")
+                            ) : (
+                              <span>Sélectionner une date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value || undefined}
+                          onSelect={field.onChange}
+                          disabled={(date) =>
+                            date < new Date("1900-01-01")
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
             
             <FormField
@@ -439,8 +695,8 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Brouillon">Brouillon</SelectItem>
-                      <SelectItem value="En révision">En révision</SelectItem>
+                      <SelectItem value="En attente de diffusion">En attente de diffusion</SelectItem>
+                      <SelectItem value="Diffusé">Diffusé</SelectItem>
                       <SelectItem value="Soumis pour visa">Soumis pour visa</SelectItem>
                       <SelectItem value="Approuvé">Approuvé</SelectItem>
                       <SelectItem value="Rejeté">Rejeté</SelectItem>
@@ -524,7 +780,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
                   <FormControl>
                     <Textarea 
                       placeholder="Description détaillée du document..." 
-                      className="min-h-[100px]" 
+                      className="min-h-[80px]" 
                       {...field} 
                       value={field.value || ''}
                     />

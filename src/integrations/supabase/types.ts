@@ -12,14 +12,23 @@ export type Database = {
       documents: {
         Row: {
           created_at: string | null
+          date_bpe: string | null
+          date_diffusion: string | null
           dateupload: string | null
           dateupload_old: string | null
           description: string | null
+          designation: string | null
+          domaine_technique: string | null
+          emetteur: string | null
           fascicule_id: string | null
           file_path: string | null
+          geographie: string | null
           id: string
           marche_id: string
           nom: string
+          numero: string | null
+          numero_operation: string | null
+          phase: string | null
           statut: string
           taille: string | null
           type: string
@@ -27,29 +36,47 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          date_bpe?: string | null
+          date_diffusion?: string | null
           dateupload?: string | null
           dateupload_old?: string | null
           description?: string | null
+          designation?: string | null
+          domaine_technique?: string | null
+          emetteur?: string | null
           fascicule_id?: string | null
           file_path?: string | null
+          geographie?: string | null
           id?: string
           marche_id: string
           nom: string
-          statut: string
+          numero?: string | null
+          numero_operation?: string | null
+          phase?: string | null
+          statut?: string
           taille?: string | null
           type: string
           version: string
         }
         Update: {
           created_at?: string | null
+          date_bpe?: string | null
+          date_diffusion?: string | null
           dateupload?: string | null
           dateupload_old?: string | null
           description?: string | null
+          designation?: string | null
+          domaine_technique?: string | null
+          emetteur?: string | null
           fascicule_id?: string | null
           file_path?: string | null
+          geographie?: string | null
           id?: string
           marche_id?: string
           nom?: string
+          numero?: string | null
+          numero_operation?: string | null
+          phase?: string | null
           statut?: string
           taille?: string | null
           type?: string
@@ -261,6 +288,7 @@ export type Database = {
           file_path: string | null
           id: string
           marche_id: string
+          statut: string | null
           taille: string | null
           version: string
         }
@@ -273,6 +301,7 @@ export type Database = {
           file_path?: string | null
           id?: string
           marche_id: string
+          statut?: string | null
           taille?: string | null
           version: string
         }
@@ -285,6 +314,7 @@ export type Database = {
           file_path?: string | null
           id?: string
           marche_id?: string
+          statut?: string | null
           taille?: string | null
           version?: string
         }

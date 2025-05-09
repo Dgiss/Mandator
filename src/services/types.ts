@@ -1,4 +1,3 @@
-
 // Type pour un marché
 export interface Marche {
   id: string;
@@ -69,6 +68,17 @@ export interface Document {
   marche_id: string;
   file_path?: string;
   created_at?: string;
+  
+  // Nouveaux champs
+  designation?: string;
+  geographie?: string;
+  phase?: string;
+  emetteur?: string;
+  numero_operation?: string;
+  domaine_technique?: string;
+  numero?: string;
+  date_diffusion?: string;
+  date_bpe?: string;
 }
 
 // Vous pouvez ajouter d'autres types ici si nécessaire
