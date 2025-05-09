@@ -31,39 +31,53 @@ export const versionsService = {
 
   // Ajouter une nouvelle version
   async addVersion(version: Version, file?: File) {
-    let filePath = null;
+    try {
+      let filePath = version.file_path || null;
 
-    // Si un fichier est fourni, le télécharger d'abord
-    if (file) {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}_${file.name}`;
-      filePath = `${version.marche_id}/${fileName}`;
+      // Si un fichier est fourni, le télécharger d'abord
+      if (file && !filePath) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${file.name}`;
+        filePath = `${version.marche_id}/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
+        // Vérifier si le bucket existe
+        const { data: buckets } = await supabase.storage.listBuckets();
+        if (!buckets || !buckets.some(b => b.name === 'versions')) {
+          // Créer le bucket s'il n'existe pas
+          await supabase.storage.createBucket('versions', {
+            public: false
+          });
+        }
+
+        const { error: uploadError } = await supabase.storage
+          .from('versions')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+      }
+
+      // Insérer la version dans la base de données
+      const { data, error } = await supabase
         .from('versions')
-        .upload(filePath, file);
+        .insert([{
+          document_id: version.document_id,
+          marche_id: version.marche_id,
+          version: version.version,
+          cree_par: version.cree_par,
+          taille: version.taille,
+          commentaire: version.commentaire,
+          file_path: filePath,
+          date_creation: new Date().toISOString(),
+          statut: version.statut || 'Actif'
+        }])
+        .select();
 
-      if (uploadError) throw uploadError;
+      if (error) throw error;
+      return data[0];
+    } catch (error) {
+      console.error('Erreur lors de la création de la version:', error);
+      throw error;
     }
-
-    // Insérer la version dans la base de données
-    const { data, error } = await supabase
-      .from('versions')
-      .insert([{
-        document_id: version.document_id,
-        marche_id: version.marche_id,
-        version: version.version,
-        cree_par: version.cree_par,
-        taille: version.taille,
-        commentaire: version.commentaire,
-        file_path: filePath,
-        date_creation: new Date().toISOString(),
-        statut: version.statut
-      }])
-      .select();
-
-    if (error) throw error;
-    return data[0];
   },
 
   // Supprimer une version

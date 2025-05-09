@@ -209,6 +209,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
       };
       
       let result;
+      let documentId;
       
       if (isEditing) {
         // Update existing document
@@ -216,11 +217,47 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
           .from('documents')
           .update(documentData)
           .eq('id', editingDocument.id);
+          
+        documentId = editingDocument.id;
       } else {
         // Insert new document
         result = await supabase
           .from('documents')
-          .insert([documentData]);
+          .insert([documentData])
+          .select('id');
+          
+        if (result.data && result.data.length > 0) {
+          documentId = result.data[0].id;
+          
+          // Automatically create a version when a document is created
+          if (documentId && selectedFile) {
+            try {
+              // Import versionsService and create a new version
+              const { versionsService } = await import('@/services/versionsService');
+              
+              // Get the current user (would typically come from auth context)
+              // For now, use a placeholder or get from a context
+              const currentUser = "Utilisateur"; // Replace with actual user info when auth is implemented
+              
+              await versionsService.addVersion({
+                document_id: documentId,
+                marche_id: values.marche_id,
+                version: values.version,
+                cree_par: currentUser,
+                taille: fileSize,
+                commentaire: "Version initiale créée automatiquement",
+                file_path: filePath,
+                statut: "Actif"
+              }, selectedFile);
+              
+              console.log("Version initiale créée automatiquement");
+            } catch (versionError) {
+              console.error("Erreur lors de la création de la version:", versionError);
+              // We don't throw here to avoid interrupting the document creation flow
+              // Just log the error and continue
+            }
+          }
+        }
       }
       
       if (result.error) {
@@ -247,13 +284,14 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         title: isEditing ? "Document modifié" : "Document créé",
         description: isEditing 
           ? "Le document a été modifié avec succès" 
-          : "Le document a été créé avec succès",
+          : "Le document a été créé avec succès et une version initiale a été générée automatiquement",
         variant: "success",
       });
       
       // Invalider les requêtes pour forcer un rechargement des données
       queryClient.invalidateQueries({ queryKey: ['documents-recents', marcheId] });
       queryClient.invalidateQueries({ queryKey: ['documents', marcheId] });
+      queryClient.invalidateQueries({ queryKey: ['versions', marcheId] });
       
       form.reset();
       setSelectedFile(null);
