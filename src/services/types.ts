@@ -62,7 +62,7 @@ export interface Document {
   type: string;
   statut: string;
   version: string;
-  dateUpload?: string;
+  dateupload?: string; // Modifié de dateUpload à dateupload pour correspondre à la colonne Supabase
   taille?: string;
   description?: string;
   fascicule_id?: string;
