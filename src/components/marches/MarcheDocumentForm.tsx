@@ -35,19 +35,7 @@ import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDropzone } from 'react-dropzone';
 import { checkBucket, sanitizeFileName } from '@/utils/storage-setup';
-
-interface Document {
-  id: string;
-  nom: string;
-  type: string;
-  statut: 'Approuvé' | 'En révision' | 'Soumis pour visa' | 'Rejeté';
-  version: string;
-  dateupload: string;
-  taille: string;
-  description?: string;
-  fascicule_id?: string;
-  marche_id: string;
-}
+import { Document } from '@/services/types';
 
 interface DocumentFormProps {
   marcheId: string;

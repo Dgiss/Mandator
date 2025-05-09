@@ -12,7 +12,7 @@ export interface Database {
           statut: string;
           version: string;
           description: string | null;
-          dateUpload: string | null;
+          dateupload: string | null;  // Changed from dateUpload to dateupload to match database
           taille: string | null;
           file_path: string | null;
           marche_id: string;
@@ -26,7 +26,7 @@ export interface Database {
           statut: string;
           version: string;
           description?: string | null;
-          dateUpload?: string | null;
+          dateupload?: string | null;  // Changed from dateUpload to dateupload to match database
           taille?: string | null;
           file_path?: string | null;
           marche_id: string;
@@ -40,7 +40,7 @@ export interface Database {
           statut?: string;
           version?: string;
           description?: string | null;
-          dateUpload?: string | null;
+          dateupload?: string | null;  // Changed from dateUpload to dateupload to match database
           taille?: string | null;
           file_path?: string | null;
           marche_id?: string;
@@ -82,7 +82,6 @@ export interface Database {
         };
         Relationships: [];
       };
-      // Ajout de la définition de la table marches
       marches: {
         Row: {
           id: string;
@@ -169,7 +168,6 @@ export interface Database {
         };
         Relationships: [];
       };
-      // Ajout de la table profiles
       profiles: {
         Row: {
           id: string;
@@ -203,7 +201,6 @@ export interface Database {
         };
         Relationships: [];
       };
-      // Ajout de la table versions
       versions: {
         Row: {
           id: string;
@@ -246,7 +243,6 @@ export interface Database {
         };
         Relationships: [];
       };
-      // Ajout de la table visas
       visas: {
         Row: {
           id: string;
@@ -289,7 +285,6 @@ export interface Database {
         };
         Relationships: [];
       };
-      // Ajout de la table reponses
       reponses: {
         Row: {
           id: string;

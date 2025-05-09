@@ -1,6 +1,7 @@
 
 
 
+
 // Type pour un marché
 export interface Marche {
   id: string;
@@ -62,9 +63,9 @@ export interface Document {
   id: string;
   nom: string;
   type: string;
-  statut: string; // Changed from union type to string to match Supabase
+  statut: string; // Using string instead of union type to match Supabase
   version: string;
-  dateupload?: string; // Changed from dateUpload to dateupload to match Supabase
+  dateupload?: string; // Using lowercase to match Supabase column name
   taille?: string;
   description?: string;
   fascicule_id?: string;
