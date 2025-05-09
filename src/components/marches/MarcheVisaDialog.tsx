@@ -82,6 +82,7 @@ const MarcheVisaDialog: React.FC<MarcheVisaDialogProps> = ({
         // Invalidate queries to refresh the data
         queryClient.invalidateQueries({ queryKey: ['versions', version.marche_id] });
         queryClient.invalidateQueries({ queryKey: ['documents', version.marche_id] });
+        queryClient.invalidateQueries({ queryKey: ['visas', version.marche_id] });
         
         if (onVisaComplete) {
           onVisaComplete();
@@ -164,7 +165,7 @@ const MarcheVisaDialog: React.FC<MarcheVisaDialogProps> = ({
             <p className="text-sm text-blue-700">
               {decision === 'approuve' 
                 ? "En approuvant ce document, vous confirmez qu'il répond à toutes les exigences et qu'il peut être utilisé dans le cadre du projet."
-                : "En rejetant ce document, une nouvelle version sera automatiquement créée pour permettre les corrections nécessaires."}
+                : "En rejetant ce document, une nouvelle version sera automatiquement créée avec la lettre suivante pour permettre les corrections nécessaires."}
             </p>
           </div>
         </div>

@@ -27,7 +27,33 @@ export const visasService = {
     return data;
   },
 
-  // Ajouter un nouveau visa
+  // Créer un nouveau visa lors de la diffusion du document
+  async createVisaForDiffusion(documentId: string, marcheId: string, version: string, demandePar: string, echeance?: string) {
+    // Calculer l'échéance par défaut (7 jours à partir d'aujourd'hui)
+    const defaultEcheance = new Date();
+    defaultEcheance.setDate(defaultEcheance.getDate() + 7);
+    
+    const visaToCreate = {
+      document_id: documentId,
+      marche_id: marcheId,
+      version: version,
+      demande_par: demandePar,
+      date_demande: new Date().toISOString(),
+      echeance: echeance || defaultEcheance.toISOString(),
+      statut: 'En attente',
+      commentaire: 'Document diffusé pour visa'
+    };
+
+    const { data, error } = await supabase
+      .from('visas')
+      .insert([visaToCreate])
+      .select();
+
+    if (error) throw error;
+    return data[0];
+  },
+
+  // Ajouter un nouveau visa (pour les autres cas)
   async addVisa(visa: Visa, file?: File) {
     let attachmentPath = null;
 
@@ -77,6 +103,37 @@ export const visasService = {
 
     if (error) throw error;
     return data[0];
+  },
+
+  // Traiter un visa (approuver ou refuser)
+  async processVisa(visaId: string, documentId: string, decision: 'approuve' | 'rejete', commentaire: string) {
+    // Mettre à jour le visa
+    const { data: updatedVisa, error: visaError } = await supabase
+      .from('visas')
+      .update({
+        statut: decision === 'approuve' ? 'Approuvé' : 'Rejeté',
+        commentaire: commentaire
+      })
+      .eq('id', visaId)
+      .select();
+
+    if (visaError) throw visaError;
+
+    // Mettre à jour le document
+    const { error: docError } = await supabase
+      .from('documents')
+      .update({
+        statut: decision === 'approuve' ? 'Approuvé' : 'En attente de diffusion'
+      })
+      .eq('id', documentId);
+
+    if (docError) throw docError;
+
+    return {
+      success: true,
+      visa: updatedVisa[0],
+      decision
+    };
   },
 
   // Supprimer un visa

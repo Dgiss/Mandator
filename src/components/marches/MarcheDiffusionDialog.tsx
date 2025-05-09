@@ -66,6 +66,7 @@ const MarcheDiffusionDialog: React.FC<MarcheDiffusionDialogProps> = ({
 
     setIsSubmitting(true);
     try {
+      // Appeler le service de diffusion qui créera également un visa
       const result = await versionsService.diffuseVersion(
         version.id || '', 
         commentaire, 
@@ -83,6 +84,7 @@ const MarcheDiffusionDialog: React.FC<MarcheDiffusionDialogProps> = ({
         // Invalidate queries to refresh the data
         queryClient.invalidateQueries({ queryKey: ['versions', version.marche_id] });
         queryClient.invalidateQueries({ queryKey: ['documents', version.marche_id] });
+        queryClient.invalidateQueries({ queryKey: ['visas', version.marche_id] });
         
         if (onDiffusionComplete) {
           onDiffusionComplete();
@@ -127,7 +129,7 @@ const MarcheDiffusionDialog: React.FC<MarcheDiffusionDialogProps> = ({
         <div className="space-y-4 py-4">
           <div className="text-sm text-gray-600">
             <p>Vous êtes sur le point de diffuser la version {version.version} du document pour visa. 
-            Une fois diffusé, le document passera en statut "En attente de visa".</p>
+            Une fois diffusé, le document passera en statut "En attente de visa" et un visa sera automatiquement créé.</p>
           </div>
           
           <div>

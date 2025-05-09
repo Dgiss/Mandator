@@ -1,7 +1,7 @@
-
 import { supabase } from '@/lib/supabase';
 import { Version, DocumentAttachment } from './types';
 import { Database } from '@/types/supabase';
+import { visasService } from './visasService';
 
 export const versionsService = {
   // Récupérer toutes les versions pour un marché
@@ -58,7 +58,7 @@ export const versionsService = {
       const lastVersion = data[0].version;
       // Utiliser le code ASCII pour obtenir la prochaine lettre
       // 'A' est 65, 'B' est 66, etc.
-      const lastLetter = lastVersion.charAt(lastVersion.length - 1);
+      const lastLetter = lastVersion.charAt(0);
       const nextLetterCode = lastLetter.charCodeAt(0) + 1;
       const nextLetter = String.fromCharCode(nextLetterCode);
       
@@ -296,17 +296,24 @@ export const versionsService = {
     return true;
   },
 
-  // Diffuser une version (MANDATAIRE uniquement)
+  // Diffuser une version (MANDATAIRE uniquement) - Mise à jour selon le workflow
   async diffuseVersion(versionId: string, commentaire: string, file?: File) {
     try {
       // Récupérer les données de la version
       const { data: versionData, error: versionError } = await supabase
         .from('versions')
-        .select('document_id, marche_id')
+        .select('document_id, marche_id, version, cree_par')
         .eq('id', versionId)
         .single();
 
       if (versionError) throw versionError;
+
+      // Récupérer les données de l'utilisateur (pour le demande_par)
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error("Aucun utilisateur connecté");
+      }
 
       // Téléverser un nouveau fichier si fourni
       let filePath = null;
@@ -330,6 +337,14 @@ export const versionsService = {
           })
           .eq('id', versionId);
       }
+
+      // ÉTAPE IMPORTANTE: Créer le visa lors de la diffusion
+      await visasService.createVisaForDiffusion(
+        versionData.document_id,
+        versionData.marche_id,
+        versionData.version,
+        user.email || versionData.cree_par
+      );
 
       // Mettre à jour le statut de la version à "En attente de visa"
       const { error: updateError } = await supabase
@@ -357,7 +372,7 @@ export const versionsService = {
     }
   },
 
-  // Procédure de visa (MOE uniquement)
+  // Procédure de visa (MOE uniquement) - Mise à jour selon le workflow
   async processVisa(versionId: string, decision: 'approuve' | 'rejete', commentaire: string) {
     try {
       // Récupérer les données de la version
@@ -368,6 +383,29 @@ export const versionsService = {
         .single();
 
       if (versionError) throw versionError;
+
+      // Récupérer le visa associé à cette version
+      const { data: visaData, error: visaError } = await supabase
+        .from('visas')
+        .select('id')
+        .eq('document_id', versionData.document_id)
+        .eq('version', versionData.version)
+        .eq('statut', 'En attente')
+        .single();
+
+      if (visaError) {
+        console.error('Erreur lors de la récupération du visa:', visaError);
+        // Continuer même si on ne trouve pas de visa
+      }
+
+      // Mettre à jour le statut du visa si trouvé
+      if (visaData && visaData.id) {
+        await visasService.updateVisaStatus(
+          visaData.id, 
+          decision === 'approuve' ? 'Approuvé' : 'Rejeté', 
+          commentaire
+        );
+      }
 
       // Déterminer le nouveau statut
       const nouveauStatut = decision === 'approuve' ? 'Approuvé' : 'Rejeté';
@@ -384,9 +422,13 @@ export const versionsService = {
       if (updateError) throw updateError;
 
       // Mettre à jour également le statut du document
+      const documentStatusUpdate = decision === 'approuve' 
+        ? { statut: 'Approuvé' }
+        : { statut: 'En attente de diffusion' };
+      
       const { error: docUpdateError } = await supabase
         .from('documents')
-        .update({ statut: nouveauStatut })
+        .update(documentStatusUpdate)
         .eq('id', versionData.document_id);
 
       if (docUpdateError) throw docUpdateError;
