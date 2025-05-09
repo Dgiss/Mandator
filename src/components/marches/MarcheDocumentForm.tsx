@@ -59,7 +59,6 @@ const documentFormSchema = z.object({
   name: z.string().min(1, { message: 'Le nom est requis' }),
   version: z.string().min(1, { message: 'La version est requise' }),
   type: z.string().min(1, { message: 'Le type est requis' }),
-  statut: z.string().min(1, { message: 'Le statut est requis' }),
   description: z.string().optional(),
   fascicule_id: z.string().optional(),
   marche_id: z.string().min(1, { message: 'Le marché est requis' }),
@@ -67,7 +66,6 @@ const documentFormSchema = z.object({
   designation: z.string().optional(),
   geographie: z.string().optional(),
   phase: z.string().optional(),
-  emetteur: z.string().optional(),
   numero_operation: z.string().optional(),
   domaine_technique: z.string().optional(),
   numero: z.string().optional(),
@@ -148,14 +146,12 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
       name: '',
       version: '1.0',
       type: 'PDF',
-      statut: 'En révision',
       description: '',
       fascicule_id: undefined,
       marche_id: marcheId,
       designation: '',
       geographie: '',
       phase: '',
-      emetteur: '',
       numero_operation: '',
       domaine_technique: '',
       numero: '',
@@ -171,14 +167,12 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         name: editingDocument.nom,
         version: editingDocument.version,
         type: editingDocument.type,
-        statut: editingDocument.statut,
         description: editingDocument.description || '',
         fascicule_id: editingDocument.fascicule_id || undefined,
         marche_id: editingDocument.marche_id || marcheId,
         designation: editingDocument.designation || '',
         geographie: editingDocument.geographie || '',
         phase: editingDocument.phase || '',
-        emetteur: editingDocument.emetteur || '',
         numero_operation: editingDocument.numero_operation || '',
         domaine_technique: editingDocument.domaine_technique || '',
         numero: editingDocument.numero || '',
@@ -232,11 +226,15 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         filePath = fileData?.path || '';
       }
       
+      // Récupérer l'utilisateur actuel pour l'utiliser comme émetteur
+      const { data: { user } } = await supabase.auth.getUser();
+      const emetteur = user ? user.email || 'Utilisateur' : 'Utilisateur';
+      
       // Prepare document data
       const documentData = {
         nom: values.name,
         type: values.type,
-        statut: values.statut,
+        statut: 'En attente de diffusion', // Statut par défaut
         version: values.version,
         description: values.description || null,
         fascicule_id: values.fascicule_id === 'none' ? null : values.fascicule_id,
@@ -247,7 +245,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         designation: values.designation || null,
         geographie: values.geographie || null,
         phase: values.phase || null,
-        emetteur: values.emetteur || null,
+        emetteur: emetteur, // Utilisateur connecté comme émetteur
         numero_operation: values.numero_operation || null,
         domaine_technique: values.domaine_technique || null,
         numero: values.numero || null,
@@ -281,10 +279,6 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
           if (documentId) {
             try {
               console.log('Creating initial version for document:', documentId);
-              
-              // Get the current user (would typically come from auth context)
-              // For now, use a placeholder or get from a context
-              const currentUser = "Utilisateur"; // Replace with actual user info when auth is implemented
               
               await versionsService.createInitialVersion(result.data[0], filePath, fileSize);
             } catch (versionError) {
@@ -320,7 +314,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         title: isEditing ? "Document modifié" : "Document créé",
         description: isEditing 
           ? "Le document a été modifié avec succès" 
-          : "Le document a été cré�� avec succès et une version initiale A a été générée automatiquement",
+          : "Le document a été créé avec succès et une version initiale A a été générée automatiquement",
         variant: "success",
       });
       
@@ -532,20 +526,6 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="emetteur"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Émetteur</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: Bureau d'études XYZ" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
                 name="numero_operation"
                 render={({ field }) => (
                   <FormItem>
@@ -557,9 +537,23 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
                   </FormItem>
                 )}
               />
+              
+              <FormField
+                control={form.control}
+                name="geographie"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Géographie</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Bâtiment A, Niveau RDC" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
             
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="numero"
@@ -582,20 +576,6 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
                     <FormLabel>Version*</FormLabel>
                     <FormControl>
                       <Input placeholder="Ex: 1.0" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="geographie"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Géographie</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: Bâtiment A, Niveau RDC" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -688,34 +668,6 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
                 )}
               />
             </div>
-            
-            <FormField
-              control={form.control}
-              name="statut"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Statut*</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner un statut" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="En attente de diffusion">En attente de diffusion</SelectItem>
-                      <SelectItem value="Diffusé">Diffusé</SelectItem>
-                      <SelectItem value="Soumis pour visa">Soumis pour visa</SelectItem>
-                      <SelectItem value="Approuvé">Approuvé</SelectItem>
-                      <SelectItem value="Rejeté">Rejeté</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             
             <FormField
               control={form.control}
