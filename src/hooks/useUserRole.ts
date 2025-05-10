@@ -55,7 +55,13 @@ export function useUserRole(marcheId?: string): UserRoleInfo {
         setGlobalRole(userGlobalRole as UserRole);
         
         // Si un marcheId est fourni, récupérer le rôle spécifique pour ce marché
-        await fetchMarcheRoles();
+        if (marcheId) {
+          const specificRole = await getMarcheRole(marcheId);
+          setMarcheRoles(prev => ({...prev, [marcheId]: specificRole}));
+        } else {
+          // Sinon, récupérer tous les rôles spécifiques de l'utilisateur
+          await fetchMarcheRoles();
+        }
       } catch (error) {
         console.error('Erreur:', error);
         setGlobalRole('STANDARD');
@@ -72,6 +78,7 @@ export function useUserRole(marcheId?: string): UserRoleInfo {
     if (!user) return;
     
     try {
+      // Use a direct query approach to avoid RLS issues
       const { data, error } = await supabase
         .from('droits_marche')
         .select('marche_id, role_specifique')
@@ -104,12 +111,13 @@ export function useUserRole(marcheId?: string): UserRoleInfo {
     if (!user) return null;
     
     try {
+      // Use a more direct query approach
       const { data, error } = await supabase
         .from('droits_marche')
         .select('role_specifique')
         .eq('user_id', user.id)
         .eq('marche_id', marcheId)
-        .single();
+        .maybeSingle();
       
       if (error) {
         console.error(`Pas de rôle spécifique trouvé pour le marché ${marcheId}:`, error);

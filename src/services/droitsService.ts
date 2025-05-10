@@ -205,20 +205,17 @@ export const droitsService = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return false;
 
-    // Récupérer le profil de l'utilisateur pour connaître son rôle global
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role_global')
-      .eq('id', user.id)
-      .single();
+    // Vérifier si l'utilisateur est admin en utilisant notre nouvelle fonction
+    const { data: isAdminResult, error: adminError } = await supabase
+      .rpc('is_admin');
 
-    if (profileError) {
-      console.error('Erreur lors de la récupération du profil:', profileError);
+    if (adminError) {
+      console.error('Erreur lors de la vérification du statut admin:', adminError);
       return false;
     }
 
     // Les administrateurs ont accès à tous les marchés
-    if (profile?.role_global === 'ADMIN') return true;
+    if (isAdminResult) return true;
 
     // Pour les autres, vérifier s'ils ont des droits spécifiques sur ce marché
     const { data, error } = await supabase
