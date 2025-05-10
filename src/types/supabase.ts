@@ -1,4 +1,3 @@
-
 import { Database as SupabaseDatabase } from '@/integrations/supabase/types';
 
 // Extend the Supabase types with our custom database schema
@@ -128,42 +127,6 @@ export interface Database {
         };
         Relationships: [];
       };
-      questions: {
-        Row: {
-          id: string;
-          content: string;
-          marche_id: string;
-          document_id: string | null;
-          fascicule_id: string | null;
-          attachment_path: string | null;
-          date_creation: string;
-          statut: string;
-          created_at: string | null;
-        };
-        Insert: {
-          id?: string;
-          content: string;
-          marche_id: string;
-          document_id?: string | null;
-          fascicule_id?: string | null;
-          attachment_path?: string | null;
-          date_creation?: string;
-          statut?: string;
-          created_at?: string | null;
-        };
-        Update: {
-          id?: string;
-          content?: string;
-          marche_id?: string;
-          document_id?: string | null;
-          fascicule_id?: string | null;
-          attachment_path?: string | null;
-          date_creation?: string;
-          statut?: string;
-          created_at?: string | null;
-        };
-        Relationships: [];
-      };
       profiles: {
         Row: {
           id: string;
@@ -173,7 +136,8 @@ export interface Database {
           entreprise: string | null;
           created_at: string | null;
           updated_at: string | null;
-          role_global: string;  // Ajout du champ role_global
+          role_global: string;
+          email: string | null;
         };
         Insert: {
           id: string;
@@ -183,7 +147,8 @@ export interface Database {
           entreprise?: string | null;
           created_at?: string | null;
           updated_at?: string | null;
-          role_global?: string;  // Ajout du champ role_global
+          role_global?: string;
+          email?: string | null;
         };
         Update: {
           id?: string;
@@ -193,11 +158,12 @@ export interface Database {
           entreprise?: string | null;
           created_at?: string | null;
           updated_at?: string | null;
-          role_global?: string;  // Ajout du champ role_global
+          role_global?: string;
+          email?: string | null;
         };
         Relationships: [];
       };
-      droits_marche: {  // Nouvelle table droits_marche
+      droits_marche: {
         Row: {
           id: string;
           user_id: string;
@@ -331,6 +297,42 @@ export interface Database {
           user_id?: string | null;
           date_creation?: string | null;
           attachment_path?: string | null;
+          created_at?: string | null;
+        };
+        Relationships: [];
+      };
+      questions: {
+        Row: {
+          id: string;
+          content: string;
+          marche_id: string;
+          document_id: string | null;
+          fascicule_id: string | null;
+          attachment_path: string | null;
+          date_creation: string;
+          statut: string;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          content: string;
+          marche_id: string;
+          document_id?: string | null;
+          fascicule_id?: string | null;
+          attachment_path?: string | null;
+          date_creation?: string;
+          statut?: string;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          content?: string;
+          marche_id?: string;
+          document_id?: string | null;
+          fascicule_id?: string | null;
+          attachment_path?: string | null;
+          date_creation?: string;
+          statut?: string;
           created_at?: string | null;
         };
         Relationships: [];

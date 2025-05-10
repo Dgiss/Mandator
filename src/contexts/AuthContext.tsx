@@ -10,9 +10,9 @@ interface AuthContextType {
   profile: any | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any | null }>;
-  signUp: (email: string, password: string, userData?: { nom?: string; prenom?: string; entreprise?: string }) => Promise<{ error: any | null }>;
+  signUp: (email: string, password: string, userData?: { nom?: string; prenom?: string; entreprise?: string; email?: string }) => Promise<{ error: any | null }>;
   signOut: () => Promise<void>;
-  updateProfile: (data: { nom?: string; prenom?: string; entreprise?: string }) => Promise<{ error: any | null }>;
+  updateProfile: (data: { nom?: string; prenom?: string; entreprise?: string; email?: string }) => Promise<{ error: any | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -104,14 +104,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (
     email: string, 
     password: string, 
-    userData?: { nom?: string; prenom?: string; entreprise?: string }
+    userData?: { nom?: string; prenom?: string; entreprise?: string; email?: string }
   ) => {
     try {
+      // S'assurer que l'email est inclus dans les données utilisateur
+      const userMetadata = {
+        ...userData,
+        email: email // Ajouter l'email aux métadonnées
+      };
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: userData
+          data: userMetadata
         }
       });
 
@@ -139,7 +145,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Fonction de mise à jour du profil
-  const updateProfile = async (data: { nom?: string; prenom?: string; entreprise?: string }) => {
+  const updateProfile = async (data: { nom?: string; prenom?: string; entreprise?: string; email?: string }) => {
     if (!user) {
       return { error: { message: "Aucun utilisateur connecté" } };
     }

@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, Mail, Key, User, Building } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { validateField } from '@/hooks/form/validation';
 
 export default function AuthPage() {
   const navigate = useNavigate();
@@ -31,6 +32,7 @@ export default function AuthPage() {
   const [loginLoading, setLoginLoading] = useState(false);
   const [registerLoading, setRegisterLoading] = useState(false);
   const [error, setError] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     // Si l'utilisateur est connecté, rediriger vers la page d'accueil
@@ -39,10 +41,55 @@ export default function AuthPage() {
     }
   }, [user, loading, navigate]);
 
+  const validateEmailField = (email: string) => {
+    const emailValidation = validateField('email', email, {
+      required: true,
+      isEmail: true,
+      errorMessage: "Veuillez entrer une adresse email valide"
+    });
+    
+    return emailValidation;
+  };
+
+  const validatePasswordField = (password: string) => {
+    return validateField('password', password, {
+      required: true,
+      minLength: 6,
+      errorMessage: "Le mot de passe doit contenir au moins 6 caractères"
+    });
+  };
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    
+    // Validation de l'email
+    const emailError = validateEmailField(registerEmail);
+    if (emailError) newErrors.email = emailError;
+    
+    // Validation du mot de passe
+    const passwordError = validatePasswordField(registerPassword);
+    if (passwordError) newErrors.password = passwordError;
+    
+    // Validation de la confirmation du mot de passe
+    if (registerPassword !== registerPasswordConfirm) {
+      newErrors.passwordConfirm = "Les mots de passe ne correspondent pas";
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoginLoading(true);
+
+    const emailError = validateEmailField(loginEmail);
+    if (emailError) {
+      setError(emailError);
+      setLoginLoading(false);
+      return;
+    }
 
     try {
       const { error } = await signIn(loginEmail, loginPassword);
@@ -60,14 +107,7 @@ export default function AuthPage() {
     e.preventDefault();
     setError('');
 
-    // Validation
-    if (registerPassword !== registerPasswordConfirm) {
-      setError("Les mots de passe ne correspondent pas");
-      return;
-    }
-
-    if (registerPassword.length < 6) {
-      setError("Le mot de passe doit contenir au moins 6 caractères");
+    if (!validateForm()) {
       return;
     }
 
@@ -77,7 +117,8 @@ export default function AuthPage() {
       const userData = {
         nom,
         prenom,
-        entreprise
+        entreprise,
+        email: registerEmail
       };
 
       const { error } = await signUp(registerEmail, registerPassword, userData);
@@ -199,11 +240,12 @@ export default function AuthPage() {
                             id="register-email"
                             type="email"
                             placeholder="nom@exemple.com"
-                            className="pl-10"
+                            className={`pl-10 ${errors.email ? 'border-red-500' : ''}`}
                             value={registerEmail}
                             onChange={(e) => setRegisterEmail(e.target.value)}
                             required
                           />
+                          {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
                         </div>
                       </div>
                       
@@ -254,11 +296,12 @@ export default function AuthPage() {
                           <Input
                             id="register-password"
                             type="password"
-                            className="pl-10"
+                            className={`pl-10 ${errors.password ? 'border-red-500' : ''}`}
                             value={registerPassword}
                             onChange={(e) => setRegisterPassword(e.target.value)}
                             required
                           />
+                          {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
                         </div>
                       </div>
                       
@@ -267,10 +310,12 @@ export default function AuthPage() {
                         <Input
                           id="confirm-password"
                           type="password"
+                          className={errors.passwordConfirm ? 'border-red-500' : ''}
                           value={registerPasswordConfirm}
                           onChange={(e) => setRegisterPasswordConfirm(e.target.value)}
                           required
                         />
+                        {errors.passwordConfirm && <p className="text-red-500 text-xs mt-1">{errors.passwordConfirm}</p>}
                       </div>
                     </div>
                     <Button 
