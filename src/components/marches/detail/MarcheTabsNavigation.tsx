@@ -20,7 +20,7 @@ interface MarcheTabsNavigationProps {
 
 const MarcheTabsNavigation: React.FC<MarcheTabsNavigationProps> = ({ activeTab, onTabChange }) => {
   return (
-    <div className="border-b overflow-x-auto">
+    <div className="border-b overflow-x-auto sticky top-[69px] bg-white z-10 shadow-sm">
       <TabsList className="bg-transparent h-auto p-0 w-full justify-start">
         <TabsTrigger 
           value="apercu" 

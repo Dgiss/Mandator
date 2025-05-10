@@ -1,5 +1,5 @@
 
-import React, { ReactNode, useState } from 'react';
+import React, { ReactNode } from 'react';
 import { 
   SidebarProvider, 
   Sidebar, 
@@ -10,7 +10,8 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarTrigger,
-  SidebarInset
+  SidebarInset,
+  SidebarRail
 } from "@/components/ui/sidebar";
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,8 @@ import {
   MessageSquare, 
   Settings, 
   LogOut,
-  Shield
+  Shield,
+  PanelLeft
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -50,14 +52,21 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   };
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={true}>
       <div className="flex min-h-screen w-full bg-gray-50">
-        <Sidebar>
+        <Sidebar 
+          variant="inset" 
+          className="border-r border-gray-200 shadow-sm z-30"
+        >
+          <SidebarRail />
+          
           <SidebarHeader className="flex items-center border-b px-4 py-4">
             <Link to="/" className="flex items-center">
               <FileText className="h-6 w-6 text-btp-blue mr-2" />
               <span className="text-xl font-bold">MandataireBTP</span>
             </Link>
+            
+            <SidebarTrigger className="ml-auto lg:hidden" />
           </SidebarHeader>
           
           <SidebarContent>
@@ -142,7 +151,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         
         <SidebarInset>
           <div className="flex flex-col min-h-screen w-full">
-            <div className="p-4 flex items-center justify-between border-b bg-white md:hidden">
+            <div className="p-4 flex items-center justify-between border-b bg-white sticky top-0 z-20">
               <div className="flex items-center">
                 <SidebarTrigger />
                 <Link to="/" className="flex items-center ml-2">
@@ -152,7 +161,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               </div>
             </div>
             
-            <main className="flex-1">
+            <main className="flex-1 relative">
               {children}
             </main>
           </div>

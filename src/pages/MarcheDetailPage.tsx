@@ -65,65 +65,69 @@ export default function MarcheDetailPage() {
 
   return (
     <PageLayout>
-      <MarcheHeader 
-        marche={marche} 
-        getStatusColor={getStatusColor}
-        formatDate={formatDate}
-      />
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <MarcheTabsNavigation 
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
+      <div className="container mx-auto px-4 pb-12">
+        <MarcheHeader 
+          marche={marche} 
+          getStatusColor={getStatusColor}
+          formatDate={formatDate}
         />
 
-        <TabsContent value="apercu" className="pt-4">
-          <MarcheApercuContent 
-            documentStats={documentStats}
-            visasEnAttente={visasEnAttente}
-            fasciculeProgress={fasciculeProgress}
-            documentsRecents={documentsRecents}
-            formatDate={formatDate}
-            setActiveTab={setActiveTab}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <MarcheTabsNavigation 
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
           />
-        </TabsContent>
 
-        <TabsContent value="fascicules">
-          <MarcheFascicules marcheId={id || ""} />
-        </TabsContent>
+          <div className="py-6">
+            <TabsContent value="apercu" className="mt-0">
+              <MarcheApercuContent 
+                documentStats={documentStats}
+                visasEnAttente={visasEnAttente}
+                fasciculeProgress={fasciculeProgress}
+                documentsRecents={documentsRecents}
+                formatDate={formatDate}
+                setActiveTab={setActiveTab}
+              />
+            </TabsContent>
 
-        <TabsContent value="documents">
-          <MarcheDocuments marcheId={id || ""} />
-        </TabsContent>
+            <TabsContent value="fascicules" className="mt-0">
+              <MarcheFascicules marcheId={id || ""} />
+            </TabsContent>
 
-        <TabsContent value="versions">
-          <MarcheVersions marcheId={id || ""} />
-        </TabsContent>
+            <TabsContent value="documents" className="mt-0">
+              <MarcheDocuments marcheId={id || ""} />
+            </TabsContent>
 
-        <TabsContent value="visas">
-          <MarcheVisas marcheId={id || ""} />
-        </TabsContent>
+            <TabsContent value="versions" className="mt-0">
+              <MarcheVersions marcheId={id || ""} />
+            </TabsContent>
 
-        <TabsContent value="qr">
-          <MarcheQuestionsReponses marcheId={id || ""} />
-        </TabsContent>
+            <TabsContent value="visas" className="mt-0">
+              <MarcheVisas marcheId={id || ""} />
+            </TabsContent>
 
-        <TabsContent value="collaborateurs">
-          <MarcheCollaborateurs marcheId={id || ""} />
-        </TabsContent>
+            <TabsContent value="qr" className="mt-0">
+              <MarcheQuestionsReponses marcheId={id || ""} />
+            </TabsContent>
 
-        <TabsContent value="situations">
-          <MarcheSituations marcheId={id || ""} />
-        </TabsContent>
+            <TabsContent value="collaborateurs" className="mt-0">
+              <MarcheCollaborateurs marcheId={id || ""} />
+            </TabsContent>
 
-        <TabsContent value="ordres">
-          <MarcheOrdresService marcheId={id || ""} />
-        </TabsContent>
+            <TabsContent value="situations" className="mt-0">
+              <MarcheSituations marcheId={id || ""} />
+            </TabsContent>
 
-        <TabsContent value="prix">
-          <MarchePrixNouveaux marcheId={id || ""} />
-        </TabsContent>
-      </Tabs>
+            <TabsContent value="ordres" className="mt-0">
+              <MarcheOrdresService marcheId={id || ""} />
+            </TabsContent>
+
+            <TabsContent value="prix" className="mt-0">
+              <MarchePrixNouveaux marcheId={id || ""} />
+            </TabsContent>
+          </div>
+        </Tabs>
+      </div>
     </PageLayout>
   );
 }
