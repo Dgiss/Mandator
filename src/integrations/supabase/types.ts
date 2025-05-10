@@ -466,7 +466,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_moe_for_marche: {
+        Args: { marche_id: string }
+        Returns: boolean
+      }
+      search_profiles: {
+        Args: { search_term: string }
+        Returns: {
+          created_at: string | null
+          entreprise: string | null
+          id: string
+          nom: string | null
+          prenom: string | null
+          role: string | null
+          role_global: string
+          updated_at: string | null
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

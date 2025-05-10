@@ -109,17 +109,14 @@ export const droitsService = {
     }
 
     try {
-      // Search in profiles by id (which might contain email)
-      // or by nom/prenom if available
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, nom, prenom, role_global')
-        .or(`id.ilike.%${searchTerm}%,nom.ilike.%${searchTerm}%,prenom.ilike.%${searchTerm}%`);
+      // Use the search_profiles database function we created
+      const { data, error } = await supabase
+        .rpc('search_profiles', { search_term: searchTerm });
 
-      if (profilesError) throw profilesError;
+      if (error) throw error;
 
       // Map through profiles to format user data properly
-      const usersWithRoles = profiles.map(profile => ({
+      const usersWithRoles = (data || []).map(profile => ({
         id: profile.id,
         nom: profile.nom || '',
         prenom: profile.prenom || '',
