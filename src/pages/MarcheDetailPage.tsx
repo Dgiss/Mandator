@@ -65,12 +65,14 @@ export default function MarcheDetailPage() {
 
   return (
     <PageLayout>
-      <div className="container mx-auto px-4 pb-12">
-        <MarcheHeader 
-          marche={marche} 
-          getStatusColor={getStatusColor}
-          formatDate={formatDate}
-        />
+      <div className="pb-12 w-full">
+        <div className="container mx-auto px-4">
+          <MarcheHeader 
+            marche={marche} 
+            getStatusColor={getStatusColor}
+            formatDate={formatDate}
+          />
+        </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <MarcheTabsNavigation 
@@ -78,7 +80,7 @@ export default function MarcheDetailPage() {
             onTabChange={setActiveTab}
           />
 
-          <div className="py-6">
+          <div className="py-6 container mx-auto px-4">
             <TabsContent value="apercu" className="mt-0">
               <MarcheApercuContent 
                 documentStats={documentStats}

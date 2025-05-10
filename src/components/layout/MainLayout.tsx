@@ -1,5 +1,5 @@
 
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useEffect } from 'react';
 import { 
   SidebarProvider, 
   Sidebar, 
@@ -11,7 +11,8 @@ import {
   SidebarMenuButton,
   SidebarTrigger,
   SidebarInset,
-  SidebarRail
+  SidebarRail,
+  useSidebar
 } from "@/components/ui/sidebar";
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,9 @@ import {
   Settings, 
   LogOut,
   Shield,
-  PanelLeft
+  PanelLeft,
+  Menu,
+  X
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -37,6 +40,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
   const { isAdmin } = useUserRole();
+  const { open, setOpen, isMobile } = useSidebar();
   
   const isActive = (path: string) => {
     return location.pathname.startsWith(path);
@@ -51,8 +55,15 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     }
   };
 
+  // Close sidebar on mobile when navigating to a new page
+  useEffect(() => {
+    if (isMobile) {
+      setOpen(false);
+    }
+  }, [location.pathname, isMobile, setOpen]);
+
   return (
-    <SidebarProvider defaultOpen={true}>
+    <SidebarProvider defaultOpen={!isMobile}>
       <div className="flex min-h-screen w-full bg-gray-50">
         <Sidebar 
           variant="inset" 
@@ -66,7 +77,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               <span className="text-xl font-bold">MandataireBTP</span>
             </Link>
             
-            <SidebarTrigger className="ml-auto lg:hidden" />
+            <SidebarTrigger className="ml-auto lg:hidden">
+              {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </SidebarTrigger>
           </SidebarHeader>
           
           <SidebarContent>
@@ -86,7 +99,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton isActive={isActive('/home')} tooltip="Accueil" asChild>
+                <SidebarMenuButton isActive={isActive('/home') || isActive('/')} tooltip="Accueil" asChild>
                   <Link to="/">
                     <Home className="size-4" />
                     <span>Accueil</span>
@@ -125,7 +138,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             </SidebarMenu>
           </SidebarContent>
           
-          <SidebarFooter className="border-t">
+          <SidebarFooter className="border-t mt-auto">
             <div className="flex flex-col gap-2 p-4">
               <SidebarMenuItem>
                 <SidebarMenuButton isActive={isActive('/parametres')} tooltip="Paramètres" asChild>
@@ -153,15 +166,21 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           <div className="flex flex-col min-h-screen w-full">
             <div className="p-4 flex items-center justify-between border-b bg-white sticky top-0 z-20">
               <div className="flex items-center">
-                <SidebarTrigger />
-                <Link to="/" className="flex items-center ml-2">
+                <SidebarTrigger className="mr-2">
+                  {open ? (
+                    <PanelLeft className="h-5 w-5 transition-transform" />
+                  ) : (
+                    <Menu className="h-5 w-5" />
+                  )}
+                </SidebarTrigger>
+                <Link to="/" className="flex items-center">
                   <FileText className="h-5 w-5 text-btp-blue mr-2" />
                   <span className="text-lg font-bold">MandataireBTP</span>
                 </Link>
               </div>
             </div>
             
-            <main className="flex-1 relative">
+            <main className="flex-1 relative overflow-auto">
               {children}
             </main>
           </div>
