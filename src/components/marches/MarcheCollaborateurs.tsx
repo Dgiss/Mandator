@@ -24,6 +24,7 @@ const MarcheCollaborateurs: React.FC<MarcheCollaborateursProps> = ({ marcheId })
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [selectedRole, setSelectedRole] = useState<MarcheSpecificRole>('MANDATAIRE');
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const { toast } = useToast();
   const { canManageRoles, isAdmin } = useUserRole(marcheId);
 
@@ -55,6 +56,25 @@ const MarcheCollaborateurs: React.FC<MarcheCollaborateursProps> = ({ marcheId })
     }
   };
 
+  // Handle search input change
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (searchQuery && searchQuery.length >= 2) {
+        try {
+          const results = await droitsService.searchUsers(searchQuery);
+          setSearchResults(results);
+        } catch (error) {
+          console.error('Erreur lors de la recherche:', error);
+          setSearchResults([]);
+        }
+      } else {
+        setSearchResults([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
+
   // Fonction pour attribuer un rôle à un utilisateur
   const handleAssignRole = async () => {
     if (!selectedUserId || !selectedRole) {
@@ -79,6 +99,7 @@ const MarcheCollaborateurs: React.FC<MarcheCollaborateursProps> = ({ marcheId })
       setSelectedUserId('');
       setSelectedRole('MANDATAIRE');
       setSearchQuery('');
+      setSearchResults([]);
     } catch (error) {
       console.error('Erreur lors de l\'attribution du rôle:', error);
       toast({
@@ -109,30 +130,18 @@ const MarcheCollaborateurs: React.FC<MarcheCollaborateursProps> = ({ marcheId })
     }
   };
 
-  // Filtrer les utilisateurs disponibles en fonction de la recherche
-  const filteredUsers = availableUsers.filter(user => {
-    if (!searchQuery.trim()) return false; // Ne pas montrer de résultats si la recherche est vide
-    
-    const searchLower = searchQuery.toLowerCase();
-    const email = user.email?.toLowerCase() || '';
-    const nom = user.nom?.toLowerCase() || '';
-    const prenom = user.prenom?.toLowerCase() || '';
-    
-    return email.includes(searchLower) || 
-           nom.includes(searchLower) || 
-           prenom.includes(searchLower);
-  });
-
   // Utilisateurs qui ont déjà un accès à ce marché
   const usersWithAccess = collaborateurs.map(collab => collab.user_id);
   
   // Utilisateurs disponibles pour attribution (ceux qui n'ont pas encore accès)
-  const filteredAvailableUsers = filteredUsers.filter(user => 
+  const filteredSearchResults = searchResults.filter(user => 
     !usersWithAccess.includes(user.id)
   );
 
   const handleUserSelection = (userId: string) => {
     setSelectedUserId(userId);
+    setSearchQuery(''); // Clear search when a user is selected
+    setSearchResults([]);
   };
 
   return (
@@ -249,10 +258,10 @@ const MarcheCollaborateurs: React.FC<MarcheCollaborateursProps> = ({ marcheId })
                 </div>
               </div>
               
-              {filteredAvailableUsers.length > 0 && (
+              {filteredSearchResults.length > 0 && (
                 <div className="bg-muted p-2 rounded-md max-h-[150px] overflow-auto">
                   <p className="text-xs text-muted-foreground mb-2">Résultats de recherche:</p>
-                  {filteredAvailableUsers.map(user => (
+                  {filteredSearchResults.map(user => (
                     <div 
                       key={user.id} 
                       className={`p-2 rounded-md cursor-pointer flex items-center justify-between mb-1 ${
@@ -278,7 +287,7 @@ const MarcheCollaborateurs: React.FC<MarcheCollaborateursProps> = ({ marcheId })
                 </div>
               )}
               
-              {searchQuery && filteredAvailableUsers.length === 0 && (
+              {searchQuery && filteredSearchResults.length === 0 && (
                 <div className="p-4 border border-dashed rounded-md text-center text-muted-foreground">
                   Aucun utilisateur trouvé pour "{searchQuery}"
                 </div>

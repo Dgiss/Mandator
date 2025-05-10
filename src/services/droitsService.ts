@@ -18,59 +18,120 @@ export interface UserDroit {
 export const droitsService = {
   // Récupérer tous les droits pour un marché spécifique
   async getDroitsByMarcheId(marcheId: string): Promise<UserDroit[]> {
-    const { data, error } = await supabase
-      .from('droits_marche')
-      .select(`
-        *,
-        userInfo:profiles!user_id(
-          email:id(email),
-          nom,
-          prenom
-        )
-      `)
-      .eq('marche_id', marcheId);
+    try {
+      // Fetch rights from droits_marche table
+      const { data: droitsData, error: droitsError } = await supabase
+        .from('droits_marche')
+        .select('*')
+        .eq('marche_id', marcheId);
 
-    if (error) {
+      if (droitsError) throw droitsError;
+
+      // For each right, fetch the corresponding user info
+      const droitsWithUserInfo = await Promise.all(
+        (droitsData || []).map(async (droit) => {
+          // Get user profile data
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('id, nom, prenom')
+            .eq('id', droit.user_id)
+            .single();
+
+          // Get user email from auth.users (via profiles and id)
+          // This will depend on how your auth is structured
+          const userInfo = profileError ? {} : {
+            email: droit.user_id, // Default to user_id which might be email
+            nom: profileData?.nom || '',
+            prenom: profileData?.prenom || ''
+          };
+
+          return {
+            ...droit,
+            userInfo
+          };
+        })
+      );
+
+      return droitsWithUserInfo as UserDroit[];
+    } catch (error) {
       console.error('Erreur lors de la récupération des droits:', error);
       throw error;
     }
-    
-    return data as UserDroit[];
   },
 
   // Récupérer tous les droits pour un utilisateur
   async getDroitsByUserId(userId: string): Promise<UserDroit[]> {
-    const { data, error } = await supabase
-      .from('droits_marche')
-      .select('*')
-      .eq('user_id', userId);
+    try {
+      const { data, error } = await supabase
+        .from('droits_marche')
+        .select('*')
+        .eq('user_id', userId);
 
-    if (error) {
+      if (error) throw error;
+      
+      return data as UserDroit[];
+    } catch (error) {
       console.error('Erreur lors de la récupération des droits:', error);
       throw error;
     }
-    
-    return data as UserDroit[];
   },
 
   // Récupérer les utilisateurs avec leur rôle global
   async getUsers(): Promise<any[]> {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select(`
-        id,
-        nom,
-        prenom,
-        role_global,
-        email:id(email)
-      `);
+    try {
+      // Get all profiles with their global role
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, nom, prenom, role_global');
 
-    if (error) {
+      if (profilesError) throw profilesError;
+
+      // Map through profiles to format user data properly
+      const usersWithRoles = profiles.map(profile => ({
+        id: profile.id,
+        nom: profile.nom || '',
+        prenom: profile.prenom || '',
+        role_global: profile.role_global || 'STANDARD',
+        email: profile.id // Default to ID as email
+      }));
+
+      return usersWithRoles;
+    } catch (error) {
       console.error('Erreur lors de la récupération des utilisateurs:', error);
       throw error;
     }
-    
-    return data;
+  },
+
+  // Rechercher des utilisateurs par terme de recherche (email, nom, prénom)
+  async searchUsers(searchTerm: string): Promise<any[]> {
+    if (!searchTerm || searchTerm.trim() === '') {
+      return []; // Return empty array if search term is empty
+    }
+
+    try {
+      // Search in profiles by id (which might contain email)
+      // or by nom/prenom if available
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, nom, prenom, role_global')
+        .or(`id.ilike.%${searchTerm}%,nom.ilike.%${searchTerm}%,prenom.ilike.%${searchTerm}%`);
+
+      if (profilesError) throw profilesError;
+
+      // Map through profiles to format user data properly
+      const usersWithRoles = profiles.map(profile => ({
+        id: profile.id,
+        nom: profile.nom || '',
+        prenom: profile.prenom || '',
+        role_global: profile.role_global || 'STANDARD',
+        email: profile.id // Default to ID as email
+      }));
+
+      return usersWithRoles;
+    } catch (error) {
+      console.error('Erreur lors de la recherche des utilisateurs:', error);
+      return []; // Return empty array on error
+    }
   },
 
   // Attribuer un rôle à un utilisateur sur un marché spécifique
