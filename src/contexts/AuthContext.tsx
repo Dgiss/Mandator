@@ -151,6 +151,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
+      // Mettre à jour l'email dans auth.users si l'email a été modifié
+      if (data.email && data.email !== user.email) {
+        const { error: updateAuthError } = await supabase.auth.updateUser({
+          email: data.email
+        });
+
+        if (updateAuthError) {
+          toast.error(`Erreur de mise à jour de l'email: ${updateAuthError.message}`);
+          return { error: updateAuthError };
+        }
+      }
+
       const { error } = await supabase
         .from('profiles')
         .update(data)

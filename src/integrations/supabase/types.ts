@@ -242,6 +242,7 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string | null
+          email: string | null
           entreprise: string | null
           id: string
           nom: string | null
@@ -252,6 +253,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          email?: string | null
           entreprise?: string | null
           id: string
           nom?: string | null
@@ -262,6 +264,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          email?: string | null
           entreprise?: string | null
           id?: string
           nom?: string | null
@@ -482,6 +485,7 @@ export type Database = {
         Args: { search_term: string }
         Returns: {
           created_at: string | null
+          email: string | null
           entreprise: string | null
           id: string
           nom: string | null
