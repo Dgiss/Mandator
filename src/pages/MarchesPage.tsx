@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Marche } from '@/services/types';
 import { fetchMarches } from '@/services/marcheService';
 import MarchesList from '@/components/marches/MarchesList';
@@ -15,6 +16,7 @@ export default function MarchesPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { canCreateMarche } = useUserRole();
   
   // État local
   const [searchTerm, setSearchTerm] = useState('');
@@ -109,7 +111,7 @@ export default function MarchesPage() {
   }, []);
 
   // Actions pour la page
-  const pageActions = (
+  const pageActions = canCreateMarche ? (
     <Button 
       variant="btpPrimary" 
       onClick={handleCreateMarche} 
@@ -117,7 +119,7 @@ export default function MarchesPage() {
     >
       <Plus className="mr-2 h-4 w-4" /> Nouveau marché
     </Button>
-  );
+  ) : null;
 
   return (
     <PageLayout 

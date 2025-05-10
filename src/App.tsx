@@ -9,6 +9,7 @@ import MarcheDetailPage from "./pages/MarcheDetailPage";
 import QuestionsReponsesPage from "./pages/QuestionsReponsesPage";
 import NotFound from "./pages/NotFound";
 import AuthPage from "./pages/AuthPage";
+import AdminPage from "./pages/AdminPage";
 
 import { useEffect } from "react";
 import { CRMProvider } from "./contexts/CRMContext";
@@ -51,6 +52,7 @@ const App = () => {
               <Route path="/marches/:id" element={<PrivateRoute><MarcheDetailPage /></PrivateRoute>} />
               <Route path="/marches/creation" element={<PrivateRoute><MarketCreationPage /></PrivateRoute>} />
               <Route path="/questions-reponses" element={<PrivateRoute><QuestionsReponsesPage /></PrivateRoute>} />
+              <Route path="/admin" element={<PrivateRoute><AdminPage /></PrivateRoute>} />
               <Route path="/parametres" element={
                 <PrivateRoute>
                   <div className="container mx-auto p-6"><h1 className="text-2xl font-bold">Paramètres</h1></div>

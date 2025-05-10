@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase';
 import { Visa } from './types';
 
@@ -175,37 +174,54 @@ export const visasService = {
     if (error) throw error;
     return data;
   },
-
-  // Récupérer le rôle de l'utilisateur actuel
-  async getCurrentUserRole() {
+  
+  // Récupérer le rôle de l'utilisateur actuel sur un marché spécifique
+  async getUserRoleForMarche(marcheId: string) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
     
-    // Récupérer le profil avec le rôle
-    const { data, error } = await supabase
+    // Vérifier d'abord si l'utilisateur est administrateur
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role_global')
       .eq('id', user.id)
       .single();
     
-    if (error) {
-      console.error('Erreur lors de la récupération du rôle:', error);
-      return 'STANDARD'; // Rôle par défaut
+    if (profileError) {
+      console.error('Erreur lors de la récupération du profil:', profileError);
+      return 'STANDARD';
     }
     
-    // Normaliser le rôle en majuscules pour la cohérence
-    return data?.role ? String(data.role).toUpperCase() : 'STANDARD';
+    // Les administrateurs sont considérés comme ayant tous les droits
+    if (profile?.role_global === 'ADMIN') {
+      return 'ADMIN';
+    }
+    
+    // Récupérer le rôle spécifique pour ce marché
+    const { data, error } = await supabase
+      .from('droits_marche')
+      .select('role_specifique')
+      .eq('user_id', user.id)
+      .eq('marche_id', marcheId)
+      .maybeSingle();
+    
+    if (error) {
+      console.error('Erreur lors de la récupération du rôle spécifique:', error);
+      return null;
+    }
+    
+    return data?.role_specifique || profile?.role_global || 'STANDARD';
   },
   
-  // Vérifier si l'utilisateur peut diffuser un document (MANDATAIRE uniquement)
-  async canUserDiffuse() {
-    const role = await this.getCurrentUserRole();
-    return role === 'MANDATAIRE';
+  // Vérifier si l'utilisateur peut diffuser un document pour un marché spécifique
+  async canUserDiffuseForMarche(marcheId: string) {
+    const role = await this.getUserRoleForMarche(marcheId);
+    return role === 'ADMIN' || role === 'MANDATAIRE';
   },
   
-  // Vérifier si l'utilisateur peut viser un document (MOE uniquement)
-  async canUserVisa() {
-    const role = await this.getCurrentUserRole();
-    return role === 'MOE';
+  // Vérifier si l'utilisateur peut viser un document pour un marché spécifique
+  async canUserVisaForMarche(marcheId: string) {
+    const role = await this.getUserRoleForMarche(marcheId);
+    return role === 'ADMIN' || role === 'MOE';
   }
 };

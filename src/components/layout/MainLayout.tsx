@@ -19,10 +19,12 @@ import {
   Home, 
   MessageSquare, 
   Settings, 
-  LogOut
+  LogOut,
+  Shield
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -32,6 +34,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
+  const { isAdmin } = useUserRole();
   
   const isActive = (path: string) => {
     return location.pathname.startsWith(path);
@@ -99,6 +102,17 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              
+              {isAdmin && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton isActive={isActive('/admin')} tooltip="Administration" asChild>
+                    <Link to="/admin">
+                      <Shield className="size-4" />
+                      <span>Administration</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarContent>
           

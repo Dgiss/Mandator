@@ -132,6 +132,38 @@ export type Database = {
         }
         Relationships: []
       }
+      droits_marche: {
+        Row: {
+          created_at: string | null
+          id: string
+          marche_id: string
+          role_specifique: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          marche_id: string
+          role_specifique: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          marche_id?: string
+          role_specifique?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "droits_marche_marche_id_fkey"
+            columns: ["marche_id"]
+            isOneToOne: false
+            referencedRelation: "marches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fascicules: {
         Row: {
           created_at: string | null
@@ -215,6 +247,7 @@ export type Database = {
           nom: string | null
           prenom: string | null
           role: string | null
+          role_global: string
           updated_at: string | null
         }
         Insert: {
@@ -224,6 +257,7 @@ export type Database = {
           nom?: string | null
           prenom?: string | null
           role?: string | null
+          role_global?: string
           updated_at?: string | null
         }
         Update: {
@@ -233,6 +267,7 @@ export type Database = {
           nom?: string | null
           prenom?: string | null
           role?: string | null
+          role_global?: string
           updated_at?: string | null
         }
         Relationships: []

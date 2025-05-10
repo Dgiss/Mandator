@@ -25,7 +25,6 @@ import { useUserRole } from '@/hooks/useUserRole';
 interface MarcheVisaDialogProps {
   version: Version;
   onVisaComplete?: () => void;
-  userRole?: string;
 }
 
 const MarcheVisaDialog: React.FC<MarcheVisaDialogProps> = ({ 
@@ -42,8 +41,8 @@ const MarcheVisaDialog: React.FC<MarcheVisaDialogProps> = ({
   // Utiliser notre nouveau hook pour la gestion des rôles
   const { canVisa } = useUserRole();
 
-  // Role check - only MOE can process visa
-  const canProcessVisa = canVisa && version.statut === 'En attente de visa';
+  // Role check - only MOE or ADMIN can process visa for this marché
+  const canProcessVisa = canVisa(version.marche_id) && version.statut === 'En attente de visa';
 
   const handleVisa = async () => {
     if (!canProcessVisa) {
