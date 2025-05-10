@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { RefreshCw, Plus, X, Search, Users } from 'lucide-react';
+import { RefreshCw, Plus, X, Search, Users, Mail } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { droitsService, UserDroit } from '@/services/droitsService';
@@ -78,6 +78,7 @@ const MarcheCollaborateurs: React.FC<MarcheCollaborateursProps> = ({ marcheId })
       loadData();
       setSelectedUserId('');
       setSelectedRole('MANDATAIRE');
+      setSearchQuery('');
     } catch (error) {
       console.error('Erreur lors de l\'attribution du rôle:', error);
       toast({
@@ -110,6 +111,8 @@ const MarcheCollaborateurs: React.FC<MarcheCollaborateursProps> = ({ marcheId })
 
   // Filtrer les utilisateurs disponibles en fonction de la recherche
   const filteredUsers = availableUsers.filter(user => {
+    if (!searchQuery.trim()) return false; // Ne pas montrer de résultats si la recherche est vide
+    
     const searchLower = searchQuery.toLowerCase();
     const email = user.email?.toLowerCase() || '';
     const nom = user.nom?.toLowerCase() || '';
@@ -127,6 +130,10 @@ const MarcheCollaborateurs: React.FC<MarcheCollaborateursProps> = ({ marcheId })
   const filteredAvailableUsers = filteredUsers.filter(user => 
     !usersWithAccess.includes(user.id)
   );
+
+  const handleUserSelection = (userId: string) => {
+    setSelectedUserId(userId);
+  };
 
   return (
     <div className="space-y-6">
@@ -218,17 +225,23 @@ const MarcheCollaborateurs: React.FC<MarcheCollaborateursProps> = ({ marcheId })
       {canManageRoles && (
         <Card>
           <CardHeader>
-            <CardTitle>Ajouter un collaborateur</CardTitle>
+            <CardTitle className="flex items-center">
+              <Plus className="h-5 w-5 mr-2" />
+              Ajouter un collaborateur
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="search">Rechercher un utilisateur</Label>
+                <Label htmlFor="search" className="flex items-center">
+                  <Mail className="h-4 w-4 mr-2" /> 
+                  Rechercher un utilisateur par email
+                </Label>
                 <div className="relative mt-1">
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="search"
-                    placeholder="Rechercher par nom, prénom ou email..."
+                    placeholder="Entrez l'email de l'utilisateur..."
                     className="pl-8"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -236,60 +249,83 @@ const MarcheCollaborateurs: React.FC<MarcheCollaborateursProps> = ({ marcheId })
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="user">Utilisateur</Label>
-                  <Select
-                    value={selectedUserId}
-                    onValueChange={setSelectedUserId}
-                  >
-                    <SelectTrigger id="user">
-                      <SelectValue placeholder="Sélectionner un utilisateur" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredAvailableUsers.length === 0 ? (
-                        <SelectItem value="none" disabled>
-                          Aucun utilisateur disponible
-                        </SelectItem>
-                      ) : (
-                        filteredAvailableUsers.map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.prenom} {user.nom} ({user.email})
-                          </SelectItem>
-                        ))
+              {filteredAvailableUsers.length > 0 && (
+                <div className="bg-muted p-2 rounded-md max-h-[150px] overflow-auto">
+                  <p className="text-xs text-muted-foreground mb-2">Résultats de recherche:</p>
+                  {filteredAvailableUsers.map(user => (
+                    <div 
+                      key={user.id} 
+                      className={`p-2 rounded-md cursor-pointer flex items-center justify-between mb-1 ${
+                        selectedUserId === user.id ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'
+                      }`}
+                      onClick={() => handleUserSelection(user.id)}
+                    >
+                      <div>
+                        <div className="font-medium">
+                          {user.prenom} {user.nom}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {user.email}
+                        </div>
+                      </div>
+                      {selectedUserId === user.id && (
+                        <Badge variant="outline" className="ml-2">
+                          Sélectionné
+                        </Badge>
                       )}
-                    </SelectContent>
-                  </Select>
+                    </div>
+                  ))}
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="role">Rôle</Label>
-                  <Select
-                    value={selectedRole}
-                    onValueChange={(value) => setSelectedRole(value as MarcheSpecificRole)}
-                    disabled={!selectedUserId}
-                  >
-                    <SelectTrigger id="role">
-                      <SelectValue placeholder="Sélectionner un rôle" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="MANDATAIRE">Mandataire</SelectItem>
-                      {isAdmin && (
-                        <SelectItem value="MOE">Maître d'œuvre (MOE)</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+              )}
               
-              <Button 
-                className="w-full" 
-                onClick={handleAssignRole}
-                disabled={!selectedUserId || !selectedRole}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Ajouter le collaborateur
-              </Button>
+              {searchQuery && filteredAvailableUsers.length === 0 && (
+                <div className="p-4 border border-dashed rounded-md text-center text-muted-foreground">
+                  Aucun utilisateur trouvé pour "{searchQuery}"
+                </div>
+              )}
+              
+              {selectedUserId && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="role">Attribuer le rôle</Label>
+                    <Select
+                      value={selectedRole}
+                      onValueChange={(value) => setSelectedRole(value as MarcheSpecificRole)}
+                    >
+                      <SelectTrigger id="role" className="w-full">
+                        <SelectValue placeholder="Sélectionner un rôle" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="MANDATAIRE">
+                          <div className="font-medium">Mandataire</div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Accès en lecture seule
+                          </div>
+                        </SelectItem>
+                        {isAdmin && (
+                          <SelectItem value="MOE">
+                            <div className="font-medium">Maître d'œuvre (MOE)</div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              Accès complet avec gestion des droits
+                            </div>
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="flex items-end">
+                    <Button 
+                      className="w-full" 
+                      onClick={handleAssignRole}
+                      disabled={!selectedUserId || !selectedRole}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Ajouter le collaborateur
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
