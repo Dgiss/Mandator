@@ -18,10 +18,14 @@ const PageLayout: React.FC<PageLayoutProps> = ({
   actions
 }) => {
   return (
-    <SidebarProvider defaultOpen={true}>
+    <SidebarProvider defaultOpen={true} 
+      style={{ 
+        "--sidebar-width": "280px", 
+        "--sidebar-width-icon": "64px" 
+      } as React.CSSProperties}>
       <MainLayout>
         {title && (
-          <div className="px-6 py-4">
+          <div className="px-6 py-4 bg-white border-b">
             <PageHeader 
               title={title} 
               description={description}
@@ -30,7 +34,7 @@ const PageLayout: React.FC<PageLayoutProps> = ({
             </PageHeader>
           </div>
         )}
-        <div className={title ? "px-6 pb-6" : "p-6"}>
+        <div className={title ? "px-6 py-6" : "p-6"}>
           {children}
         </div>
       </MainLayout>
