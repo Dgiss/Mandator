@@ -13,6 +13,17 @@ interface MarcheHeaderProps {
 const MarcheHeader: React.FC<MarcheHeaderProps> = ({ marche, getStatusColor, formatDate }) => {
   return (
     <div className="mb-6">
+      {marche.image && (
+        <div className="w-full h-48 md:h-64 mb-6 rounded-lg overflow-hidden relative">
+          <img 
+            src={marche.image} 
+            alt={`Couverture du marché ${marche.titre}`}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+        </div>
+      )}
+
       <div className="flex items-center gap-2 mb-4">
         <Button variant="ghost" size="sm" className="h-8 w-8 p-0" asChild>
           <a href="/marches">
@@ -35,7 +46,7 @@ const MarcheHeader: React.FC<MarcheHeaderProps> = ({ marche, getStatusColor, for
             </div>
           )}
           <div>
-            <h1 className="text-2xl font-bold">{marche.titre}</h1>
+            <h1 className="text-2xl font-bold text-gray-800 mb-1">{marche.titre}</h1>
             <div className="flex flex-wrap items-center gap-2 mt-1">
               <span className={`px-2 py-0.5 text-xs rounded-full ${getStatusColor(marche.statut)}`}>
                 {marche.statut}
