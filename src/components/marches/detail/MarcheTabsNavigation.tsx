@@ -9,7 +9,8 @@ import {
   MessageSquare,
   ClipboardList,
   ClipboardCheck,
-  DollarSign
+  DollarSign,
+  Users
 } from 'lucide-react';
 
 interface MarcheTabsNavigationProps {
@@ -62,6 +63,13 @@ const MarcheTabsNavigation: React.FC<MarcheTabsNavigationProps> = ({ activeTab, 
           onClick={() => onTabChange("qr")}
         >
           <MessageSquare className="mr-2 h-4 w-4" /> Q/R
+        </TabsTrigger>
+        <TabsTrigger 
+          value="collaborateurs" 
+          className="flex items-center px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-btp-blue rounded-none data-[state=active]:shadow-none"
+          onClick={() => onTabChange("collaborateurs")}
+        >
+          <Users className="mr-2 h-4 w-4" /> Collaborateurs
         </TabsTrigger>
         <TabsTrigger 
           value="situations" 

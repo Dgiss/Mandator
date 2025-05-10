@@ -22,6 +22,7 @@ import MarcheQuestionsReponses from '@/components/marches/MarcheQuestionsReponse
 import MarcheSituations from '@/components/marches/MarcheSituations';
 import MarcheOrdresService from '@/components/marches/MarcheOrdresService';
 import MarchePrixNouveaux from '@/components/marches/MarchePrixNouveaux';
+import MarcheCollaborateurs from '@/components/marches/MarcheCollaborateurs';
 
 export default function MarcheDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -105,6 +106,10 @@ export default function MarcheDetailPage() {
 
         <TabsContent value="qr">
           <MarcheQuestionsReponses marcheId={id || ""} />
+        </TabsContent>
+
+        <TabsContent value="collaborateurs">
+          <MarcheCollaborateurs marcheId={id || ""} />
         </TabsContent>
 
         <TabsContent value="situations">
