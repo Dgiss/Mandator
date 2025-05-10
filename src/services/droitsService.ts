@@ -22,10 +22,10 @@ export const droitsService = {
       .from('droits_marche')
       .select(`
         *,
-        userInfo: user_id (
-          email:auth.users!id(email),
-          nom:profiles!id(nom),
-          prenom:profiles!id(prenom)
+        userInfo:profiles!user_id(
+          email:id(email),
+          nom,
+          prenom
         )
       `)
       .eq('marche_id', marcheId);
@@ -62,7 +62,7 @@ export const droitsService = {
         nom,
         prenom,
         role_global,
-        email:auth.users!id(email)
+        email:id(email)
       `);
 
     if (error) {

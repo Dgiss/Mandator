@@ -1,3 +1,4 @@
+
 import { Database as SupabaseDatabase } from '@/integrations/supabase/types';
 
 // Extend the Supabase types with our custom database schema
@@ -12,7 +13,7 @@ export interface Database {
           statut: string;
           version: string;
           description: string | null;
-          dateupload: string | null;  // Changed from dateUpload to dateupload to match database
+          dateupload: string | null;
           taille: string | null;
           file_path: string | null;
           marche_id: string;
@@ -26,7 +27,7 @@ export interface Database {
           statut: string;
           version: string;
           description?: string | null;
-          dateupload?: string | null;  // Changed from dateUpload to dateupload to match database
+          dateupload?: string | null;
           taille?: string | null;
           file_path?: string | null;
           marche_id: string;
@@ -40,7 +41,7 @@ export interface Database {
           statut?: string;
           version?: string;
           description?: string | null;
-          dateupload?: string | null;  // Changed from dateUpload to dateupload to match database
+          dateupload?: string | null;
           taille?: string | null;
           file_path?: string | null;
           marche_id?: string;
@@ -55,9 +56,9 @@ export interface Database {
           nom: string;
           description: string | null;
           marche_id: string;
-          nombredocuments: number | null;  // Changed from nombreDocuments
+          nombredocuments: number | null;
           progression: number | null;
-          datemaj: string | null;  // Changed from dateMaj
+          datemaj: string | null;
           created_at: string | null;
         };
         Insert: {
@@ -65,9 +66,9 @@ export interface Database {
           nom: string;
           description?: string | null;
           marche_id: string;
-          nombredocuments?: number | null;  // Changed from nombreDocuments
+          nombredocuments?: number | null;
           progression?: number | null;
-          datemaj?: string | null;  // Changed from dateMaj
+          datemaj?: string | null;
           created_at?: string | null;
         };
         Update: {
@@ -75,9 +76,9 @@ export interface Database {
           nom?: string;
           description?: string | null;
           marche_id?: string;
-          nombredocuments?: number | null;  // Changed from nombreDocuments
+          nombredocuments?: number | null;
           progression?: number | null;
-          datemaj?: string | null;  // Changed from dateMaj
+          datemaj?: string | null;
           created_at?: string | null;
         };
         Relationships: [];
@@ -89,7 +90,7 @@ export interface Database {
           description: string | null;
           client: string | null;
           statut: string;
-          datecreation: string | null;  // Correction: datecreation au lieu de dateCreation
+          datecreation: string | null;
           budget: string | null;
           image: string | null;
           user_id: string | null;
@@ -103,7 +104,7 @@ export interface Database {
           description?: string | null;
           client?: string | null;
           statut?: string;
-          datecreation?: string | null;  // Correction: datecreation au lieu de dateCreation
+          datecreation?: string | null;
           budget?: string | null;
           image?: string | null;
           user_id?: string | null;
@@ -117,7 +118,7 @@ export interface Database {
           description?: string | null;
           client?: string | null;
           statut?: string;
-          datecreation?: string | null;  // Correction: datecreation au lieu de dateCreation
+          datecreation?: string | null;
           budget?: string | null;
           image?: string | null;
           user_id?: string | null;
@@ -172,7 +173,7 @@ export interface Database {
           entreprise: string | null;
           created_at: string | null;
           updated_at: string | null;
-          role_utilisateur: string | null;
+          role_global: string;  // Ajout du champ role_global
         };
         Insert: {
           id: string;
@@ -182,7 +183,7 @@ export interface Database {
           entreprise?: string | null;
           created_at?: string | null;
           updated_at?: string | null;
-          role_utilisateur?: string | null;
+          role_global?: string;  // Ajout du champ role_global
         };
         Update: {
           id?: string;
@@ -192,7 +193,31 @@ export interface Database {
           entreprise?: string | null;
           created_at?: string | null;
           updated_at?: string | null;
-          role_utilisateur?: string | null;
+          role_global?: string;  // Ajout du champ role_global
+        };
+        Relationships: [];
+      };
+      droits_marche: {  // Nouvelle table droits_marche
+        Row: {
+          id: string;
+          user_id: string;
+          marche_id: string;
+          role_specifique: string;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          marche_id: string;
+          role_specifique: string;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          marche_id?: string;
+          role_specifique?: string;
+          created_at?: string | null;
         };
         Relationships: [];
       };
