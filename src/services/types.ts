@@ -1,4 +1,3 @@
-
 // Type pour un marché
 export interface Marche {
   id: string;
@@ -12,6 +11,21 @@ export interface Marche {
   logo?: string | null;
   user_id?: string | null;
   created_at?: string | null;
+  
+  // Nouveaux champs
+  adresse?: string | null;
+  ville?: string | null;
+  code_postal?: string | null;
+  pays?: string | null;
+  region?: string | null;
+  type_marche?: string | null;
+  date_debut?: string | null;
+  date_fin?: string | null;
+  date_notification?: string | null;
+  periode_preparation?: string | null;
+  periode_chantier?: string | null;
+  date_fin_gpa?: string | null;
+  commentaire?: string | null;
 }
 
 // Type pour une version de document

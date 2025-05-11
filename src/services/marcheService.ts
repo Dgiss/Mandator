@@ -56,5 +56,5 @@ export const fetchMarches = async (): Promise<Marche[]> => {
   }
 };
 
-// Réexporter les fonctions de marchesService.ts
-export * from '@/services/marchesService';
+// Cette ligne était causant une référence circulaire - je la supprime
+// export * from '@/services/marchesService';
