@@ -41,8 +41,8 @@ import { Switch } from '@/components/ui/switch';
 interface VisaFormProps {
   marcheId: string;
   documentId?: string;
-  documentVersion?: string;
   documentName?: string;
+  documentVersion?: string;
   onVisaCreated?: () => void;
 }
 
@@ -602,13 +602,15 @@ const MarcheVisaForm: React.FC<VisaFormProps> = ({
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Pays émetteur</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value || 'placeholder'}>
                               <FormControl>
                                 <SelectTrigger>
                                   <SelectValue placeholder="Sélectionner un pays" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
+                                {/* This placeholder item solves the empty string error */}
+                                <SelectItem value="placeholder" disabled>Sélectionner un pays</SelectItem>
                                 {countries.map(country => (
                                   <SelectItem key={country.code} value={country.code}>
                                     <div className="flex items-center">
