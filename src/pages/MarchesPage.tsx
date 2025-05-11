@@ -11,6 +11,7 @@ import { Marche } from '@/services/types';
 import { fetchMarches } from '@/services/marcheService';
 import MarchesList from '@/components/marches/MarchesList';
 import MarchesFilters from '@/components/marches/MarchesFilters';
+import MarketCreationModal from '@/components/marches/MarketCreationModal';
 
 export default function MarchesPage() {
   const navigate = useNavigate();
@@ -24,6 +25,7 @@ export default function MarchesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState<number>(0);
+  const [isCreationModalOpen, setIsCreationModalOpen] = useState(false);
 
   // Chargement des marchés depuis Supabase
   useEffect(() => {
@@ -103,8 +105,12 @@ export default function MarchesPage() {
   }, [navigate]);
 
   const handleCreateMarche = useCallback(() => {
-    navigate('/marches/creation');
-  }, [navigate]);
+    setIsCreationModalOpen(true);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setIsCreationModalOpen(false);
+  }, []);
 
   const handleSearchChange = useCallback((value: string) => {
     setSearchTerm(value);
@@ -137,6 +143,11 @@ export default function MarchesPage() {
         loading={loading}
         error={error}
         onMarcheClick={handleMarcheClick}
+      />
+      
+      <MarketCreationModal 
+        isOpen={isCreationModalOpen}
+        onClose={handleCloseModal}
       />
     </PageLayout>
   );
