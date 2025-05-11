@@ -1,4 +1,3 @@
-
 // Type pour un marché
 export interface Marche {
   id: string;

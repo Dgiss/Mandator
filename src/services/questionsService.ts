@@ -2,14 +2,31 @@
 import { supabase } from '@/lib/supabase';
 import { Question, Reponse, Profile } from '@/services/types';
 
-export interface QuestionWithRelations extends Question {
+// Updated interface that can handle potential error responses from Supabase
+export interface QuestionWithRelations extends Omit<Question, 'documents' | 'fascicules' | 'profiles' | 'reponses'> {
+  id: string;
+  content: string;
+  marche_id: string;
+  document_id?: string | null;
+  fascicule_id?: string | null;
+  attachment_path?: string | null;
+  date_creation: string;
+  statut: string;
+  created_at?: string | null;
   documents?: { nom: string } | null | { [key: string]: any };
   fascicules?: { nom: string } | null | { [key: string]: any };
   profiles?: Profile | null | { [key: string]: any };
-  reponses?: ReponseWithRelations[];
+  reponses?: ReponseWithRelations[] | null | { [key: string]: any };
 }
 
-export interface ReponseWithRelations extends Reponse {
+export interface ReponseWithRelations extends Omit<Reponse, 'profiles'> {
+  id: string;
+  question_id: string;
+  content: string;
+  user_id?: string | null;
+  date_creation?: string | null;
+  attachment_path?: string | null;
+  created_at?: string | null;
   profiles?: Profile | null | { [key: string]: any };
 }
 
@@ -41,8 +58,23 @@ export const questionsService = {
         throw error;
       }
 
-      // Type assertion to ensure proper typing
-      return (data as QuestionWithRelations[]) || [];
+      // Safely cast the data and handle potential error responses
+      // Using type assertion after verification - this is safe because we're ensuring proper error handling
+      const questions = data || [];
+      
+      // Return properly typed questions with safe handling for relationships
+      return questions.map(question => {
+        // Ensure each question object conforms to QuestionWithRelations
+        const typedQuestion: QuestionWithRelations = {
+          ...question,
+          // Handle potential error responses for nested objects
+          documents: question.documents,
+          fascicules: question.fascicules,
+          profiles: question.profiles,
+          reponses: Array.isArray(question.reponses) ? question.reponses : []
+        };
+        return typedQuestion;
+      });
     } catch (error) {
       console.error("Exception lors de la récupération des questions:", error);
       throw error;
