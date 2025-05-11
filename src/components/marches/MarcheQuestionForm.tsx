@@ -25,6 +25,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Paperclip, X, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
+import { questionsService } from '@/services/questionsService';
 
 interface MarcheQuestionFormProps {
   marcheId: string;
@@ -49,84 +50,74 @@ const MarcheQuestionForm: React.FC<MarcheQuestionFormProps> = ({ marcheId, onSub
   const [attachment, setAttachment] = useState<File | null>(null);
   const [documents, setDocuments] = useState<{id: string; nom: string}[]>([]);
   const [fascicules, setFascicules] = useState<{id: string; nom: string}[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<QuestionFormValues>({
     resolver: zodResolver(questionSchema),
     defaultValues: {
       content: '',
-      documentId: '',
-      fasciculeId: '',
+      documentId: undefined,
+      fasciculeId: undefined,
     }
   });
 
   // Fetch documents and fascicules from Supabase
   useEffect(() => {
     const fetchData = async () => {
-      // Fetch documents
-      const { data: documentsData, error: documentsError } = await supabase
-        .from('documents')
-        .select('id, nom')
-        .eq('marche_id', marcheId);
-      
-      if (!documentsError && documentsData) {
-        setDocuments(documentsData);
-      } else {
-        console.error('Error fetching documents:', documentsError);
-      }
-      
-      // Fetch fascicules
-      const { data: fasciculesData, error: fasciculesError } = await supabase
-        .from('fascicules')
-        .select('id, nom')
-        .eq('marche_id', marcheId);
-      
-      if (!fasciculesError && fasciculesData) {
-        setFascicules(fasciculesData);
-      } else {
-        console.error('Error fetching fascicules:', fasciculesError);
+      setIsLoading(true);
+      try {
+        // Fetch documents
+        const { data: documentsData, error: documentsError } = await supabase
+          .from('documents')
+          .select('id, nom')
+          .eq('marche_id', marcheId);
+        
+        if (!documentsError && documentsData) {
+          setDocuments(documentsData);
+        } else {
+          console.error('Error fetching documents:', documentsError);
+        }
+        
+        // Fetch fascicules
+        const { data: fasciculesData, error: fasciculesError } = await supabase
+          .from('fascicules')
+          .select('id, nom')
+          .eq('marche_id', marcheId);
+        
+        if (!fasciculesError && fasciculesData) {
+          setFascicules(fasciculesData);
+        } else {
+          console.error('Error fetching fascicules:', fasciculesError);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les documents et fascicules",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
       }
     };
     
     fetchData();
-  }, [marcheId]);
+  }, [marcheId, toast]);
 
   const handleSubmit = async (values: QuestionFormValues) => {
     try {
-      let attachmentPath = null;
+      setIsLoading(true);
       
-      // Upload attachment if exists
-      if (attachment) {
-        const fileNameWithTimestamp = `${Date.now()}_${attachment.name}`;
-        const { data: fileData, error: fileError } = await supabase.storage
-          .from('questions')
-          .upload(`marches/${marcheId}/${fileNameWithTimestamp}`, attachment);
-        
-        if (fileError) {
-          throw new Error(`Erreur lors du téléversement du fichier: ${fileError.message}`);
-        }
-        
-        attachmentPath = fileData?.path || null;
-      }
+      // Créer la question en utilisant le service
+      await questionsService.addQuestion({
+        content: values.content,
+        marche_id: marcheId,
+        document_id: values.documentId || null,
+        fascicule_id: values.fasciculeId || null,
+      }, attachment || undefined);
       
-      // Save question to database - Now using the correctly defined questions table
-      const { data, error } = await supabase
-        .from('questions')
-        .insert([{
-          content: values.content,
-          marche_id: marcheId,
-          document_id: values.documentId || null,
-          fascicule_id: values.fasciculeId || null,
-          attachment_path: attachmentPath,
-          date_creation: new Date().toISOString(),
-          statut: 'En attente',
-        }]);
-      
-      if (error) {
-        throw new Error(error.message);
-      }
-      
-      // Call the onSubmit callback
+      // Appeler le callback onSubmit
       onSubmit({
         content: values.content,
         documentId: values.documentId,
@@ -146,6 +137,8 @@ const MarcheQuestionForm: React.FC<MarcheQuestionFormProps> = ({ marcheId, onSub
         description: "Une erreur s'est produite lors de l'envoi de la question",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -204,7 +197,7 @@ const MarcheQuestionForm: React.FC<MarcheQuestionFormProps> = ({ marcheId, onSub
                     <FormLabel>Document associé (optionnel)</FormLabel>
                     <Select 
                       onValueChange={field.onChange} 
-                      value={field.value || ''}
+                      value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -212,7 +205,7 @@ const MarcheQuestionForm: React.FC<MarcheQuestionFormProps> = ({ marcheId, onSub
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Aucun document</SelectItem>
+                        <SelectItem value="placeholder" disabled>Sélectionner un document</SelectItem>
                         {documents.map(doc => (
                           <SelectItem key={doc.id} value={doc.id}>
                             {doc.nom}
@@ -236,7 +229,7 @@ const MarcheQuestionForm: React.FC<MarcheQuestionFormProps> = ({ marcheId, onSub
                     <FormLabel>Fascicule associé (optionnel)</FormLabel>
                     <Select 
                       onValueChange={field.onChange} 
-                      value={field.value || ''}
+                      value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -244,7 +237,7 @@ const MarcheQuestionForm: React.FC<MarcheQuestionFormProps> = ({ marcheId, onSub
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Aucun fascicule</SelectItem>
+                        <SelectItem value="placeholder" disabled>Sélectionner un fascicule</SelectItem>
                         {fascicules.map(fascicule => (
                           <SelectItem key={fascicule.id} value={fascicule.id}>
                             {fascicule.nom}
@@ -305,11 +298,11 @@ const MarcheQuestionForm: React.FC<MarcheQuestionFormProps> = ({ marcheId, onSub
             </div>
             
             <div className="flex justify-end space-x-3">
-              <Button type="button" variant="outline" onClick={onCancel}>
+              <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
                 Annuler
               </Button>
-              <Button type="submit">
-                Envoyer la question
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? 'Envoi en cours...' : 'Envoyer la question'}
               </Button>
             </div>
           </form>

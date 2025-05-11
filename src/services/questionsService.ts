@@ -10,51 +10,58 @@ export interface Question {
   attachment_path?: string | null;
   date_creation?: string;
   statut?: string;
+  created_at?: string | null;
+  documents?: { nom: string } | null;
+  fascicules?: { nom: string } | null;
+  profiles?: { nom: string, prenom: string, id: string } | null;
+  reponses?: Reponse[];
+  user_id?: string | null;
 }
 
 export interface Reponse {
   id?: string;
   question_id: string;
   content: string;
-  user_id?: string;
-  date_creation?: string;
+  user_id?: string | null;
+  date_creation?: string | null;
   attachment_path?: string | null;
+  created_at?: string | null;
+  profiles?: { nom: string, prenom: string, entreprise: string, id: string } | null;
 }
 
 export const questionsService = {
   // Récupérer toutes les questions pour un marché
   async getQuestionsByMarcheId(marcheId: string) {
-    const { data, error } = await supabase
-      .from('questions')
-      .select(`
-        *,
-        documents(nom),
-        fascicules(nom)
-      `)
-      .eq('marche_id', marcheId)
-      .order('date_creation', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('questions')
+        .select(`
+          *,
+          documents(nom),
+          fascicules(nom),
+          profiles:user_id(id, nom, prenom, entreprise),
+          reponses(
+            id, 
+            content, 
+            user_id, 
+            date_creation,
+            attachment_path,
+            profiles:user_id(id, nom, prenom, entreprise)
+          )
+        `)
+        .eq('marche_id', marcheId)
+        .order('date_creation', { ascending: false });
 
-    // Récupérer les réponses pour chaque question
-    if (!error && data) {
-      const questionsWithResponses = await Promise.all(
-        data.map(async (question) => {
-          const { data: responsesData } = await supabase
-            .from('reponses')
-            .select('*')
-            .eq('question_id', question.id);
-          
-          return {
-            ...question,
-            reponses: responsesData || []
-          };
-        })
-      );
-      
-      return questionsWithResponses;
+      if (error) {
+        console.error("Erreur lors de la récupération des questions:", error);
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error("Exception lors de la récupération des questions:", error);
+      throw error;
     }
-
-    if (error) throw error;
-    return data;
   },
 
   // Ajouter une nouvelle question
@@ -63,7 +70,6 @@ export const questionsService = {
 
     // Si un fichier est fourni, le télécharger d'abord
     if (file) {
-      const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}_${file.name}`;
       attachmentPath = `${question.marche_id}/${fileName}`;
 
@@ -71,7 +77,16 @@ export const questionsService = {
         .from('questions')
         .upload(attachmentPath, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error("Erreur lors du téléversement du fichier:", uploadError);
+        throw uploadError;
+      }
+    }
+
+    // Récupérer l'ID de l'utilisateur actuel
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error("Utilisateur non authentifié");
     }
 
     // Insérer la question dans la base de données
@@ -79,13 +94,18 @@ export const questionsService = {
       .from('questions')
       .insert([{
         ...question,
+        user_id: user.id,
         attachment_path: attachmentPath,
         date_creation: new Date().toISOString(),
         statut: question.statut || 'En attente'
       }])
       .select();
 
-    if (error) throw error;
+    if (error) {
+      console.error("Erreur lors de l'ajout de la question:", error);
+      throw error;
+    }
+    
     return data[0];
   },
 
@@ -101,9 +121,11 @@ export const questionsService = {
         .eq('id', reponse.question_id)
         .single();
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.error("Erreur lors de la récupération du marché:", fetchError);
+        throw fetchError;
+      }
 
-      const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}_${file.name}`;
       attachmentPath = `${questionData.marche_id}/${fileName}`;
 
@@ -111,12 +133,17 @@ export const questionsService = {
         .from('reponses')
         .upload(attachmentPath, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error("Erreur lors du téléversement du fichier:", uploadError);
+        throw uploadError;
+      }
     }
 
     // Récupérer l'ID de l'utilisateur actuel
     const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id;
+    if (!user) {
+      throw new Error("Utilisateur non authentifié");
+    }
 
     // Insérer la réponse dans la base de données
     const { data, error } = await supabase
@@ -126,11 +153,14 @@ export const questionsService = {
         content: reponse.content,
         attachment_path: attachmentPath,
         date_creation: new Date().toISOString(),
-        user_id: userId
+        user_id: user.id
       }])
       .select();
 
-    if (error) throw error;
+    if (error) {
+      console.error("Erreur lors de l'ajout de la réponse:", error);
+      throw error;
+    }
 
     // Mettre à jour le statut de la question
     await supabase
@@ -147,7 +177,20 @@ export const questionsService = {
       .from(bucket)
       .download(attachmentPath);
 
-    if (error) throw error;
+    if (error) {
+      console.error("Erreur lors du téléchargement du fichier:", error);
+      throw error;
+    }
+    
     return data;
+  },
+  
+  // Obtenir l'URL publique d'un fichier
+  async getPublicUrl(bucket: 'questions' | 'reponses', attachmentPath: string) {
+    const { data } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(attachmentPath);
+      
+    return data.publicUrl;
   }
 };

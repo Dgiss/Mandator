@@ -1,3 +1,4 @@
+
 // Type pour un marché
 export interface Marche {
   id: string;
@@ -26,6 +27,9 @@ export interface Marche {
   periode_chantier?: string | null;
   date_fin_gpa?: string | null;
   commentaire?: string | null;
+  
+  // Relations
+  questions?: any[];
 }
 
 // Type pour une version de document
@@ -109,6 +113,40 @@ export interface Document {
   date_diffusion?: string;
   date_bpe?: string;
   attachments?: DocumentAttachment[]; // New field for attachments
+}
+
+// Type pour une question
+export interface Question {
+  id: string;
+  content: string;
+  marche_id: string;
+  document_id?: string | null;
+  fascicule_id?: string | null;
+  attachment_path?: string | null;
+  date_creation: string;
+  statut: string;
+  created_at?: string | null;
+  user_id?: string | null;
+  
+  // Relations
+  documents?: { nom: string } | null;
+  fascicules?: { nom: string } | null;
+  profiles?: { nom: string, prenom: string, id: string } | null;
+  reponses?: Reponse[];
+}
+
+// Type pour une réponse
+export interface Reponse {
+  id: string;
+  question_id: string;
+  content: string;
+  user_id?: string | null;
+  date_creation: string;
+  attachment_path?: string | null;
+  created_at?: string | null;
+  
+  // Relations
+  profiles?: { nom: string, prenom: string, entreprise: string, id: string } | null;
 }
 
 // Types pour les rôles utilisateur
