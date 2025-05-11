@@ -3,14 +3,14 @@ import { supabase } from '@/lib/supabase';
 import { Question, Reponse, Profile } from '@/services/types';
 
 export interface QuestionWithRelations extends Question {
-  documents?: { nom: string } | null;
-  fascicules?: { nom: string } | null;
-  profiles?: Profile | null;
+  documents?: { nom: string } | null | { [key: string]: any };
+  fascicules?: { nom: string } | null | { [key: string]: any };
+  profiles?: Profile | null | { [key: string]: any };
   reponses?: ReponseWithRelations[];
 }
 
 export interface ReponseWithRelations extends Reponse {
-  profiles?: Profile | null;
+  profiles?: Profile | null | { [key: string]: any };
 }
 
 export const questionsService = {
@@ -41,7 +41,8 @@ export const questionsService = {
         throw error;
       }
 
-      return data || [];
+      // Type assertion to ensure proper typing
+      return (data as QuestionWithRelations[]) || [];
     } catch (error) {
       console.error("Exception lors de la récupération des questions:", error);
       throw error;
@@ -73,16 +74,22 @@ export const questionsService = {
       throw new Error("Utilisateur non authentifié");
     }
 
+    // Ensure all required fields are present in the object we insert
+    const questionToInsert = {
+      content: question.content,
+      marche_id: question.marche_id,
+      document_id: question.document_id || null,
+      fascicule_id: question.fascicule_id || null,
+      attachment_path: attachmentPath,
+      user_id: user.id,
+      date_creation: new Date().toISOString(),
+      statut: question.statut || 'En attente'
+    };
+
     // Insérer la question dans la base de données
     const { data, error } = await supabase
       .from('questions')
-      .insert([{
-        ...question,
-        user_id: user.id,
-        attachment_path: attachmentPath,
-        date_creation: new Date().toISOString(),
-        statut: question.statut || 'En attente'
-      }])
+      .insert([questionToInsert])
       .select();
 
     if (error) {
@@ -129,16 +136,19 @@ export const questionsService = {
       throw new Error("Utilisateur non authentifié");
     }
 
+    // Ensure all required fields are present
+    const reponseToInsert = {
+      question_id: reponse.question_id,
+      content: reponse.content,
+      attachment_path: attachmentPath,
+      date_creation: new Date().toISOString(),
+      user_id: user.id
+    };
+
     // Insérer la réponse dans la base de données
     const { data, error } = await supabase
       .from('reponses')
-      .insert([{
-        question_id: reponse.question_id,
-        content: reponse.content,
-        attachment_path: attachmentPath,
-        date_creation: new Date().toISOString(),
-        user_id: user.id
-      }])
+      .insert([reponseToInsert])
       .select();
 
     if (error) {

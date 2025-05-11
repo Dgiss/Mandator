@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/layout/PageLayout';
@@ -20,13 +19,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { questionsService } from '@/services/questionsService';
-import { Question } from '@/services/types';
+import { Question, Marche } from '@/services/types';
 
 interface MarketItem {
   id: string;
   titre: string;
   client: string;
-  questions?: Question[] | null;
+  questions?: Question[] | null | { [key: string]: any };
   datecreation?: string | null;
 }
 
@@ -49,7 +48,7 @@ export default function QuestionsReponsesPage() {
   const [activeTab, setActiveTab] = useState('marches');
 
   // Récupérer les marchés depuis Supabase
-  const { data: marches, isLoading: marchesLoading } = useQuery({
+  const { data: marchesData, isLoading: marchesLoading } = useQuery({
     queryKey: ['marches-for-questions'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -64,9 +63,12 @@ export default function QuestionsReponsesPage() {
         .order('datecreation', { ascending: false });
 
       if (error) throw error;
-      return data as MarketItem[] || [];
+      return data || [];
     }
   });
+
+  // Safely cast to MarketItem array
+  const marches = marchesData as MarketItem[];
 
   // Récupérer toutes les questions avec réponses
   const { data: discussions, isLoading: discussionsLoading } = useQuery({
@@ -178,9 +180,20 @@ export default function QuestionsReponsesPage() {
   // Compter le nombre de questions non répondues par marché
   function countUnreadByMarche(marcheId: string) {
     const market = marches?.find(m => m.id === marcheId);
-    if (!market || !market.questions || !Array.isArray(market.questions)) return 0;
     
-    return market.questions.filter((q: any) => q.statut === 'En attente').length;
+    if (!market || !market.questions) return 0;
+    
+    // Handle the case where questions is an object with error property
+    if (typeof market.questions === 'object' && 'error' in market.questions) {
+      return 0;
+    }
+    
+    // If it's an array, filter and count
+    if (Array.isArray(market.questions)) {
+      return market.questions.filter((q: any) => q.statut === 'En attente').length;
+    }
+    
+    return 0;
   }
 
   return (

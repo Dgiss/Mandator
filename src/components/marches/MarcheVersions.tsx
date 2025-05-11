@@ -45,10 +45,14 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
   const versions = versionsData as Version[];
 
   const filteredVersions = versions.filter((version: Version) => {
-    // Handle potential null or error documents case
-    const documentName = version.documents && 'nom' in version.documents 
-      ? version.documents.nom 
-      : '';
+    // Safely handle document name
+    let documentName = '';
+    
+    if (version.documents) {
+      if (typeof version.documents === 'object' && version.documents !== null && 'nom' in version.documents) {
+        documentName = version.documents.nom || '';
+      }
+    }
     
     const searchFields = [
       documentName,
@@ -121,9 +125,14 @@ export default function MarcheVersions({ marcheId }: MarcheVersionsProps) {
   // Helper function to safely get document name
   const getDocumentName = (version: Version): string => {
     if (!version.documents) return "Document sans nom";
-    if ('nom' in version.documents && version.documents.nom) {
+    
+    if (typeof version.documents === 'object' && 
+        version.documents !== null && 
+        'nom' in version.documents && 
+        version.documents.nom) {
       return version.documents.nom;
     }
+    
     return "Document sans nom";
   };
 

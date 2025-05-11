@@ -29,7 +29,7 @@ export interface Marche {
   commentaire?: string | null;
   
   // Relations
-  questions?: Question[];
+  questions?: Question[] | null | { [key: string]: any };
 }
 
 // Type pour une version de document
@@ -46,7 +46,7 @@ export interface Version {
   created_at?: string | null;
   statut?: string | null;
   attachments?: DocumentAttachment[]; // New field for attachments
-  documents?: { nom: string } | null; // Updated to handle error cases
+  documents?: { nom: string } | null | { [key: string]: any }; // Updated to handle error cases
 }
 
 // Type pour un visa
@@ -140,10 +140,10 @@ export interface Question {
   user_id?: string | null;
   
   // Relations
-  documents?: { nom: string } | null;
-  fascicules?: { nom: string } | null;
-  profiles?: Profile | null;
-  reponses?: Reponse[];
+  documents?: { nom: string } | null | { [key: string]: any };
+  fascicules?: { nom: string } | null | { [key: string]: any };
+  profiles?: Profile | null | { [key: string]: any };
+  reponses?: Reponse[] | null | { [key: string]: any };
 }
 
 // Type pour une réponse
@@ -157,7 +157,7 @@ export interface Reponse {
   created_at?: string | null;
   
   // Relations
-  profiles?: Profile | null;
+  profiles?: Profile | null | { [key: string]: any };
 }
 
 // Types pour les rôles utilisateur

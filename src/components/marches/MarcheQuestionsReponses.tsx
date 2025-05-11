@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -228,6 +227,47 @@ const MarcheQuestionsReponses = ({ marcheId }: MarcheQuestionsReponsesProps) => 
     return `${(firstName || '').charAt(0)}${(lastName || '').charAt(0)}`.toUpperCase();
   };
 
+  // Helper function to safely check if a value has a specific property
+  const hasProp = (obj: any, prop: string): boolean => {
+    return obj && typeof obj === 'object' && prop in obj;
+  };
+  
+  // Helper function to safely access profile properties
+  const getProfileName = (profile: any): string => {
+    if (!profile) return 'Utilisateur';
+    
+    if (hasProp(profile, 'error')) {
+      return 'Utilisateur';
+    }
+    
+    const prenom = hasProp(profile, 'prenom') ? profile.prenom : '';
+    const nom = hasProp(profile, 'nom') ? profile.nom : '';
+    
+    return `${prenom} ${nom}`.trim() || 'Utilisateur';
+  };
+  
+  // Helper function to safely get document or fascicule name
+  const getRelatedItemName = (item: any): string => {
+    if (!item) return '';
+    
+    if (hasProp(item, 'error')) {
+      return '';
+    }
+    
+    return hasProp(item, 'nom') ? item.nom : '';
+  };
+  
+  // Helper function to safely handle reponses array
+  const getReponses = (question: any): any[] => {
+    if (!question || !question.reponses) return [];
+    
+    if (hasProp(question.reponses, 'error')) {
+      return [];
+    }
+    
+    return Array.isArray(question.reponses) ? question.reponses : [];
+  };
+
   // Filtrer la question active et ses réponses
   const activeQuestion = activeQuestionId 
     ? questions?.find(q => q.id === activeQuestionId) 
@@ -298,7 +338,7 @@ const MarcheQuestionsReponses = ({ marcheId }: MarcheQuestionsReponsesProps) => 
                       </Avatar>
                       <div>
                         <p className="text-sm font-medium">
-                          {question.profiles?.prenom || ''} {question.profiles?.nom || 'Utilisateur'}
+                          {getProfileName(question.profiles)}
                         </p>
                         <p className="text-xs text-gray-500">{formatDate(question.date_creation)}</p>
                       </div>
@@ -335,14 +375,14 @@ const MarcheQuestionsReponses = ({ marcheId }: MarcheQuestionsReponsesProps) => 
                 <div className="bg-btp-blue text-white p-3">
                   <div className="flex justify-between items-start">
                     <h3 className="font-semibold">
-                      {activeQuestion.documents?.nom || activeQuestion.fascicules?.nom || 'Discussion'}
+                      {getRelatedItemName(activeQuestion.documents)} {getRelatedItemName(activeQuestion.fascicules)}
                     </h3>
                     <Badge className={`${getStatusColor(activeQuestion.statut)}`}>
                       {activeQuestion.statut}
                     </Badge>
                   </div>
                   <p className="text-xs opacity-80">
-                    Créée par {activeQuestion.profiles?.prenom || ''} {activeQuestion.profiles?.nom || 'Utilisateur'} le {formatDate(activeQuestion.date_creation)}
+                    Créée par {getProfileName(activeQuestion.profiles)} le {formatDate(activeQuestion.date_creation)}
                   </p>
                 </div>
 
@@ -364,9 +404,16 @@ const MarcheQuestionsReponses = ({ marcheId }: MarcheQuestionsReponsesProps) => 
                           )}
                         </Avatar>
                         <div>
-                          <p className="font-medium">
-                            {activeQuestion.profiles?.prenom || ''} {activeQuestion.profiles?.nom || 'Utilisateur'}
-                          </p>
+                          <div className="flex items-center">
+                            <p className="font-medium">
+                              {getProfileName(activeQuestion.profiles)}
+                            </p>
+                            {activeQuestion.profiles?.entreprise && (
+                              <Badge variant="outline" className="ml-2 text-xs">
+                                {activeQuestion.profiles.entreprise}
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-xs text-gray-500">{formatDate(activeQuestion.date_creation)}</p>
                         </div>
                       </div>
@@ -427,7 +474,7 @@ const MarcheQuestionsReponses = ({ marcheId }: MarcheQuestionsReponsesProps) => 
                     </div>
 
                     {/* Les réponses */}
-                    {activeQuestion.reponses && activeQuestion.reponses.length > 0 && activeQuestion.reponses.map((reponse: ReponseWithRelations) => (
+                    {getReponses(activeQuestion).map((reponse: ReponseWithRelations) => (
                       <div key={reponse.id} className="flex flex-col">
                         <div className="flex items-start mb-2">
                           <Avatar className="h-8 w-8 mr-2">
@@ -444,7 +491,7 @@ const MarcheQuestionsReponses = ({ marcheId }: MarcheQuestionsReponsesProps) => 
                           <div>
                             <div className="flex items-center">
                               <p className="font-medium">
-                                {reponse.profiles?.prenom || ''} {reponse.profiles?.nom || 'Utilisateur'}
+                                {getProfileName(reponse.profiles)}
                               </p>
                               {reponse.profiles?.entreprise && (
                                 <Badge variant="outline" className="ml-2 text-xs">
