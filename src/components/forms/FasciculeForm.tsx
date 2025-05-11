@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -84,7 +83,7 @@ const FasciculeForm = () => {
     { id: 'cat-005', name: 'Maintenance' }
   ];
 
-  const handleSelectChange = (name: string) => (value: string) => {
+  const handleSelectChange = (name: keyof typeof values) => (value: string) => {
     setFieldValue(name, value);
   };
 

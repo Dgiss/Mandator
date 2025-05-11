@@ -33,4 +33,5 @@ export interface FormOperationsResult<T> {
   resetForm: (newValues?: T) => void;
   validateForm: () => boolean;
   validateField: (field: string, value: any, rules: FieldValidation) => string | null;
+  setValues: (values: T) => void;
 }

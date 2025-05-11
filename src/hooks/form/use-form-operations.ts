@@ -154,7 +154,8 @@ export const useFormOperations = <T extends Record<string, any>>(
     setFieldValue,
     resetForm,
     validateForm,
-    validateField: validateField
+    validateField: validateField,
+    setValues
   };
 };
 
