@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/layout/PageLayout';
 import PageHeader from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -20,22 +20,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { questionsService } from '@/services/questionsService';
+import { Question } from '@/services/types';
 
 interface MarketItem {
   id: string;
-  title: string;
+  titre: string;
   client: string;
-  unreadCount: number;
-  lastMessageDate: string;
+  questions?: Question[] | null;
+  datecreation?: string | null;
 }
 
 interface DiscussionItem {
   id: string;
   marcheId: string;
   marcheTitre: string;
+  questionContent: string;
   lastMessage: string;
   lastMessageTime: string;
   unreadCount: number;
+  statut: string;
+  date_creation?: string | null;
 }
 
 export default function QuestionsReponsesPage() {
@@ -60,7 +64,7 @@ export default function QuestionsReponsesPage() {
         .order('datecreation', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      return data as MarketItem[] || [];
     }
   });
 
@@ -88,31 +92,35 @@ export default function QuestionsReponsesPage() {
       );
 
       // Transformer les données pour l'affichage
-      const allDiscussions: any[] = [];
+      const allDiscussions: DiscussionItem[] = [];
       marchesWithDiscussions.forEach(marche => {
-        marche.questions.forEach((question: any) => {
-          const totalResponses = question.reponses?.length || 0;
-          const lastResponse = totalResponses > 0 
-            ? question.reponses[totalResponses - 1] 
-            : null;
+        if (marche.questions && Array.isArray(marche.questions)) {
+          marche.questions.forEach((question: Question) => {
+            const reponses = question.reponses || [];
+            const totalResponses = reponses.length || 0;
+            const lastResponse = totalResponses > 0 
+              ? reponses[totalResponses - 1] 
+              : null;
 
-          allDiscussions.push({
-            id: question.id,
-            marcheId: marche.id,
-            marcheTitre: marche.titre,
-            questionContent: question.content,
-            lastMessage: lastResponse ? lastResponse.content : question.content,
-            lastMessageTime: formatDate(lastResponse ? lastResponse.date_creation : question.date_creation),
-            unreadCount: question.statut === 'En attente' ? 1 : 0,
-            statut: question.statut
+            allDiscussions.push({
+              id: question.id,
+              marcheId: marche.id,
+              marcheTitre: marche.titre,
+              questionContent: question.content,
+              lastMessage: lastResponse ? lastResponse.content : question.content,
+              lastMessageTime: formatDate(lastResponse ? lastResponse.date_creation : question.date_creation),
+              unreadCount: question.statut === 'En attente' ? 1 : 0,
+              statut: question.statut,
+              date_creation: lastResponse ? lastResponse.date_creation : question.date_creation
+            });
           });
-        });
+        }
       });
 
       // Trier par date de dernier message
       allDiscussions.sort((a, b) => {
-        const dateA = lastResponseDate(a);
-        const dateB = lastResponseDate(b);
+        const dateA = new Date(a.date_creation || new Date());
+        const dateB = new Date(b.date_creation || new Date());
         return dateB.getTime() - dateA.getTime();
       });
 
@@ -166,18 +174,13 @@ export default function QuestionsReponsesPage() {
       month: '2-digit'
     });
   }
-
-  // Obtenir la date de dernière réponse pour le tri
-  function lastResponseDate(discussion: any) {
-    return new Date(discussion.lastMessageDate || discussion.date_creation || new Date());
-  }
   
   // Compter le nombre de questions non répondues par marché
   function countUnreadByMarche(marcheId: string) {
-    const questions = marches?.find(m => m.id === marcheId)?.questions;
-    if (!questions) return 0;
+    const market = marches?.find(m => m.id === marcheId);
+    if (!market || !market.questions || !Array.isArray(market.questions)) return 0;
     
-    return questions.filter((q: any) => q.statut === 'En attente').length;
+    return market.questions.filter((q: any) => q.statut === 'En attente').length;
   }
 
   return (

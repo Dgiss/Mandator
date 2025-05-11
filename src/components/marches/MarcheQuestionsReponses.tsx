@@ -1,20 +1,19 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { 
-  Send, FileText, Paperclip, Image, MessageSquare, 
-  Plus, Download, ChevronDown, RefreshCw, X, UserCircle 
+  Send, FileText, Paperclip, MessageSquare, 
+  Plus, Download, RefreshCw, X, UserCircle 
 } from 'lucide-react';
 import MarcheQuestionForm from './MarcheQuestionForm';
 import { useToast } from '@/hooks/use-toast';
-import { questionsService, Question, Reponse } from '@/services/questionsService';
+import { questionsService, QuestionWithRelations, ReponseWithRelations } from '@/services/questionsService';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface MarcheQuestionsReponsesProps {
@@ -292,7 +291,10 @@ const MarcheQuestionsReponses = ({ marcheId }: MarcheQuestionsReponsesProps) => 
                   <div className="flex justify-between items-start mb-1">
                     <div className="flex items-center">
                       <Avatar className="h-8 w-8 mr-2">
-                        <AvatarFallback>{getInitials(question.profiles?.prenom, question.profiles?.nom)}</AvatarFallback>
+                        <AvatarFallback>{getInitials(
+                          question.profiles?.prenom || '',
+                          question.profiles?.nom || ''
+                        )}</AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="text-sm font-medium">
@@ -332,7 +334,9 @@ const MarcheQuestionsReponses = ({ marcheId }: MarcheQuestionsReponsesProps) => 
                 {/* En-tête de la question active */}
                 <div className="bg-btp-blue text-white p-3">
                   <div className="flex justify-between items-start">
-                    <h3 className="font-semibold">{activeQuestion.documents?.nom || activeQuestion.fascicules?.nom || 'Discussion'}</h3>
+                    <h3 className="font-semibold">
+                      {activeQuestion.documents?.nom || activeQuestion.fascicules?.nom || 'Discussion'}
+                    </h3>
                     <Badge className={`${getStatusColor(activeQuestion.statut)}`}>
                       {activeQuestion.statut}
                     </Badge>
@@ -401,7 +405,7 @@ const MarcheQuestionsReponses = ({ marcheId }: MarcheQuestionsReponsesProps) => 
                             <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
                               <FileText className="h-5 w-5 text-blue-500" />
                               <span className="text-sm font-medium flex-grow truncate">
-                                {activeQuestion.attachment_path.split('/').pop()}
+                                {activeQuestion.attachment_path.split('/').pop() || ''}
                               </span>
                               <Button
                                 type="button"
@@ -423,7 +427,7 @@ const MarcheQuestionsReponses = ({ marcheId }: MarcheQuestionsReponsesProps) => 
                     </div>
 
                     {/* Les réponses */}
-                    {activeQuestion.reponses && activeQuestion.reponses.map((reponse) => (
+                    {activeQuestion.reponses && activeQuestion.reponses.length > 0 && activeQuestion.reponses.map((reponse: ReponseWithRelations) => (
                       <div key={reponse.id} className="flex flex-col">
                         <div className="flex items-start mb-2">
                           <Avatar className="h-8 w-8 mr-2">
@@ -463,7 +467,7 @@ const MarcheQuestionsReponses = ({ marcheId }: MarcheQuestionsReponsesProps) => 
                               <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
                                 <FileText className="h-5 w-5 text-blue-500" />
                                 <span className="text-sm font-medium flex-grow truncate">
-                                  {reponse.attachment_path.split('/').pop()}
+                                  {reponse.attachment_path.split('/').pop() || ''}
                                 </span>
                                 <Button
                                   type="button"

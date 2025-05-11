@@ -1,37 +1,21 @@
 
 import { supabase } from '@/lib/supabase';
+import { Question, Reponse, Profile } from '@/services/types';
 
-export interface Question {
-  id?: string;
-  content: string;
-  marche_id: string;
-  document_id?: string | null;
-  fascicule_id?: string | null;
-  attachment_path?: string | null;
-  date_creation?: string;
-  statut?: string;
-  created_at?: string | null;
+export interface QuestionWithRelations extends Question {
   documents?: { nom: string } | null;
   fascicules?: { nom: string } | null;
-  profiles?: { nom: string, prenom: string, id: string } | null;
-  reponses?: Reponse[];
-  user_id?: string | null;
+  profiles?: Profile | null;
+  reponses?: ReponseWithRelations[];
 }
 
-export interface Reponse {
-  id?: string;
-  question_id: string;
-  content: string;
-  user_id?: string | null;
-  date_creation?: string | null;
-  attachment_path?: string | null;
-  created_at?: string | null;
-  profiles?: { nom: string, prenom: string, entreprise: string, id: string } | null;
+export interface ReponseWithRelations extends Reponse {
+  profiles?: Profile | null;
 }
 
 export const questionsService = {
   // Récupérer toutes les questions pour un marché
-  async getQuestionsByMarcheId(marcheId: string) {
+  async getQuestionsByMarcheId(marcheId: string): Promise<QuestionWithRelations[]> {
     try {
       const { data, error } = await supabase
         .from('questions')
@@ -65,7 +49,7 @@ export const questionsService = {
   },
 
   // Ajouter une nouvelle question
-  async addQuestion(question: Question, file?: File) {
+  async addQuestion(question: Partial<Question>, file?: File) {
     let attachmentPath = null;
 
     // Si un fichier est fourni, le télécharger d'abord
@@ -106,11 +90,11 @@ export const questionsService = {
       throw error;
     }
     
-    return data[0];
+    return data[0] as Question;
   },
 
   // Ajouter une réponse à une question
-  async addReponse(reponse: Reponse, file?: File) {
+  async addReponse(reponse: Partial<Reponse>, file?: File) {
     let attachmentPath = null;
 
     // Si un fichier est fourni, le télécharger d'abord
@@ -168,7 +152,7 @@ export const questionsService = {
       .update({ statut: 'Répondu' })
       .eq('id', reponse.question_id);
 
-    return data[0];
+    return data[0] as Reponse;
   },
 
   // Télécharger un fichier attaché à une question ou réponse
