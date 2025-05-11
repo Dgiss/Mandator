@@ -1,414 +1,495 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { Checkbox } from '@/components/ui/checkbox';
-import { CalendarIcon, Save, Upload, FileUp, FileText } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Calendar as CalendarIcon, Save, Upload, Tag, User, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { toast } from 'sonner';
+import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { Separator } from '@/components/ui/separator';
+import { FormSection } from '@/components/ui/form-section';
+import { TagInput } from '@/components/ui/tag-input';
+import { MultiFileUpload } from '@/components/ui/multi-file-upload';
+import { FormPreview } from '@/components/ui/form-preview';
+import { useFormOperations } from '@/components/ui/enhanced-form';
 
 const DocumentForm = () => {
-  const [documentData, setDocumentData] = useState({
-    reference: '',
-    titre: '',
-    marche: '',
-    fascicule: '',
-    type: 'technique',
-    description: '',
-    dateCreation: undefined as Date | undefined,
-    dateValidation: undefined as Date | undefined,
-    auteur: '',
-    version: '1.0',
-    statut: 'brouillon',
-    isConfidentiel: false,
-    isArchive: false,
-    document: null as File | null,
-    commentaire: '',
-    motsClefs: ''
-  });
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [showPreview, setShowPreview] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
 
-  // Mock data for select fields
-  const marches = [
-    { id: 'marche-001', titre: 'Marché de rénovation du pont de Grande-Terre' },
-    { id: 'marche-002', titre: 'Construction école Marie-Galante' },
-    { id: 'marche-003', titre: 'Aménagement place de la Victoire' }
+  const documentFormSchema = {
+    nom: {
+      required: true,
+      minLength: 3,
+      errorMessage: "Le nom du document est requis"
+    },
+    numero: {
+      required: true,
+      errorMessage: "Le numéro du document est requis"
+    },
+    type: {
+      required: true,
+      errorMessage: "Le type de document est requis"
+    }
+  };
+
+  const {
+    values,
+    errors,
+    handleChange,
+    handleSubmit,
+    setFieldValue,
+    isSubmitting,
+  } = useFormOperations({
+    nom: '',
+    numero: '',
+    version: '1.0.0',
+    description: '',
+    type: '',
+    domaineTechnique: '',
+    phase: '',
+    statut: 'En attente de diffusion',
+    dateCreation: new Date(),
+    dateUpload: null,
+    dateDiffusion: null,
+    dateBPE: null,
+    emetteur: '',
+    auteur: '',
+    derniereModification: null,
+    geographie: '',
+    designation: '',
+    tags: [] as string[],
+    fasciculeId: ''
+  }, documentFormSchema);
+
+  // Mock data for selects
+  const typeDocuments = [
+    "Plan", "Notice", "CCTP", "DPGF", "CCP", "Rapport", "Etude", "PV", "Procédure", "Mémoire"
+  ];
+  
+  const domainesTechniques = [
+    "Architecture", "Structure", "VRD", "Electricité", "Plomberie", "CVC", "Acoustique", "Paysage", "Géotechnique"
+  ];
+  
+  const phases = [
+    "ESQ", "APS", "APD", "PRO", "EXE", "DET", "AOR", "DOE"
+  ];
+  
+  const statuts = [
+    "En attente de diffusion", "Diffusé", "En cours de visa", "BPE", "Obsolète"
   ];
   
   const fascicules = [
-    { id: 'fasc-001', titre: 'CCTP Lot 1' },
-    { id: 'fasc-002', titre: 'CCAP Construction' },
-    { id: 'fasc-003', titre: 'Clauses Techniques Particulières' }
+    { id: 'fasc-001', nom: 'Fascicule Technique Lot 1' },
+    { id: 'fasc-002', nom: 'Fascicule Administratif' },
+    { id: 'fasc-003', nom: 'Fascicule VRD' }
   ];
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setDocumentData({ ...documentData, [name]: value });
-  };
-
-  const handleSelectChange = (name: string) => (value: string) => {
-    setDocumentData({ ...documentData, [name]: value });
-  };
-
-  const handleCheckboxChange = (name: string) => (checked: boolean) => {
-    setDocumentData({ ...documentData, [name]: checked });
-  };
-
-  const handleDateChange = (name: string) => (date: Date | undefined) => {
-    setDocumentData({ ...documentData, [name]: date });
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setDocumentData({
-        ...documentData,
-        document: e.target.files[0]
-      });
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const simulateUploadProgress = () => {
+    const newProgress: Record<string, number> = {};
     
-    // Validation simple
-    if (!documentData.reference || !documentData.titre || !documentData.document) {
-      toast.error("Formulaire incomplet", {
-        description: "Veuillez remplir tous les champs obligatoires et joindre un document"
-      });
-      return;
-    }
-    
-    // Simulation de l'envoi des données
-    console.log('Document soumis :', documentData);
-    toast.success("Document enregistré", {
-      description: `Le document ${documentData.titre} a été enregistré avec succès.`
+    uploadedFiles.forEach(file => {
+      newProgress[file.name] = 0;
     });
     
-    // Réinitialisation du formulaire
-    setDocumentData({
-      reference: '',
-      titre: '',
-      marche: '',
-      fascicule: '',
-      type: 'technique',
-      description: '',
-      dateCreation: undefined,
-      dateValidation: undefined,
-      auteur: '',
-      version: '1.0',
-      statut: 'brouillon',
-      isConfidentiel: false,
-      isArchive: false,
-      document: null,
-      commentaire: '',
-      motsClefs: ''
-    });
+    setUploadProgress(newProgress);
+    
+    const interval = setInterval(() => {
+      setUploadProgress(prev => {
+        const updated = { ...prev };
+        let allDone = true;
+        
+        Object.keys(updated).forEach(fileName => {
+          if (updated[fileName] < 100) {
+            updated[fileName] += 10; // Increment by 10%
+            allDone = false;
+          }
+        });
+        
+        if (allDone) {
+          clearInterval(interval);
+        }
+        
+        return updated;
+      });
+    }, 300);
+    
+    return () => clearInterval(interval);
+  };
+
+  const onSubmit = async (data: any) => {
+    console.log('Document soumis:', { ...data, files: uploadedFiles });
+    
+    // Simulate file upload
+    if (uploadedFiles.length > 0) {
+      simulateUploadProgress();
+      await new Promise(resolve => setTimeout(resolve, 3000)); // Simulate upload time
+    }
+    
+    // Here you would typically call an API to save the document
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+    
+    // Show success message
+    console.log('Document enregistré avec succès');
+    
+    // Reset form
+    setUploadedFiles([]);
+    
+    // In a real application, you might redirect to the document details page or list
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
       <Card>
         <CardContent className="pt-6">
-          <div className="text-lg font-semibold mb-4">Document à téléverser</div>
-          
-          <div className="space-y-4 mb-6">
-            <div className="flex items-center justify-center w-full">
-              <label htmlFor="document-upload" className="flex flex-col items-center justify-center w-full h-48 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  {documentData.document ? (
-                    <>
-                      <FileText className="w-16 h-16 mb-3 text-agri-primary" />
-                      <p className="mb-1 text-lg font-medium">{documentData.document.name}</p>
-                      <p className="text-xs text-gray-500">{Math.round(documentData.document.size / 1024)} Ko</p>
-                      <p className="mt-2 text-sm text-agri-primary font-medium">Cliquez pour changer de fichier</p>
-                    </>
-                  ) : (
-                    <>
-                      <FileUp className="w-12 h-12 mb-3 text-gray-500" />
-                      <p className="mb-2 text-lg text-gray-500"><span className="font-semibold">Cliquez pour téléverser un document</span></p>
-                      <p className="text-xs text-gray-500">PDF, DOC, DOCX, XLS, XLSX (MAX. 10Mo)</p>
-                    </>
-                  )}
+          {showPreview ? (
+            <FormPreview
+              title="Aperçu du document"
+              data={{
+                ...values,
+                type: values.type,
+                domaineTechnique: values.domaineTechnique,
+                phase: values.phase,
+                fascicule: fascicules.find(f => f.id === values.fasciculeId)?.nom || "Aucun",
+                statut: values.statut,
+                dateCreation: values.dateCreation ? format(values.dateCreation, 'P', { locale: fr }) : "Non définie",
+                dateDiffusion: values.dateDiffusion ? format(values.dateDiffusion, 'P', { locale: fr }) : "Non définie",
+                dateBPE: values.dateBPE ? format(values.dateBPE, 'P', { locale: fr }) : "Non définie",
+                uploadedFiles: uploadedFiles.length > 0 ? `${uploadedFiles.length} fichier(s)` : "Aucun"
+              }}
+              isValid={Object.keys(errors).length === 0}
+              onEdit={() => setShowPreview(false)}
+            />
+          ) : (
+            <>
+              <FormSection title="Identification du document">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="nom">Nom du document*</Label>
+                    <Input
+                      id="nom"
+                      name="nom"
+                      value={values.nom}
+                      onChange={handleChange}
+                      placeholder="Ex: Plan d'exécution niveau R+1"
+                      className={errors.nom ? "border-red-500" : ""}
+                    />
+                    {errors.nom && <p className="text-sm text-red-500">{errors.nom}</p>}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="numero">Numéro/Code*</Label>
+                    <Input
+                      id="numero"
+                      name="numero"
+                      value={values.numero}
+                      onChange={handleChange}
+                      placeholder="Ex: DOC-2023-001"
+                      className={errors.numero ? "border-red-500" : ""}
+                    />
+                    {errors.numero && <p className="text-sm text-red-500">{errors.numero}</p>}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="version">Version</Label>
+                    <Input
+                      id="version"
+                      name="version"
+                      value={values.version}
+                      onChange={handleChange}
+                      placeholder="Ex: 1.0.0"
+                    />
+                    <p className="text-xs text-muted-foreground">Format: major.minor.patch</p>
+                  </div>
                 </div>
-                <input 
-                  id="document-upload" 
-                  name="document-upload"
-                  type="file" 
-                  className="hidden"
-                  onChange={handleFileChange}
+                
+                <div className="space-y-2 mt-4">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    name="description"
+                    value={values.description}
+                    onChange={handleChange}
+                    placeholder="Description détaillée du document..."
+                    rows={3}
+                  />
+                </div>
+                
+                <div className="mt-4">
+                  <Label>Tags</Label>
+                  <TagInput
+                    id="tags"
+                    tags={values.tags}
+                    onChange={(tags) => setFieldValue('tags', tags)}
+                    placeholder="Ajouter un tag..."
+                    maxTags={10}
+                    description="Les tags facilitent la recherche du document"
+                  />
+                </div>
+              </FormSection>
+              
+              <FormSection title="Classification" className="mt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="type">Type de document*</Label>
+                    <Select
+                      value={values.type}
+                      onValueChange={(value) => setFieldValue('type', value)}
+                    >
+                      <SelectTrigger id="type" className={errors.type ? "border-red-500" : ""}>
+                        <SelectValue placeholder="Sélectionnez un type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {typeDocuments.map(type => (
+                          <SelectItem key={type} value={type}>
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.type && <p className="text-sm text-red-500">{errors.type}</p>}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="domaineTechnique">Domaine technique</Label>
+                    <Select
+                      value={values.domaineTechnique}
+                      onValueChange={(value) => setFieldValue('domaineTechnique', value)}
+                    >
+                      <SelectTrigger id="domaineTechnique">
+                        <SelectValue placeholder="Sélectionnez un domaine" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {domainesTechniques.map(domaine => (
+                          <SelectItem key={domaine} value={domaine}>
+                            {domaine}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="phase">Phase</Label>
+                    <Select
+                      value={values.phase}
+                      onValueChange={(value) => setFieldValue('phase', value)}
+                    >
+                      <SelectTrigger id="phase">
+                        <SelectValue placeholder="Sélectionnez une phase" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {phases.map(phase => (
+                          <SelectItem key={phase} value={phase}>
+                            {phase}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="fasciculeId">Fascicule</Label>
+                    <Select
+                      value={values.fasciculeId}
+                      onValueChange={(value) => setFieldValue('fasciculeId', value)}
+                    >
+                      <SelectTrigger id="fasciculeId">
+                        <SelectValue placeholder="Associer à un fascicule" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {fascicules.map(fascicule => (
+                          <SelectItem key={fascicule.id} value={fascicule.id}>
+                            {fascicule.nom}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="statut">Statut</Label>
+                    <Select
+                      value={values.statut}
+                      onValueChange={(value) => setFieldValue('statut', value)}
+                    >
+                      <SelectTrigger id="statut">
+                        <SelectValue placeholder="Sélectionnez un statut" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {statuts.map(statut => (
+                          <SelectItem key={statut} value={statut}>
+                            {statut}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="geographie">Zone géographique</Label>
+                    <Input
+                      id="geographie"
+                      name="geographie"
+                      value={values.geographie}
+                      onChange={handleChange}
+                      placeholder="Ex: Bâtiment A, Zone Nord"
+                    />
+                  </div>
+                </div>
+              </FormSection>
+              
+              <FormSection title="Dates" className="mt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="dateCreation">Date de création</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          id="dateCreation"
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !values.dateCreation && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {values.dateCreation ? (
+                            format(values.dateCreation, 'P', { locale: fr })
+                          ) : (
+                            <span>Sélectionner une date</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={values.dateCreation}
+                          onSelect={(date) => setFieldValue('dateCreation', date)}
+                          initialFocus
+                          locale={fr}
+                          className="pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="dateDiffusion">Date de diffusion prévue</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          id="dateDiffusion"
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !values.dateDiffusion && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {values.dateDiffusion ? (
+                            format(values.dateDiffusion, 'P', { locale: fr })
+                          ) : (
+                            <span>Sélectionner une date</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={values.dateDiffusion}
+                          onSelect={(date) => setFieldValue('dateDiffusion', date)}
+                          initialFocus
+                          locale={fr}
+                          className="pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+              </FormSection>
+              
+              <FormSection title="Traçabilité" className="mt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="emetteur">Émetteur</Label>
+                    <Input
+                      id="emetteur"
+                      name="emetteur"
+                      value={values.emetteur}
+                      onChange={handleChange}
+                      placeholder="Ex: Bureau d'études XYZ"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="auteur">Auteur</Label>
+                    <Input
+                      id="auteur"
+                      name="auteur"
+                      value={values.auteur}
+                      onChange={handleChange}
+                      placeholder="Ex: Jean Dupont"
+                    />
+                  </div>
+                </div>
+              </FormSection>
+              
+              <Separator className="my-6" />
+              
+              <div className="space-y-4">
+                <div className="flex items-start gap-2">
+                  <User className="h-5 w-5 mt-0.5 text-muted-foreground" />
+                  <div>
+                    <h3 className="text-base font-medium">Fichiers du document</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Téléversez un ou plusieurs fichiers pour ce document
+                    </p>
+                  </div>
+                </div>
+                
+                <MultiFileUpload
+                  id="document-files"
+                  files={uploadedFiles}
+                  onChange={setUploadedFiles}
+                  accept=".pdf,.docx,.doc,.dwg,.dxf,.xlsx,.xls,.ppt,.pptx,.jpg,.png"
+                  maxSize={50}
+                  maxFiles={10}
+                  progress={uploadProgress}
+                  description="Formats acceptés : PDF, Office, DWG, images (max. 50MB par fichier)"
                 />
-              </label>
-            </div>
-          </div>
-          
-          <Separator className="my-6" />
-          
-          <div className="text-lg font-semibold mb-4">Informations générales</div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div className="space-y-2">
-              <Label htmlFor="reference">Référence du document *</Label>
-              <Input 
-                id="reference" 
-                name="reference"
-                value={documentData.reference}
-                onChange={handleInputChange}
-                placeholder="Ex: DOC-2023-001"
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="version">Version</Label>
-              <Input 
-                id="version" 
-                name="version"
-                value={documentData.version}
-                onChange={handleInputChange}
-                placeholder="Ex: 1.0"
-              />
-            </div>
-            
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="titre">Titre du document *</Label>
-              <Input 
-                id="titre" 
-                name="titre"
-                value={documentData.titre}
-                onChange={handleInputChange}
-                placeholder="Ex: Cahier des Charges Technique"
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="marche">Marché associé</Label>
-              <Select 
-                value={documentData.marche} 
-                onValueChange={handleSelectChange('marche')}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez un marché" />
-                </SelectTrigger>
-                <SelectContent>
-                  {marches.map(marche => (
-                    <SelectItem key={marche.id} value={marche.id}>
-                      {marche.titre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="fascicule">Fascicule associé</Label>
-              <Select 
-                value={documentData.fascicule} 
-                onValueChange={handleSelectChange('fascicule')}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez un fascicule" />
-                </SelectTrigger>
-                <SelectContent>
-                  {fascicules.map(fascicule => (
-                    <SelectItem key={fascicule.id} value={fascicule.id}>
-                      {fascicule.titre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div className="space-y-2">
-              <Label htmlFor="type">Type de document</Label>
-              <Select 
-                value={documentData.type} 
-                onValueChange={handleSelectChange('type')}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez un type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="technique">Document Technique</SelectItem>
-                  <SelectItem value="administratif">Document Administratif</SelectItem>
-                  <SelectItem value="financier">Document Financier</SelectItem>
-                  <SelectItem value="juridique">Document Juridique</SelectItem>
-                  <SelectItem value="communication">Communication</SelectItem>
-                  <SelectItem value="autre">Autre</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="statut">Statut</Label>
-              <Select 
-                value={documentData.statut} 
-                onValueChange={handleSelectChange('statut')}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez un statut" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="brouillon">Brouillon</SelectItem>
-                  <SelectItem value="en_cours">En cours de validation</SelectItem>
-                  <SelectItem value="valide">Validé</SelectItem>
-                  <SelectItem value="rejete">Rejeté</SelectItem>
-                  <SelectItem value="obsolete">Obsolète</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="dateCreation">Date de création</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !documentData.dateCreation && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {documentData.dateCreation ? (
-                      format(documentData.dateCreation, "dd MMMM yyyy", { locale: fr })
-                    ) : (
-                      <span>Sélectionner une date</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={documentData.dateCreation}
-                    onSelect={handleDateChange('dateCreation')}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="dateValidation">Date de validation</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !documentData.dateValidation && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {documentData.dateValidation ? (
-                      format(documentData.dateValidation, "dd MMMM yyyy", { locale: fr })
-                    ) : (
-                      <span>Sélectionner une date</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={documentData.dateValidation}
-                    onSelect={handleDateChange('dateValidation')}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="auteur">Auteur</Label>
-              <Input 
-                id="auteur" 
-                name="auteur"
-                value={documentData.auteur}
-                onChange={handleInputChange}
-                placeholder="Ex: Jean Dupont"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="motsClefs">Mots-clefs</Label>
-              <Input 
-                id="motsClefs" 
-                name="motsClefs"
-                value={documentData.motsClefs}
-                onChange={handleInputChange}
-                placeholder="Ex: construction, fondation, béton"
-              />
-            </div>
-          </div>
-          
-          <div className="space-y-2 mb-6">
-            <Label htmlFor="description">Description du document</Label>
-            <Textarea 
-              id="description" 
-              name="description"
-              value={documentData.description}
-              onChange={handleInputChange}
-              placeholder="Description générale du document..."
-              rows={3}
-            />
-          </div>
-          
-          <div className="space-y-2 mb-6">
-            <Label htmlFor="commentaire">Commentaire</Label>
-            <Textarea 
-              id="commentaire" 
-              name="commentaire"
-              value={documentData.commentaire}
-              onChange={handleInputChange}
-              placeholder="Commentaire ou note additionnelle..."
-              rows={2}
-            />
-          </div>
-          
-          <Separator className="my-6" />
-          
-          <div className="text-lg font-semibold mb-4">Options du document</div>
-          
-          <div className="flex flex-col md:flex-row gap-6 mb-6">
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="isConfidentiel" 
-                checked={documentData.isConfidentiel}
-                onCheckedChange={handleCheckboxChange('isConfidentiel')}
-              />
-              <Label htmlFor="isConfidentiel">Document confidentiel</Label>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="isArchive" 
-                checked={documentData.isArchive}
-                onCheckedChange={handleCheckboxChange('isArchive')}
-              />
-              <Label htmlFor="isArchive">Archiver ce document</Label>
-            </div>
-          </div>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
       
-      <div className="flex justify-end space-x-3">
-        <Button type="button" variant="outline">Annuler</Button>
-        <Button type="submit" className="bg-agri-primary hover:bg-agri-primary-dark">
-          <Save className="mr-2 h-4 w-4" />
-          Enregistrer le document
+      <div className="flex justify-between">
+        <Button 
+          type="button" 
+          variant="outline"
+          onClick={() => setShowPreview(!showPreview)}
+        >
+          {showPreview ? "Modifier le formulaire" : "Aperçu"}
         </Button>
+        
+        <div className="flex space-x-3">
+          <Button type="button" variant="outline">Annuler</Button>
+          <Button 
+            type="submit"
+            disabled={isSubmitting}
+          >
+            <Save className="mr-2 h-4 w-4" />
+            {isSubmitting ? "Enregistrement..." : "Enregistrer le document"}
+          </Button>
+        </div>
       </div>
     </form>
   );

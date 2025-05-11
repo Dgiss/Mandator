@@ -64,7 +64,16 @@ export default function MarketCreationPage() {
     hasAttachments: false,
     isPublic: false,
     datecreation: undefined,
-    statut: 'En attente'
+    dateDebut: undefined,
+    dateFin: undefined,
+    statut: 'En attente',
+    typeMarche: 'Public',
+    devise: '€',
+    adresse: '',
+    ville: '',
+    codePostal: '',
+    pays: 'France',
+    region: ''
   }, marketFormSchema);
 
   const onSubmit = async (data: any) => {
@@ -106,11 +115,19 @@ export default function MarketCreationPage() {
         description: data.description,
         client: data.client,
         statut: data.statut,
-        budget: `${data.budget} €`,
+        budget: `${data.budget} ${data.devise || '€'}`,
         image: coverImagePath,
         logo: logoPath,
         user_id: user.id,
-        datecreation: formattedDate
+        datecreation: formattedDate,
+        type_marche: data.typeMarche,
+        adresse: data.adresse,
+        ville: data.ville,
+        code_postal: data.codePostal,
+        pays: data.pays,
+        region: data.region,
+        date_debut: data.dateDebut ? new Date(data.dateDebut).toISOString() : null,
+        date_fin: data.dateFin ? new Date(data.dateFin).toISOString() : null
       };
       
       console.log("Données du marché à insérer:", marcheData);
@@ -143,16 +160,15 @@ export default function MarketCreationPage() {
   };
 
   return (
-    <PageLayout>
-      <PageHeader 
-        title="Créer un nouveau marché" 
-        description="Remplissez le formulaire pour créer un nouveau marché public"
-      >
+    <PageLayout
+      title="Créer un nouveau marché"
+      description="Remplissez le formulaire pour créer un nouveau marché public"
+      actions={
         <Button variant="outline" onClick={() => navigate(-1)}>
           Retour
         </Button>
-      </PageHeader>
-
+      }
+    >
       <Card>
         <CardContent className="pt-6">
           <MarcheCreationForm
