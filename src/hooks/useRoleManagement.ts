@@ -3,19 +3,24 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { droitsService } from '@/services/droits';
 import { supabase } from '@/lib/supabase';
-import { MarcheSpecificRole } from '@/hooks/useUserRole';
+import { MarcheSpecificRole } from '@/hooks/userRole/types';
 
 export function useRoleManagement(marcheId: string) {
+  // State management
   const [isLoading, setIsLoading] = useState(true);
   const [droits, setDroits] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState<string>('');
-  const [selectedRole, setSelectedRole] = useState<MarcheSpecificRole>('MANDATAIRE');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const { toast } = useToast();
   
+  // Form state
+  const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [selectedRole, setSelectedRole] = useState<MarcheSpecificRole>('MANDATAIRE');
+  
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+
   // Get current user ID on component mount
   useEffect(() => {
     const getCurrentUser = async () => {
@@ -30,7 +35,7 @@ export function useRoleManagement(marcheId: string) {
     loadData();
   }, [marcheId]);
 
-  // Search effect
+  // Handle search with debounce
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
       if (searchQuery && searchQuery.length >= 2) {
@@ -49,7 +54,7 @@ export function useRoleManagement(marcheId: string) {
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
 
-  // Function to reload data
+  // Reload all data
   const loadData = async () => {
     setIsLoading(true);
     try {
@@ -72,7 +77,7 @@ export function useRoleManagement(marcheId: string) {
     }
   };
 
-  // Function to assign a role to a user
+  // Role assignment
   const handleAssignRole = async () => {
     if (!selectedUserId || !selectedRole) {
       toast({
@@ -93,10 +98,7 @@ export function useRoleManagement(marcheId: string) {
       
       // Reload data and reset form
       loadData();
-      setSelectedUserId('');
-      setSelectedRole('MANDATAIRE');
-      setSearchQuery('');
-      setSearchResults([]);
+      resetForm();
     } catch (error) {
       console.error('Erreur lors de l\'attribution du rôle:', error);
       toast({
@@ -107,7 +109,7 @@ export function useRoleManagement(marcheId: string) {
     }
   };
 
-  // Function to remove a role
+  // Role removal
   const handleRemoveRole = async (userId: string) => {
     try {
       await droitsService.removeRole(userId, marcheId);
@@ -127,13 +129,13 @@ export function useRoleManagement(marcheId: string) {
     }
   };
 
-  // Users who already have rights for this market
-  const usersWithAccess = droits.map(collab => collab.user_id);
-  
-  // Available users for assignment (those who don't already have a right)
-  const filteredSearchResults = searchResults.filter(user => 
-    !usersWithAccess.includes(user.id)
-  );
+  // Form helpers
+  const resetForm = () => {
+    setSelectedUserId('');
+    setSelectedRole('MANDATAIRE');
+    setSearchQuery('');
+    setSearchResults([]);
+  };
 
   const handleUserSelection = (userId: string) => {
     setSelectedUserId(userId);
@@ -145,22 +147,38 @@ export function useRoleManagement(marcheId: string) {
     setSearchQuery(e.target.value);
   };
 
+  // Calculated values
+  const usersWithAccess = droits.map(collab => collab.user_id);
+  
+  // Available users for assignment (those who don't already have a right)
+  const filteredSearchResults = searchResults.filter(user => 
+    !usersWithAccess.includes(user.id)
+  );
+
   return {
+    // Data
     isLoading,
     droits,
     users,
+    currentUserId,
+    
+    // Form state
     selectedUserId,
     setSelectedUserId,
     selectedRole,
     setSelectedRole,
+    
+    // Search
     searchQuery,
     setSearchQuery,
     filteredSearchResults,
-    currentUserId,
+    
+    // Actions
     handleAssignRole,
     handleRemoveRole,
     handleUserSelection,
     handleSearchChange,
-    loadData
+    loadData,
+    resetForm
   };
 }
