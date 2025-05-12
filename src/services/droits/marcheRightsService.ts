@@ -17,7 +17,7 @@ export const marcheRightsService = {
       
       // For each right, fetch the corresponding user info
       const droitsWithUserInfo = await Promise.all(
-        (droitsData || []).map(async (droit) => {
+        (droitsData as any[] || []).map(async (droit) => {
           // Get user profile data
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
@@ -107,7 +107,7 @@ export const marcheRightsService = {
       const { error } = await supabase
         .rpc('remove_role_from_user', {
           user_id: userId, 
-          marche_id: marche_id
+          marche_id: marcheId
         });
 
       if (error) throw error;

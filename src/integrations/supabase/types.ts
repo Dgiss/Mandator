@@ -515,6 +515,26 @@ export type Database = {
         Args: { user_id: string; marche_id: string; role_specifique: string }
         Returns: undefined
       }
+      get_droits_for_marche: {
+        Args: { marche_id_param: string }
+        Returns: {
+          created_at: string | null
+          id: string
+          marche_id: string
+          role_specifique: string
+          user_id: string
+        }[]
+      }
+      get_droits_for_user: {
+        Args: { user_id_param: string }
+        Returns: {
+          created_at: string | null
+          id: string
+          marche_id: string
+          role_specifique: string
+          user_id: string
+        }[]
+      }
       get_user_role_for_marche: {
         Args: { user_id: string; marche_id: string }
         Returns: string
