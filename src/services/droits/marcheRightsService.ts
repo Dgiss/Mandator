@@ -66,35 +66,16 @@ export const marcheRightsService = {
 
   // Assign a role to a user for a specific market
   async assignRole(userId: string, marcheId: string, role: MarcheSpecificRole): Promise<void> {
-    // Check if assignment already exists
-    const { data: existing } = await supabase
-      .from('droits_marche')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('marche_id', marcheId)
-      .single();
-
     try {
-      if (existing) {
-        // Update existing assignment
-        const { error } = await supabase
-          .from('droits_marche')
-          .update({ role_specifique: role })
-          .eq('id', existing.id);
+      // Use our new security definer function to bypass RLS
+      const { error } = await supabase
+        .rpc('assign_role_to_user', {
+          user_id: userId, 
+          marche_id: marcheId,
+          role_specifique: role
+        });
 
-        if (error) throw error;
-      } else {
-        // Create new assignment
-        const { error } = await supabase
-          .from('droits_marche')
-          .insert({
-            user_id: userId,
-            marche_id: marcheId,
-            role_specifique: role
-          });
-
-        if (error) throw error;
-      }
+      if (error) throw error;
     } catch (error) {
       console.error('Erreur lors de l\'attribution du rôle:', error);
       throw error;
@@ -105,8 +86,7 @@ export const marcheRightsService = {
   async assignCreatorAsMOE(userId: string, marcheId: string): Promise<void> {
     try {
       const { error } = await supabase
-        .from('droits_marche')
-        .insert({
+        .rpc('assign_role_to_user', {
           user_id: userId,
           marche_id: marcheId,
           role_specifique: 'MOE'
@@ -122,11 +102,12 @@ export const marcheRightsService = {
   // Remove role assignment for a user on a market
   async removeRole(userId: string, marcheId: string): Promise<void> {
     try {
+      // Use our new security definer function to bypass RLS
       const { error } = await supabase
-        .from('droits_marche')
-        .delete()
-        .eq('user_id', userId)
-        .eq('marche_id', marcheId);
+        .rpc('remove_role_from_user', {
+          user_id: userId, 
+          marche_id: marcheId
+        });
 
       if (error) throw error;
     } catch (error) {

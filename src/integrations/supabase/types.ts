@@ -511,6 +511,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_role_to_user: {
+        Args: { user_id: string; marche_id: string; role_specifique: string }
+        Returns: undefined
+      }
       get_user_role_for_marche: {
         Args: { user_id: string; marche_id: string }
         Returns: string
@@ -522,6 +526,10 @@ export type Database = {
       is_moe_for_marche: {
         Args: { marche_id: string }
         Returns: boolean
+      }
+      remove_role_from_user: {
+        Args: { user_id: string; marche_id: string }
+        Returns: undefined
       }
       search_profiles: {
         Args: { search_term: string }
