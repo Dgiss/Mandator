@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Dialog, 
@@ -17,7 +16,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { Users, Shield, Plus, X, RefreshCw } from 'lucide-react';
-import { droitsService } from '@/services/droitsService';
+import { droitsService } from '@/services/droits';
 import { useUserRole, MarcheSpecificRole } from '@/hooks/useUserRole';
 
 interface UserInfo {

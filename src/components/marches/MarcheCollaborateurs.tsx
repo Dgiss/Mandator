@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -11,7 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RefreshCw, Plus, X, Search, Users, Mail, AlertCircle, InfoIcon } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { droitsService, UserDroit } from '@/services/droitsService';
+import { droitsService, UserDroit } from '@/services/droits';
 import { useUserRole, MarcheSpecificRole } from '@/hooks/useUserRole';
 import { supabase } from '@/lib/supabase'; // Add this import to fix the error
 
@@ -252,7 +251,7 @@ const MarcheCollaborateurs: React.FC<MarcheCollaborateursProps> = ({ marcheId })
                               size="icon"
                               onClick={() => handleRemoveRole(collab.user_id)}
                               title="Supprimer l'accès"
-                              disabled={userMarcheRole === 'MOE' && collab.role_specifique === 'MOE' && collab.user_id !== supabase.auth.getUser()?.data?.user?.id}
+                              disabled={userMarcheRole === 'MOE' && collab.role_specifique === 'MOE' && collab.user_id !== supabase.auth.getUser().then(response => response.data.user?.id)}
                             >
                               <X className="h-4 w-4 text-red-500" />
                             </Button>
