@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAIAssistant } from '@/hooks/useAIAssistant';
 import { cn } from '@/lib/utils';
+import { useLocation } from 'react-router-dom';
 
 type Message = {
   id: string;
@@ -44,6 +45,14 @@ const AIAssistantDialog: React.FC<AIAssistantDialogProps> = ({ open, onOpenChang
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const location = useLocation();
+
+  // Extract marché ID from URL if present
+  const getCurrentMarcheId = () => {
+    const path = location.pathname;
+    const match = path.match(/\/marches\/([^\/]+)/);
+    return match ? match[1] : null;
+  };
 
   // Set initial message if provided
   useEffect(() => {
@@ -86,9 +95,13 @@ const AIAssistantDialog: React.FC<AIAssistantDialogProps> = ({ open, onOpenChang
     setShowSuggestions(false);
     
     try {
+      // Get the current marché ID if available
+      const marcheId = getCurrentMarcheId();
+      
       const response = await supabase.functions.invoke('ai-assistant', {
         body: {
           query: input,
+          marcheId: marcheId
         },
       });
       

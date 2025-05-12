@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { HfInference } from 'https://esm.sh/@huggingface/inference@2.3.2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,158 +17,251 @@ const questionTemplates = {
   fasciculeProgress: "Quel est l'avancement du fascicule {fascicule}?"
 };
 
+// Create a Supabase client
+const createSupabaseClient = (req) => {
+  const authHeader = req.headers.get('Authorization');
+  const apiKey = req.headers.get('apikey') || '';
+  
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || apiKey;
+  
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: {
+        Authorization: authHeader || '',
+      },
+    },
+  });
+};
+
 // Predefined query functions
 const predefinedQueries = {
   // Count pending visas overall or for a specific market
   async countPendingVisas(client, marcheId = null) {
-    const query = marcheId 
-      ? `SELECT COUNT(*) FROM visas WHERE statut = 'En attente' AND marche_id = '${marcheId}'`
-      : `SELECT COUNT(*) FROM visas WHERE statut = 'En attente'`;
+    const query = client.from('visas')
+      .select('*', { count: 'exact' })
+      .eq('statut', 'En attente');
+      
+    if (marcheId) {
+      query.eq('marche_id', marcheId);
+    }
     
-    const { data, error } = await client.rpc('execute_query', { query_text: query });
+    const { count, error } = await query;
     if (error) throw error;
-    return data[0].count;
+    return count || 0;
   },
   
   // Count documents awaiting distribution
   async countUndistributedDocuments(client, marcheId = null) {
-    const query = marcheId
-      ? `SELECT COUNT(*) FROM documents WHERE statut = 'En attente de diffusion' AND marche_id = '${marcheId}'`
-      : `SELECT COUNT(*) FROM documents WHERE statut = 'En attente de diffusion'`;
+    const query = client.from('documents')
+      .select('*', { count: 'exact' })
+      .eq('statut', 'En attente de diffusion');
+      
+    if (marcheId) {
+      query.eq('marche_id', marcheId);
+    }
     
-    const { data, error } = await client.rpc('execute_query', { query_text: query });
+    const { count, error } = await query;
     if (error) throw error;
-    return data[0].count;
+    return count || 0;
   },
   
   // Count rejected versions
   async countRejectedVersions(client, marcheId = null) {
-    const query = marcheId
-      ? `SELECT COUNT(*) FROM versions WHERE statut = 'Rejeté' AND marche_id = '${marcheId}'`
-      : `SELECT COUNT(*) FROM versions WHERE statut = 'Rejeté'`;
+    const query = client.from('versions')
+      .select('*', { count: 'exact' })
+      .eq('statut', 'Refusé');
+      
+    if (marcheId) {
+      query.eq('marche_id', marcheId);
+    }
     
-    const { data, error } = await client.rpc('execute_query', { query_text: query });
+    const { count, error } = await query;
     if (error) throw error;
-    return data[0].count;
+    return count || 0;
   },
   
   // Get fascicule progress
   async getFasciculeProgress(client, fasciculeId) {
     if (!fasciculeId) throw new Error("Identifiant du fascicule requis");
     
-    const query = `SELECT nom, progression FROM fascicules WHERE id = '${fasciculeId}'`;
-    const { data, error } = await client.rpc('execute_query', { query_text: query });
+    const { data, error } = await client
+      .from('fascicules')
+      .select('nom, progression')
+      .eq('id', fasciculeId)
+      .single();
+      
     if (error) throw error;
-    return data[0];
+    return data;
   },
   
   // Get market summary
   async getMarcheSummary(client, marcheId) {
     if (!marcheId) throw new Error("Identifiant du marché requis");
     
-    const query = `
-      SELECT 
-        m.titre,
-        (SELECT COUNT(*) FROM documents d WHERE d.marche_id = '${marcheId}') AS total_documents,
-        (SELECT COUNT(*) FROM visas v WHERE v.marche_id = '${marcheId}' AND v.statut = 'En attente') AS visas_en_attente,
-        (SELECT COUNT(*) FROM documents d WHERE d.marche_id = '${marcheId}' AND d.statut = 'En attente de diffusion') AS documents_a_diffuser,
-        (SELECT COUNT(*) FROM versions v WHERE v.marche_id = '${marcheId}' AND v.statut = 'Rejeté') AS versions_rejetees
-      FROM marches m
-      WHERE m.id = '${marcheId}'
-    `;
+    // Get market details
+    const { data: marcheData, error: marcheError } = await client
+      .from('marches')
+      .select('titre, description')
+      .eq('id', marcheId)
+      .single();
     
-    const { data, error } = await client.rpc('execute_query', { query_text: query });
-    if (error) throw error;
-    return data[0];
+    if (marcheError) throw marcheError;
+    
+    // Count documents
+    const { count: totalDocuments, error: docsError } = await client
+      .from('documents')
+      .select('*', { count: 'exact' })
+      .eq('marche_id', marcheId);
+      
+    if (docsError) throw docsError;
+    
+    // Count pending visas
+    const visasEnAttente = await predefinedQueries.countPendingVisas(client, marcheId);
+    
+    // Count documents awaiting distribution
+    const documentsADiffuser = await predefinedQueries.countUndistributedDocuments(client, marcheId);
+    
+    // Count rejected versions
+    const versionsRejetees = await predefinedQueries.countRejectedVersions(client, marcheId);
+    
+    return {
+      titre: marcheData.titre,
+      description: marcheData.description,
+      total_documents: totalDocuments,
+      visas_en_attente: visasEnAttente,
+      documents_a_diffuser: documentsADiffuser,
+      versions_rejetees: versionsRejetees
+    };
   },
   
   // Get document status counts overall
-  async getDocumentStatusCounts(client) {
-    const query = `
-      SELECT 
-        statut, 
-        COUNT(*) as count 
-      FROM documents 
-      GROUP BY statut
-    `;
+  async getDocumentStatusCounts(client, marcheId = null) {
+    let query = client.from('documents')
+      .select('statut, count(*)')
+      .groupBy('statut');
+      
+    if (marcheId) {
+      query.eq('marche_id', marcheId);
+    }
     
-    const { data, error } = await client.rpc('execute_query', { query_text: query });
+    const { data, error } = await query;
     if (error) throw error;
     return data;
   },
   
   // Get visa status counts overall
-  async getVisaStatusCounts(client) {
-    const query = `
-      SELECT 
-        statut, 
-        COUNT(*) as count 
-      FROM visas 
-      GROUP BY statut
-    `;
+  async getVisaStatusCounts(client, marcheId = null) {
+    let query = client.from('visas')
+      .select('statut, count(*)')
+      .groupBy('statut');
+      
+    if (marcheId) {
+      query.eq('marche_id', marcheId);
+    }
     
-    const { data, error } = await client.rpc('execute_query', { query_text: query });
+    const { data, error } = await query;
     if (error) throw error;
     return data;
   },
   
   // Get version status counts overall
-  async getVersionStatusCounts(client) {
-    const query = `
-      SELECT 
-        statut, 
-        COUNT(*) as count 
-      FROM versions 
-      GROUP BY statut
-    `;
+  async getVersionStatusCounts(client, marcheId = null) {
+    let query = client.from('versions')
+      .select('statut, count(*)')
+      .groupBy('statut');
+      
+    if (marcheId) {
+      query.eq('marche_id', marcheId);
+    }
     
-    const { data, error } = await client.rpc('execute_query', { query_text: query });
+    const { data, error } = await query;
     if (error) throw error;
     return data;
   },
 
   // Get overall documents stats
-  async getOverallDocumentsStats(client) {
-    const query = `
-      SELECT 
-        COUNT(*) as total_documents,
-        SUM(CASE WHEN statut = 'En attente de diffusion' THEN 1 ELSE 0 END) as pending_distribution,
-        SUM(CASE WHEN statut = 'Approuvé' THEN 1 ELSE 0 END) as approved
-      FROM documents
-    `;
+  async getOverallDocumentsStats(client, marcheId = null) {
+    let query = client.from('documents').select('*', { count: 'exact' });
     
-    const { data, error } = await client.rpc('execute_query', { query_text: query });
-    if (error) throw error;
-    return data[0];
+    if (marcheId) {
+      query.eq('marche_id', marcheId);
+    }
+    
+    const { count: totalDocuments, error: countError } = await query;
+    if (countError) throw countError;
+    
+    // Count documents pending distribution
+    let pendingQuery = client.from('documents')
+      .select('*', { count: 'exact' })
+      .eq('statut', 'En attente de diffusion');
+      
+    if (marcheId) {
+      pendingQuery.eq('marche_id', marcheId);
+    }
+    
+    const { count: pendingDistribution, error: pendingError } = await pendingQuery;
+    if (pendingError) throw pendingError;
+    
+    // Count approved documents
+    let approvedQuery = client.from('documents')
+      .select('*', { count: 'exact' })
+      .eq('statut', 'Approuvé');
+      
+    if (marcheId) {
+      approvedQuery.eq('marche_id', marcheId);
+    }
+    
+    const { count: approved, error: approvedError } = await approvedQuery;
+    if (approvedError) throw approvedError;
+    
+    return {
+      total_documents: totalDocuments,
+      pending_distribution: pendingDistribution,
+      approved: approved
+    };
   },
 
   // Get overall fascicules progress
-  async getOverallFasciculesProgress(client) {
-    const query = `
-      SELECT 
-        COUNT(*) as total_fascicules,
-        AVG(progression) as avg_progress
-      FROM fascicules
-    `;
+  async getOverallFasciculesProgress(client, marcheId = null) {
+    let query = client.from('fascicules').select('*', { count: 'exact' });
+    let progressionQuery = client.from('fascicules').select('progression');
     
-    const { data, error } = await client.rpc('execute_query', { query_text: query });
-    if (error) throw error;
-    return data[0];
+    if (marcheId) {
+      query.eq('marche_id', marcheId);
+      progressionQuery.eq('marche_id', marcheId);
+    }
+    
+    const { count: totalFascicules, error: countError } = await query;
+    if (countError) throw countError;
+    
+    const { data: progressionData, error: progressionError } = await progressionQuery;
+    if (progressionError) throw progressionError;
+    
+    // Calculate average progression
+    let avgProgress = 0;
+    if (progressionData && progressionData.length > 0) {
+      const sum = progressionData.reduce((acc, item) => acc + (item.progression || 0), 0);
+      avgProgress = sum / progressionData.length;
+    }
+    
+    return {
+      total_fascicules: totalFascicules,
+      avg_progress: avgProgress
+    };
   }
 };
 
 // Process the user's query using Hugging Face
-async function processQuery(query, client) {
+async function processQuery(query, client, marcheId = null) {
   try {
+    console.log(`Processing query: "${query}" for marché ID: ${marcheId || 'None'}`);
+    
     // Get the Hugging Face API token from environment
     const hfToken = Deno.env.get("HUGGING_FACE_TOKEN");
     if (!hfToken) {
       throw new Error("HUGGING_FACE_TOKEN is not set in environment variables");
     }
-    
-    // Extract market ID from the query if present (we'll add functionality for this later)
-    let marcheId = null;
-    let fasciculeId = null;
     
     // Simplified pattern matching for common queries
     const lowerQuery = query.toLowerCase();
@@ -203,7 +297,7 @@ async function processQuery(query, client) {
     }
     // Check for document status distribution queries
     else if (lowerQuery.includes('statut') && lowerQuery.includes('document')) {
-      const statusCounts = await predefinedQueries.getDocumentStatusCounts(client);
+      const statusCounts = await predefinedQueries.getDocumentStatusCounts(client, marcheId);
       let response = "Voici la répartition des documents par statut:\n\n";
       
       statusCounts.forEach(item => {
@@ -218,7 +312,7 @@ async function processQuery(query, client) {
     }
     // Check for visa status distribution queries
     else if (lowerQuery.includes('statut') && lowerQuery.includes('visa')) {
-      const statusCounts = await predefinedQueries.getVisaStatusCounts(client);
+      const statusCounts = await predefinedQueries.getVisaStatusCounts(client, marcheId);
       let response = "Voici la répartition des visas par statut:\n\n";
       
       statusCounts.forEach(item => {
@@ -233,7 +327,7 @@ async function processQuery(query, client) {
     }
     // Check for version status distribution queries
     else if (lowerQuery.includes('statut') && lowerQuery.includes('version')) {
-      const statusCounts = await predefinedQueries.getVersionStatusCounts(client);
+      const statusCounts = await predefinedQueries.getVersionStatusCounts(client, marcheId);
       let response = "Voici la répartition des versions par statut:\n\n";
       
       statusCounts.forEach(item => {
@@ -244,16 +338,6 @@ async function processQuery(query, client) {
         response,
         data: statusCounts,
         queryType: 'version_status'
-      };
-    }
-    // Check for fascicule progress queries
-    else if (fasciculeId && lowerQuery.includes('fascicule') && 
-            (lowerQuery.includes('progress') || lowerQuery.includes('avancement'))) {
-      const fascicule = await predefinedQueries.getFasciculeProgress(client, fasciculeId);
-      return {
-        response: `Le fascicule ${fascicule.nom} a un avancement de ${fascicule.progression}%`,
-        data: fascicule,
-        queryType: 'fascicule'
       };
     }
     // Check for market summary queries
@@ -361,7 +445,8 @@ serve(async (req) => {
   }
   
   try {
-    const { query } = await req.json();
+    const requestData = await req.json();
+    const { query, marcheId } = requestData;
     
     if (!query) {
       return new Response(
@@ -373,99 +458,14 @@ serve(async (req) => {
       );
     }
     
-    // Create a temporary Supabase client for executing queries
-    // The client uses the function's service role to execute the queries
-    const supabaseClient = {
-      rpc: async (functionName, params) => {
-        // In a real edge function, you would use the Supabase JS client here
-        // For now, we'll mock this and assume it's calling the execute_query RPC
-        
-        // Simplified mock for demonstration
-        if (functionName === 'execute_query') {
-          const { query_text } = params;
-          
-          // Mock different query results
-          if (query_text.includes('visas WHERE statut = \'En attente\'')) {
-            return { data: [{ count: 12 }], error: null };
-          }
-          else if (query_text.includes('documents WHERE statut = \'En attente de diffusion\'')) {
-            return { data: [{ count: 8 }], error: null };
-          }
-          else if (query_text.includes('versions WHERE statut = \'Rejeté\'')) {
-            return { data: [{ count: 3 }], error: null };
-          }
-          else if (query_text.includes('SELECT statut, COUNT(*) as count FROM documents')) {
-            return { 
-              data: [
-                { statut: 'En attente de diffusion', count: 8 },
-                { statut: 'Approuvé', count: 42 },
-                { statut: 'Rejeté', count: 5 }
-              ], 
-              error: null 
-            };
-          }
-          else if (query_text.includes('SELECT statut, COUNT(*) as count FROM visas')) {
-            return { 
-              data: [
-                { statut: 'En attente', count: 12 },
-                { statut: 'Approuvé', count: 35 },
-                { statut: 'Rejeté', count: 7 }
-              ], 
-              error: null 
-            };
-          }
-          else if (query_text.includes('SELECT statut, COUNT(*) as count FROM versions')) {
-            return { 
-              data: [
-                { statut: 'Actif', count: 56 },
-                { statut: 'Rejeté', count: 3 },
-                { statut: null, count: 2 }
-              ], 
-              error: null 
-            };
-          }
-          else if (query_text.includes('marches m')) {
-            return { 
-              data: [{
-                titre: "Marché exemple",
-                total_documents: 55,
-                visas_en_attente: 12,
-                documents_a_diffuser: 8,
-                versions_rejetees: 3
-              }], 
-              error: null 
-            };
-          }
-          else if (query_text.includes('COUNT(*) as total_documents')) {
-            return {
-              data: [{
-                total_documents: 55,
-                pending_distribution: 8,
-                approved: 42
-              }],
-              error: null
-            };
-          }
-          else if (query_text.includes('AVG(progression)')) {
-            return { 
-              data: [{
-                total_fascicules: 12,
-                avg_progress: 68.5
-              }], 
-              error: null 
-            };
-          }
-          else {
-            // Default response for other queries
-            return { data: [{ count: 0 }], error: null };
-          }
-        }
-        
-        return { data: null, error: new Error(`Function ${functionName} not implemented`) };
-      }
-    };
+    console.log(`Query received: "${query}"`);
+    console.log(`Market ID: ${marcheId || 'Not provided'}`);
     
-    const result = await processQuery(query, supabaseClient);
+    // Create a Supabase client using the request headers
+    const supabaseClient = createSupabaseClient(req);
+    
+    // Process the query
+    const result = await processQuery(query, supabaseClient, marcheId);
     
     return new Response(
       JSON.stringify(result),
