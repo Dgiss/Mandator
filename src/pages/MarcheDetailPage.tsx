@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
@@ -7,7 +8,7 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Lock } from 'lucide-react';
 
 // Custom hook pour la logique du marché
-import { useMarcheDetail } from '@/hooks/useMarcheDetail';
+import { useMarcheDetail } from '@/hooks/marcheDetail';
 
 // Composants pour la page de détail
 import MarcheHeader from '@/components/marches/detail/MarcheHeader';
