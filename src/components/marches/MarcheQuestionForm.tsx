@@ -51,6 +51,7 @@ const MarcheQuestionForm: React.FC<MarcheQuestionFormProps> = ({ marcheId, onSub
   const [documents, setDocuments] = useState<{id: string; nom: string}[]>([]);
   const [fascicules, setFascicules] = useState<{id: string; nom: string}[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<QuestionFormValues>({
@@ -106,8 +107,10 @@ const MarcheQuestionForm: React.FC<MarcheQuestionFormProps> = ({ marcheId, onSub
   }, [marcheId, toast]);
 
   const handleSubmit = async (values: QuestionFormValues) => {
+    if (isSubmitting) return; // Prevent double submission
+    
     try {
-      setIsLoading(true);
+      setIsSubmitting(true); // Set submitting state to true
       
       // Créer la question en utilisant le service
       await questionsService.addQuestion({
@@ -138,7 +141,7 @@ const MarcheQuestionForm: React.FC<MarcheQuestionFormProps> = ({ marcheId, onSub
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false); // Reset submitting state regardless of outcome
     }
   };
 
@@ -162,6 +165,9 @@ const MarcheQuestionForm: React.FC<MarcheQuestionFormProps> = ({ marcheId, onSub
     setAttachment(null);
   };
 
+  // Check if form is currently submitting
+  const isFormSubmitting = isLoading || isSubmitting || form.formState.isSubmitting;
+
   return (
     <Card className="mb-6">
       <CardContent className="pt-6">
@@ -177,7 +183,8 @@ const MarcheQuestionForm: React.FC<MarcheQuestionFormProps> = ({ marcheId, onSub
                     <Textarea 
                       placeholder="Posez votre question..." 
                       className="min-h-[100px]" 
-                      {...field} 
+                      {...field}
+                      disabled={isFormSubmitting}
                     />
                   </FormControl>
                   <FormDescription>
@@ -198,6 +205,7 @@ const MarcheQuestionForm: React.FC<MarcheQuestionFormProps> = ({ marcheId, onSub
                     <Select 
                       onValueChange={field.onChange} 
                       value={field.value}
+                      disabled={isFormSubmitting}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -230,6 +238,7 @@ const MarcheQuestionForm: React.FC<MarcheQuestionFormProps> = ({ marcheId, onSub
                     <Select 
                       onValueChange={field.onChange} 
                       value={field.value}
+                      disabled={isFormSubmitting}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -272,13 +281,19 @@ const MarcheQuestionForm: React.FC<MarcheQuestionFormProps> = ({ marcheId, onSub
                       size="sm"
                       className="h-8 w-8 p-0"
                       onClick={removeAttachment}
+                      disabled={isFormSubmitting}
                     >
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                 ) : (
                   <div className="flex items-center">
-                    <label htmlFor="file-attachment" className="flex items-center px-3 py-2 border border-gray-300 rounded text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer">
+                    <label 
+                      htmlFor="file-attachment" 
+                      className={`flex items-center px-3 py-2 border border-gray-300 rounded text-sm font-medium ${
+                        isFormSubmitting ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50 cursor-pointer'
+                      }`}
+                    >
                       <Paperclip className="mr-2 h-4 w-4" />
                       Joindre un fichier
                     </label>
@@ -288,6 +303,7 @@ const MarcheQuestionForm: React.FC<MarcheQuestionFormProps> = ({ marcheId, onSub
                       className="hidden"
                       onChange={handleFileChange}
                       accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                      disabled={isFormSubmitting}
                     />
                     <span className="ml-2 text-xs text-gray-500">
                       Max 10MB (PDF, DOC, XLS, JPG)
@@ -298,11 +314,19 @@ const MarcheQuestionForm: React.FC<MarcheQuestionFormProps> = ({ marcheId, onSub
             </div>
             
             <div className="flex justify-end space-x-3">
-              <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={onCancel} 
+                disabled={isFormSubmitting}
+              >
                 Annuler
               </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? 'Envoi en cours...' : 'Envoyer la question'}
+              <Button 
+                type="submit" 
+                disabled={isFormSubmitting}
+              >
+                {isFormSubmitting ? 'Envoi en cours...' : 'Envoyer la question'}
               </Button>
             </div>
           </form>
