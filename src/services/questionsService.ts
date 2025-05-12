@@ -41,14 +41,12 @@ export const questionsService = {
           *,
           documents(nom),
           fascicules(nom),
-          profiles(id, nom, prenom, entreprise),
           reponses(
             id, 
             content, 
             user_id, 
             date_creation,
-            attachment_path,
-            profiles:user_id(id, nom, prenom, entreprise)
+            attachment_path
           )
         `)
         .eq('marche_id', marcheId)
@@ -59,23 +57,47 @@ export const questionsService = {
         throw error;
       }
 
-      // Safely cast the data and handle potential error responses
-      // Using type assertion after verification - this is safe because we're ensuring proper error handling
-      const questions = data || [];
-      
-      // Return properly typed questions with safe handling for relationships
-      return questions.map(question => {
-        // Ensure each question object conforms to QuestionWithRelations
-        const typedQuestion: QuestionWithRelations = {
+      // For each question, fetch the profile separately if user_id exists
+      const questionsWithProfiles = await Promise.all((data || []).map(async (question) => {
+        let profile = null;
+        if (question.user_id) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('id, nom, prenom, entreprise')
+            .eq('id', question.user_id)
+            .single();
+          
+          profile = profileData;
+        }
+
+        // For each response, fetch the profile separately if user_id exists
+        const responsesWithProfiles = await Promise.all((question.reponses || []).map(async (reponse) => {
+          let profile = null;
+          if (reponse.user_id) {
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('id, nom, prenom, entreprise')
+              .eq('id', reponse.user_id)
+              .single();
+            
+            profile = profileData;
+          }
+
+          return {
+            ...reponse,
+            profiles: profile
+          };
+        }));
+
+        return {
           ...question,
-          // Handle potential error responses for nested objects
-          documents: question.documents,
-          fascicules: question.fascicules,
-          profiles: question.profiles,
-          reponses: Array.isArray(question.reponses) ? question.reponses : []
+          profiles: profile,
+          reponses: responsesWithProfiles
         };
-        return typedQuestion;
-      });
+      }));
+
+      // Safely cast the data and handle potential error responses
+      return questionsWithProfiles;
     } catch (error) {
       console.error("Exception lors de la récupération des questions:", error);
       throw error;
