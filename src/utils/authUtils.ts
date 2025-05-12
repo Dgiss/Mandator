@@ -1,3 +1,4 @@
+
 /**
  * Authentication utility functions for the application
  */
@@ -34,8 +35,7 @@ export const getGlobalUserRole = async (): Promise<UserRole | null> => {
     
     // Récupérer le profil avec le rôle global en utilisant une fonction sécurisée 
     // pour éviter les problèmes de récursion RLS
-    const { data, error } = await supabase
-      .rpc('get_user_global_role');  // Utiliser une fonction RPC à la place d'un accès direct
+    const { data, error } = await supabase.rpc('get_user_global_role');
     
     if (error) {
       console.error('Erreur lors de la récupération du rôle global:', error);

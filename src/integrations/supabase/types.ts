@@ -515,6 +515,35 @@ export type Database = {
         Args: { user_id: string; marche_id: string; role_specifique: string }
         Returns: undefined
       }
+      get_accessible_marches_for_user: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          adresse: string | null
+          budget: string | null
+          client: string | null
+          code_postal: string | null
+          commentaire: string | null
+          created_at: string | null
+          date_debut: string | null
+          date_fin: string | null
+          date_fin_gpa: string | null
+          date_notification: string | null
+          datecreation: string | null
+          description: string | null
+          id: string
+          image: string | null
+          logo: string | null
+          pays: string | null
+          periode_chantier: string | null
+          periode_preparation: string | null
+          region: string | null
+          statut: string
+          titre: string
+          type_marche: string | null
+          user_id: string | null
+          ville: string | null
+        }[]
+      }
       get_droits_for_marche: {
         Args: { marche_id_param: string }
         Returns: {
@@ -534,6 +563,10 @@ export type Database = {
           role_specifique: string
           user_id: string
         }[]
+      }
+      get_user_global_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       get_user_role_for_marche: {
         Args: { user_id: string; marche_id: string }

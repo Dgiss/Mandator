@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase';
 import { Marche } from '@/services/types';
 
@@ -15,8 +14,7 @@ export const fetchMarches = async (): Promise<Marche[]> => {
     
     // Utiliser la fonction RPC sécurisée pour récupérer uniquement les marchés 
     // auxquels l'utilisateur a accès (via ses droits ou en tant qu'admin)
-    const { data, error } = await supabase
-      .rpc('get_accessible_marches_for_user');
+    const { data, error } = await supabase.rpc('get_accessible_marches_for_user');
     
     if (error) {
       console.error('Erreur lors de la récupération des marchés:', error);
@@ -26,7 +24,7 @@ export const fetchMarches = async (): Promise<Marche[]> => {
     console.log("Marchés récupérés:", data);
     
     // S'assurer que les données sont bien formatées avant de les retourner
-    const formattedMarches = data?.map((marche: any) => ({
+    const formattedMarches = Array.isArray(data) ? data.map((marche: any) => ({
       id: marche.id || '',
       titre: marche.titre || 'Sans titre',
       description: marche.description || '',
@@ -38,7 +36,7 @@ export const fetchMarches = async (): Promise<Marche[]> => {
       logo: marche.logo || null,
       user_id: marche.user_id || null,
       created_at: marche.created_at || null
-    })) || [];
+    })) : [];
     
     console.log("Marchés formatés:", formattedMarches);
     return formattedMarches as Marche[];
