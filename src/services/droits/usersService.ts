@@ -9,7 +9,7 @@ export const usersService = {
       // Get all profiles with their global role
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, nom, prenom, role_global');
+        .select('id, nom, prenom, role_global, email');
 
       if (profilesError) throw profilesError;
 
@@ -19,7 +19,7 @@ export const usersService = {
         nom: profile.nom || '',
         prenom: profile.prenom || '',
         role_global: profile.role_global || 'STANDARD',
-        email: profile.id // Default to ID as email
+        email: profile.email || profile.id // Use the email field if available, otherwise fallback to ID
       }));
 
       return usersWithRoles;
@@ -36,11 +36,32 @@ export const usersService = {
     }
 
     try {
-      // Use the search_profiles database function we created
+      // Modify the search_profiles database function call to include email search
       const { data, error } = await supabase
         .rpc('search_profiles', { search_term: searchTerm });
-
-      if (error) throw error;
+      
+      if (error) {
+        console.error('RPC search_profiles error:', error);
+        
+        // Fallback: If the RPC fails, perform a direct search with ILIKE
+        const { data: directSearchData, error: directSearchError } = await supabase
+          .from('profiles')
+          .select('id, nom, prenom, role_global, email')
+          .or(`email.ilike.%${searchTerm}%,nom.ilike.%${searchTerm}%,prenom.ilike.%${searchTerm}%,id.ilike.%${searchTerm}%`);
+        
+        if (directSearchError) throw directSearchError;
+        
+        // Map through profiles to format user data properly
+        const directSearchResults = (directSearchData || []).map(profile => ({
+          id: profile.id,
+          nom: profile.nom || '',
+          prenom: profile.prenom || '',
+          role_global: profile.role_global || 'STANDARD',
+          email: profile.email || profile.id
+        }));
+        
+        return directSearchResults;
+      }
 
       // Map through profiles to format user data properly
       const usersWithRoles = (data || []).map(profile => ({
@@ -48,7 +69,7 @@ export const usersService = {
         nom: profile.nom || '',
         prenom: profile.prenom || '',
         role_global: profile.role_global || 'STANDARD',
-        email: profile.id // Default to ID as email
+        email: profile.email || profile.id // Use the email field if available, otherwise fallback to ID
       }));
 
       return usersWithRoles;
