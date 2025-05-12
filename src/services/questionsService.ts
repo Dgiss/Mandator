@@ -58,7 +58,7 @@ export const questionsService = {
       }
 
       // For each question, fetch the profile separately if user_id exists
-      const questionsWithProfiles = await Promise.all((data || []).map(async (question) => {
+      const questionsWithProfiles = await Promise.all((data || []).map(async (question: any) => {
         let profile = null;
         if (question.user_id) {
           const { data: profileData } = await supabase
@@ -71,7 +71,7 @@ export const questionsService = {
         }
 
         // For each response, fetch the profile separately if user_id exists
-        const responsesWithProfiles = await Promise.all((question.reponses || []).map(async (reponse) => {
+        const responsesWithProfiles = await Promise.all((question.reponses || []).map(async (reponse: any) => {
           let profile = null;
           if (reponse.user_id) {
             const { data: profileData } = await supabase

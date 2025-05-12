@@ -136,7 +136,7 @@ export interface Question {
   date_creation: string;
   statut: string;
   created_at?: string | null;
-  user_id?: string | null;
+  user_id?: string | null;  // Added user_id property
   
   // Relations
   documents?: { nom: string } | null | { [key: string]: any };
