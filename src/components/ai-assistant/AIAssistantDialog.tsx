@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Bot, User, Send, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useAIAssistant } from '@/hooks/useAIAssistant';
 
 type Message = {
   id: string;
@@ -28,6 +29,7 @@ const SUGGESTED_QUESTIONS = [
 ];
 
 const AIAssistantDialog: React.FC<AIAssistantDialogProps> = ({ open, onOpenChange }) => {
+  const { message: initialMessage, clearMessage } = useAIAssistant();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '0',
@@ -41,6 +43,14 @@ const AIAssistantDialog: React.FC<AIAssistantDialogProps> = ({ open, onOpenChang
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  // Set initial message if provided
+  useEffect(() => {
+    if (initialMessage && open) {
+      setInput(initialMessage);
+      clearMessage();
+    }
+  }, [initialMessage, open, clearMessage]);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -76,7 +86,6 @@ const AIAssistantDialog: React.FC<AIAssistantDialogProps> = ({ open, onOpenChang
       const response = await supabase.functions.invoke('ai-assistant', {
         body: {
           query: input,
-          supabaseClient: supabase
         },
       });
       
@@ -156,7 +165,7 @@ const AIAssistantDialog: React.FC<AIAssistantDialogProps> = ({ open, onOpenChang
                         {message.role === 'assistant' ? 'Assistant' : 'Vous'}
                       </span>
                     </div>
-                    <p className="text-sm">{message.content}</p>
+                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                   </div>
                 </div>
               ))}
