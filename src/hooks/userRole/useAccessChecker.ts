@@ -1,6 +1,6 @@
 
 import { UserRole, MarcheSpecificRole } from './types';
-import { canDiffuseMarche, canVisaMarche, canCreateMarche, canManageRolesMarche } from './permissions';
+import { canDiffuseMarche, canVisaMarche, canCreateMarche as checkCanCreateMarche, canManageRolesMarche } from './permissions';
 
 /**
  * Hook for checking various access permissions based on user roles
@@ -25,7 +25,7 @@ export function useAccessChecker(
   };
   
   // Check if user can create markets (global permission)
-  const canCreateMarche = canCreateMarche(globalRole);
+  const canCreateMarche = checkCanCreateMarche(globalRole);
   
   return {
     canDiffuse,
