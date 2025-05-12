@@ -13,6 +13,7 @@ export interface QuestionWithRelations extends Omit<Question, 'documents' | 'fas
   date_creation: string;
   statut: string;
   created_at?: string | null;
+  user_id?: string | null; // Make sure user_id is included here
   documents?: { nom: string } | null | { [key: string]: any };
   fascicules?: { nom: string } | null | { [key: string]: any };
   profiles?: Profile | null | { [key: string]: any };
@@ -40,7 +41,7 @@ export const questionsService = {
           *,
           documents(nom),
           fascicules(nom),
-          profiles:user_id(id, nom, prenom, entreprise),
+          profiles(id, nom, prenom, entreprise),
           reponses(
             id, 
             content, 

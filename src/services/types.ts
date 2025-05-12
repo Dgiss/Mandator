@@ -1,4 +1,3 @@
-
 // Type pour un marché
 export interface Marche {
   id: string;
@@ -152,7 +151,7 @@ export interface Reponse {
   question_id: string;
   content: string;
   user_id?: string | null;
-  date_creation?: string | null; // Changed from required to optional to match ReponseWithRelations
+  date_creation?: string | null;
   attachment_path?: string | null;
   created_at?: string | null;
   
