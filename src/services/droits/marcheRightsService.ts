@@ -21,14 +21,12 @@ export const marcheRightsService = {
           // Get user profile data
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
-            .select('id, nom, prenom')
+            .select('id, nom, prenom, email')
             .eq('id', droit.user_id)
             .single();
 
-          // Get user email from auth.users (via profiles and id)
-          // This will depend on how your auth is structured
           const userInfo = profileError ? {} : {
-            email: droit.user_id, // Default to user_id which might be email
+            email: profileData?.email || droit.user_id,
             nom: profileData?.nom || '',
             prenom: profileData?.prenom || ''
           };

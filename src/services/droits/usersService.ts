@@ -1,95 +1,38 @@
 
 import { supabase } from '@/lib/supabase';
-import { UserInfo } from './types';
 
 export const usersService = {
-  // Get users with their global role
-  async getUsers(): Promise<UserInfo[]> {
+  // Get all users 
+  async getUsers(): Promise<any[]> {
     try {
-      // Get all profiles with their global role
-      const { data: profiles, error: profilesError } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
-        .select('id, nom, prenom, role_global, email');
+        .select('id, nom, prenom, email, role_global')
+        .order('nom', { ascending: true });
 
-      if (profilesError) throw profilesError;
+      if (error) throw error;
 
-      // Map through profiles to format user data properly
-      const usersWithRoles = profiles.map(profile => ({
-        id: profile.id,
-        nom: profile.nom || '',
-        prenom: profile.prenom || '',
-        role_global: profile.role_global || 'STANDARD',
-        email: profile.email || profile.id // Use the email field if available, otherwise fallback to ID
-      }));
-
-      return usersWithRoles;
+      return data || [];
     } catch (error) {
       console.error('Erreur lors de la récupération des utilisateurs:', error);
       throw error;
     }
   },
 
-  // Search users by search term (email, name, first name)
-  async searchUsers(searchTerm: string): Promise<UserInfo[]> {
-    if (!searchTerm || searchTerm.trim() === '') {
-      return []; // Return empty array if search term is empty
-    }
-
+  // Search for users by name, email, etc.
+  async searchUsers(searchTerm: string): Promise<any[]> {
     try {
-      // First try using the search_profiles database function which now includes email search
+      // Use security definer function to avoid RLS issues
       const { data, error } = await supabase
-        .rpc('search_profiles', { search_term: searchTerm });
-      
-      if (error) {
-        console.error('RPC search_profiles error:', error);
-        
-        // Fallback: If the RPC fails, perform a direct search with ILIKE
-        const { data: directSearchData, error: directSearchError } = await supabase
-          .from('profiles')
-          .select('id, nom, prenom, role_global, email')
-          .or(`email.ilike.%${searchTerm}%,nom.ilike.%${searchTerm}%,prenom.ilike.%${searchTerm}%,id.ilike.%${searchTerm}%`);
-        
-        if (directSearchError) throw directSearchError;
-        
-        // Map through profiles to format user data properly
-        const directSearchResults = (directSearchData || []).map(profile => ({
-          id: profile.id,
-          nom: profile.nom || '',
-          prenom: profile.prenom || '',
-          role_global: profile.role_global || 'STANDARD',
-          email: profile.email || profile.id
-        }));
-        
-        return directSearchResults;
-      }
-
-      // Map through profiles to format user data properly
-      const usersWithRoles = (data || []).map(profile => ({
-        id: profile.id,
-        nom: profile.nom || '',
-        prenom: profile.prenom || '',
-        role_global: profile.role_global || 'STANDARD',
-        email: profile.email || profile.id // Use the email field if available, otherwise fallback to ID
-      }));
-
-      return usersWithRoles;
-    } catch (error) {
-      console.error('Erreur lors de la recherche des utilisateurs:', error);
-      return []; // Return empty array on error
-    }
-  },
-
-  // Update global role for a user
-  async updateGlobalRole(userId: string, role: string): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ role_global: role })
-        .eq('id', userId);
+        .rpc('search_profiles', {
+          search_term: searchTerm
+        });
 
       if (error) throw error;
+
+      return data || [];
     } catch (error) {
-      console.error('Erreur lors de la mise à jour du rôle global:', error);
+      console.error('Erreur lors de la recherche d\'utilisateurs:', error);
       throw error;
     }
   }

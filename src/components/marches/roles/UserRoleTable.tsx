@@ -60,14 +60,18 @@ const UserRoleTable: React.FC<UserRoleTableProps> = ({
                     {droit.userInfo?.nom || droit.userInfo?.prenom ? (
                       <div>
                         <div>{`${droit.userInfo?.prenom || ''} ${droit.userInfo?.nom || ''}`}</div>
-                        <div className="text-xs text-muted-foreground">{droit.userInfo?.email}</div>
                       </div>
                     ) : (
-                      droit.userInfo?.email || droit.user_id
+                      'Non renseigné'
                     )}
                   </TableCell>
                   <TableCell>
-                    {user?.role_global || 'STANDARD'}
+                    {droit.userInfo?.email || user?.email || droit.user_id}
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-xs text-muted-foreground">
+                      {user?.role_global || 'STANDARD'}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <RoleTypeBadge role={droit.role_specifique} />
