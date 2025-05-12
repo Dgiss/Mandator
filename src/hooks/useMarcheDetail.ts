@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Marche, Visa } from '@/services/types';
-import { fetchMarcheById } from '@/services/marchesService';
+import { fetchMarcheById } from '@/services/marches';
 import { visasService } from '@/services/visasService';
 import { versionsService } from '@/services/versionsService';
 import { useToast } from '@/hooks/use-toast';

@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Marche } from '@/services/types';
-import { fetchMarches } from '@/services/marchesService';
+import { fetchMarches } from '@/services/marches';
 import MarchesList from '@/components/marches/MarchesList';
 import MarchesFilters from '@/components/marches/MarchesFilters';
 import MarketCreationModal from '@/components/marches/MarketCreationModal';
