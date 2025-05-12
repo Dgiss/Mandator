@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { HfInference } from 'https://esm.sh/@huggingface/inference@2.3.2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -126,13 +127,13 @@ const predefinedQueries = {
   }
 };
 
-// Process the user's query
+// Process the user's query using Hugging Face
 async function processQuery(query, client) {
   try {
-    // Get the OpenAI API key from environment
-    const openAiApiKey = Deno.env.get("OPENAI_API_KEY");
-    if (!openAiApiKey) {
-      throw new Error("OPENAI_API_KEY is not set in environment variables");
+    // Get the Hugging Face API token from environment
+    const hfToken = Deno.env.get("HUGGING_FACE_TOKEN");
+    if (!hfToken) {
+      throw new Error("HUGGING_FACE_TOKEN is not set in environment variables");
     }
     
     // Extract market ID from the query if present (we'll add functionality for this later)
@@ -230,7 +231,6 @@ async function processQuery(query, client) {
     else if ((lowerQuery.includes('résumé') || lowerQuery.includes('synthèse')) && 
              (lowerQuery.includes('marché') || lowerQuery.includes('marche'))) {
       try {
-        // Use OpenAI to extract market ID if present, or use generic summary if not
         if (marcheId) {
           const summary = await predefinedQueries.getMarcheSummary(client, marcheId);
           return {
@@ -263,7 +263,9 @@ async function processQuery(query, client) {
       }
     }
     
-    // If the query doesn't match any predefined patterns, use OpenAI to generate a response
+    // If the query doesn't match any predefined patterns, use Hugging Face to generate a response
+    const hf = new HfInference(hfToken);
+    
     const systemPrompt = `
       Tu es un assistant spécialisé dans le domaine de la gestion documentaire pour les marchés publics.
       Tu connais bien les concepts de documents, versions, visas, diffusion, approbation.
@@ -280,30 +282,19 @@ async function processQuery(query, client) {
       - Combien de documents sont approuvés ?
     `;
     
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${openAiApiKey}`
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: query }
-        ],
-        temperature: 0.7
-      })
+    // Using the Hugging Face Inference API for text generation
+    const result = await hf.textGeneration({
+      model: "mistralai/Mistral-7B-Instruct-v0.2", // Using a French-capable model
+      inputs: `<s>[INST]${systemPrompt}\nQuestion utilisateur: ${query}[/INST]`,
+      parameters: {
+        max_new_tokens: 500,
+        temperature: 0.7,
+        top_p: 0.95
+      }
     });
     
-    const result = await response.json();
-    
-    if (result.error) {
-      throw new Error(`OpenAI API error: ${result.error.message}`);
-    }
-    
     return {
-      response: result.choices[0].message.content,
+      response: result.generated_text,
       queryType: 'general'
     };
     
