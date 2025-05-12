@@ -5,7 +5,7 @@ import { Marche } from '@/services/types';
 // Récupérer tous les marchés depuis Supabase
 export const fetchMarches = async (): Promise<Marche[]> => {
   try {
-    console.log("Récupération de tous les marchés...");
+    console.log("Récupération des marchés auxquels l'utilisateur a accès...");
     
     // Vérifier que le client Supabase est correctement initialisé
     if (!supabase) {
@@ -54,6 +54,7 @@ export const fetchMarches = async (): Promise<Marche[]> => {
 // Récupérer un marché spécifique par son ID
 export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
   try {
+    // L'accès au marché est contrôlé par les politiques RLS de Supabase
     const { data, error } = await supabase
       .from('marches')
       .select('*')
@@ -62,6 +63,11 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
     
     if (error) {
       console.error(`Erreur lors de la récupération du marché ${id}:`, error);
+      if (error.code === 'PGRST116') {
+        // Erreur de politique RLS - l'utilisateur n'a pas accès à ce marché
+        console.warn("L'utilisateur n'a pas accès à ce marché");
+        return null;
+      }
       throw error;
     }
     

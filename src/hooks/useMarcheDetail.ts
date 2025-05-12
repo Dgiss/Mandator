@@ -22,6 +22,7 @@ export interface FasciculeProgress {
 interface UseMarcheDetailReturn {
   marche: Marche | null;
   loading: boolean;
+  error: boolean;
   visasEnAttente: Visa[];
   documentStats: DocumentStats;
   fasciculeProgress: FasciculeProgress[];
@@ -69,13 +70,16 @@ export const useMarcheDetail = (id: string | undefined): UseMarcheDetailReturn =
       onError: (error: Error) => {
         console.error("Erreur lors du chargement des données du marché:", error);
         toast({
-          title: "Erreur",
-          description: "Impossible de charger les données du marché",
+          title: "Accès refusé",
+          description: "Vous n'avez pas accès à ce marché",
           variant: "destructive",
         });
       }
     }
   });
+
+  // Les autres requêtes ne devraient s'exécuter que si le marché est accessible
+  const shouldContinue = !!marcheQuery.data && !marcheQuery.isError;
 
   // Requête pour récupérer les visas
   const visasQuery = useQuery({
@@ -84,7 +88,7 @@ export const useMarcheDetail = (id: string | undefined): UseMarcheDetailReturn =
       if (!id) return [];
       return await visasService.getVisasByMarcheId(id);
     },
-    enabled: !!id && !!marcheQuery.data,
+    enabled: !!id && shouldContinue,
     staleTime: 5 * 60 * 1000,
     retry: 1
   });
@@ -108,7 +112,7 @@ export const useMarcheDetail = (id: string | undefined): UseMarcheDetailReturn =
       
       return data || [];
     },
-    enabled: !!id && !!marcheQuery.data,
+    enabled: !!id && shouldContinue,
     staleTime: 5 * 60 * 1000,
     retry: 1
   });
@@ -131,7 +135,7 @@ export const useMarcheDetail = (id: string | undefined): UseMarcheDetailReturn =
       
       return data || [];
     },
-    enabled: !!id && !!marcheQuery.data,
+    enabled: !!id && shouldContinue,
     staleTime: 5 * 60 * 1000,
     retry: 1
   });
@@ -185,9 +189,13 @@ export const useMarcheDetail = (id: string | undefined): UseMarcheDetailReturn =
   // État de chargement global
   const loading = marcheQuery.isLoading || visasQuery.isLoading || documentsQuery.isLoading || fasciculesQuery.isLoading;
 
+  // État d'erreur (accès refusé)
+  const error = marcheQuery.isError;
+
   return {
     marche: marcheQuery.data,
     loading,
+    error,
     visasEnAttente,
     documentStats,
     fasciculeProgress,

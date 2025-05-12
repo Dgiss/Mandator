@@ -3,7 +3,7 @@
  * Authentication utility functions for the application
  */
 import { supabase } from '@/lib/supabase';
-import { UserRole, MarcheSpecificRole } from '@/hooks/useUserRole';
+import { UserRole, MarcheSpecificRole } from '@/hooks/userRole/types';
 
 /**
  * Check if the user is authenticated
@@ -57,13 +57,12 @@ export const getMarcheSpecificRole = async (marcheId: string): Promise<MarcheSpe
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
   
-  // Récupérer le rôle spécifique pour ce marché
+  // Récupérer le rôle spécifique pour ce marché via la fonction RPC
   const { data, error } = await supabase
-    .from('droits_marche')
-    .select('role_specifique')
-    .eq('user_id', user.id)
-    .eq('marche_id', marcheId)
-    .maybeSingle();
+    .rpc('get_user_role_for_marche', {
+      user_id: user.id,
+      marche_id: marcheId
+    });
   
   if (error) {
     console.error('Erreur lors de la récupération du rôle spécifique:', error);
@@ -71,7 +70,7 @@ export const getMarcheSpecificRole = async (marcheId: string): Promise<MarcheSpe
   }
   
   // Retourner le rôle spécifique
-  return data?.role_specifique as MarcheSpecificRole || null;
+  return data as MarcheSpecificRole || null;
 };
 
 /**
@@ -147,13 +146,22 @@ export const canCreateMarches = async (): Promise<boolean> => {
  * @returns {Promise<boolean>} True si l'utilisateur a accès au marché
  */
 export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
-  // Vérifier d'abord le rôle global
-  const globalRole = await getGlobalUserRole();
-  
-  // Les administrateurs ont accès à tous les marchés
-  if (globalRole === 'ADMIN') return true;
-  
-  // Vérifier si l'utilisateur a un rôle spécifique pour ce marché
-  const specificRole = await getMarcheSpecificRole(marcheId);
-  return specificRole !== null;
+  // Cette fonction utilise la RPC pour vérifier l'accès, ce qui respecte les politiques de sécurité
+  try {
+    const { data, error } = await supabase
+      .rpc('user_has_access_to_marche', {
+        user_id: (await supabase.auth.getUser()).data.user?.id,
+        marche_id: marcheId
+      });
+    
+    if (error) {
+      console.error('Erreur lors de la vérification des droits d\'accès:', error);
+      return false;
+    }
+    
+    return !!data;
+  } catch (error) {
+    console.error('Exception lors de la vérification des droits d\'accès:', error);
+    return false;
+  }
 };

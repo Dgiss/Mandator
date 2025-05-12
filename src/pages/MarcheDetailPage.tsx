@@ -4,6 +4,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import PageLayout from '@/components/layout/PageLayout';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 // Custom hook pour la logique du marché
 import { useMarcheDetail } from '@/hooks/useMarcheDetail';
@@ -32,6 +34,7 @@ export default function MarcheDetailPage() {
   const { 
     marche, 
     loading, 
+    error,
     visasEnAttente, 
     documentStats, 
     fasciculeProgress, 
@@ -45,6 +48,30 @@ export default function MarcheDetailPage() {
       <PageLayout>
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-btp-blue"></div>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <PageLayout>
+        <div className="flex flex-col items-center justify-center h-64">
+          <Alert variant="destructive" className="max-w-md">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Accès refusé</AlertTitle>
+            <AlertDescription>
+              Vous n'avez pas les droits nécessaires pour accéder à ce marché. 
+              Veuillez contacter l'administrateur ou le maître d'œuvre du marché.
+            </AlertDescription>
+          </Alert>
+          <Button 
+            variant="btpPrimary" 
+            onClick={() => navigate('/marches')}
+            className="mt-6"
+          >
+            Retour à la liste des marchés
+          </Button>
         </div>
       </PageLayout>
     );
