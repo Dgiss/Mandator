@@ -1,37 +1,38 @@
 
 import { supabase } from '@/lib/supabase';
+import { UserRole } from '@/hooks/userRole/types';
 
 export const accessControlService = {
-  // Check if current user has rights to a specific market
+  // Check if a user has access to a specific market
   async checkUserAccessToMarche(marcheId: string): Promise<boolean> {
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return false;
+    try {
+      const { data, error } = await supabase
+        .rpc('user_has_access_to_marche', {
+          user_id: (await supabase.auth.getUser()).data.user?.id,
+          marche_id: marcheId
+        });
 
-    // Check if user is admin using our new function
-    const { data: isAdminResult, error: adminError } = await supabase
-      .rpc('is_admin');
-
-    if (adminError) {
-      console.error('Erreur lors de la vérification du statut admin:', adminError);
-      return false;
-    }
-
-    // Administrators have access to all markets
-    if (isAdminResult) return true;
-
-    // For others, check if they have access using our new security definer function
-    const { data, error } = await supabase
-      .rpc('user_has_access_to_marche', {
-        user_id: user.id,
-        marche_id: marcheId
-      });
-
-    if (error) {
+      if (error) throw error;
+      
+      return data || false;
+    } catch (error) {
       console.error('Erreur lors de la vérification des droits:', error);
       return false;
     }
+  },
 
-    return !!data;
+  // Update a user's global role
+  async updateGlobalRole(userId: string, newRole: UserRole): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role_global: newRole })
+        .eq('id', userId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du rôle global:', error);
+      throw error;
+    }
   }
 };
