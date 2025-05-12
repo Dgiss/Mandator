@@ -165,8 +165,8 @@ const MarcheQuestionForm: React.FC<MarcheQuestionFormProps> = ({ marcheId, onSub
     setAttachment(null);
   };
 
-  // Check if form is currently submitting
-  const isFormSubmitting = isLoading || isSubmitting || form.formState.isSubmitting;
+  // Check if form is currently submitting - only consider form submission state, not loading state
+  const isFormSubmitting = isSubmitting;
 
   return (
     <Card className="mb-6">
