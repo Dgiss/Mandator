@@ -15,7 +15,7 @@ export const initializeStorageBuckets = async () => {
       const { error: createQuestionsError } = await supabase
         .storage
         .createBucket('questions', {
-          public: false,
+          public: true, // Set bucket to public directly during creation
           fileSizeLimit: 10485760, // 10MB in bytes
           allowedMimeTypes: [
             'application/pdf', 
@@ -44,7 +44,7 @@ export const initializeStorageBuckets = async () => {
       const { error: createResponsesError } = await supabase
         .storage
         .createBucket('reponses', {
-          public: false,
+          public: true, // Set bucket to public directly during creation
           fileSizeLimit: 10485760, // 10MB in bytes
           allowedMimeTypes: [
             'application/pdf', 
@@ -64,25 +64,8 @@ export const initializeStorageBuckets = async () => {
       }
     }
     
-    // Set public access policy for questions bucket
-    const { error: questionsPublicError } = await supabase
-      .storage
-      .from('questions')
-      .setPublic();
-      
-    if (questionsPublicError) {
-      console.error('Failed to set questions bucket to public:', questionsPublicError);
-    }
-    
-    // Set public access policy for responses bucket
-    const { error: responsesPublicError } = await supabase
-      .storage
-      .from('reponses')
-      .setPublic();
-      
-    if (responsesPublicError) {
-      console.error('Failed to set responses bucket to public:', responsesPublicError);
-    }
+    // Note: We're removing the setPublic() calls as they don't exist
+    // Instead, we've set the buckets to be public during creation with the public: true option
     
   } catch (error) {
     console.error('Error initializing storage buckets:', error);
