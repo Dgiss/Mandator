@@ -13,6 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { droitsService, UserDroit } from '@/services/droitsService';
 import { useUserRole, MarcheSpecificRole } from '@/hooks/useUserRole';
+import { supabase } from '@/lib/supabase'; // Add this import to fix the error
 
 interface MarcheCollaborateursProps {
   marcheId: string;
