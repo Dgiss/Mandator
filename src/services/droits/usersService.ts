@@ -36,7 +36,7 @@ export const usersService = {
     }
 
     try {
-      // Modify the search_profiles database function call to include email search
+      // First try using the search_profiles database function which now includes email search
       const { data, error } = await supabase
         .rpc('search_profiles', { search_term: searchTerm });
       
