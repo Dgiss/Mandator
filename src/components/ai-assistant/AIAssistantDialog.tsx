@@ -40,6 +40,7 @@ const AIAssistantDialog: React.FC<AIAssistantDialogProps> = ({ open, onOpenChang
     },
   ]);
   const [input, setInput] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(true);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -81,6 +82,8 @@ const AIAssistantDialog: React.FC<AIAssistantDialogProps> = ({ open, onOpenChang
     setMessages((prev) => [...prev, newUserMessage]);
     setInput('');
     setLoading(true);
+    // Hide suggestions while loading
+    setShowSuggestions(false);
     
     try {
       const response = await supabase.functions.invoke('ai-assistant', {
@@ -103,6 +106,8 @@ const AIAssistantDialog: React.FC<AIAssistantDialogProps> = ({ open, onOpenChang
       };
       
       setMessages((prev) => [...prev, newAssistantMessage]);
+      // Show suggestions again after response
+      setShowSuggestions(true);
     } catch (error) {
       console.error("Error sending message:", error);
       toast({
@@ -119,6 +124,8 @@ const AIAssistantDialog: React.FC<AIAssistantDialogProps> = ({ open, onOpenChang
       };
       
       setMessages((prev) => [...prev, errorMessage]);
+      // Show suggestions again after error
+      setShowSuggestions(true);
     } finally {
       setLoading(false);
     }
@@ -194,7 +201,7 @@ const AIAssistantDialog: React.FC<AIAssistantDialogProps> = ({ open, onOpenChang
           </div>
         </ScrollArea>
 
-        {messages.length === 1 && (
+        {showSuggestions && (
           <div className="p-4 border-t">
             <h4 className="text-xs font-medium mb-2">Questions suggérées :</h4>
             <div className="flex flex-wrap gap-2">

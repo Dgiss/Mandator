@@ -124,6 +124,35 @@ const predefinedQueries = {
     const { data, error } = await client.rpc('execute_query', { query_text: query });
     if (error) throw error;
     return data;
+  },
+
+  // Get overall documents stats
+  async getOverallDocumentsStats(client) {
+    const query = `
+      SELECT 
+        COUNT(*) as total_documents,
+        SUM(CASE WHEN statut = 'En attente de diffusion' THEN 1 ELSE 0 END) as pending_distribution,
+        SUM(CASE WHEN statut = 'Approuvé' THEN 1 ELSE 0 END) as approved
+      FROM documents
+    `;
+    
+    const { data, error } = await client.rpc('execute_query', { query_text: query });
+    if (error) throw error;
+    return data[0];
+  },
+
+  // Get overall fascicules progress
+  async getOverallFasciculesProgress(client) {
+    const query = `
+      SELECT 
+        COUNT(*) as total_fascicules,
+        AVG(progression) as avg_progress
+      FROM fascicules
+    `;
+    
+    const { data, error } = await client.rpc('execute_query', { query_text: query });
+    if (error) throw error;
+    return data[0];
   }
 };
 
@@ -243,13 +272,23 @@ async function processQuery(query, client) {
           const pendingVisas = await predefinedQueries.countPendingVisas(client);
           const undistributedDocs = await predefinedQueries.countUndistributedDocuments(client);
           const rejectedVersions = await predefinedQueries.countRejectedVersions(client);
+          const docsStats = await predefinedQueries.getOverallDocumentsStats(client);
+          const fasciculesStats = await predefinedQueries.getOverallFasciculesProgress(client);
           
           return {
-            response: `Résumé global: ${pendingVisas} visas en attente, ${undistributedDocs} documents à diffuser, ${rejectedVersions} versions rejetées`,
+            response: `Résumé global: 
+- ${pendingVisas} visas en attente
+- ${undistributedDocs} documents à diffuser
+- ${rejectedVersions} versions rejetées
+- ${docsStats.total_documents} documents au total
+- ${docsStats.approved} documents approuvés
+- ${fasciculesStats.total_fascicules} fascicules avec une progression moyenne de ${Math.round(fasciculesStats.avg_progress)}%`,
             data: {
               pendingVisas,
               undistributedDocs,
-              rejectedVersions
+              rejectedVersions,
+              docsStats,
+              fasciculesStats
             },
             queryType: 'global_summary'
           };
@@ -293,8 +332,16 @@ async function processQuery(query, client) {
       }
     });
     
+    // Extract the generated text
+    let generatedText = result.generated_text || "";
+    
+    // Clean up the response if needed
+    if (generatedText.includes("[/INST]")) {
+      generatedText = generatedText.split("[/INST]").pop() || "";
+    }
+    
     return {
-      response: result.generated_text,
+      response: generatedText.trim(),
       queryType: 'general'
     };
     
@@ -385,6 +432,25 @@ serve(async (req) => {
                 visas_en_attente: 12,
                 documents_a_diffuser: 8,
                 versions_rejetees: 3
+              }], 
+              error: null 
+            };
+          }
+          else if (query_text.includes('COUNT(*) as total_documents')) {
+            return {
+              data: [{
+                total_documents: 55,
+                pending_distribution: 8,
+                approved: 42
+              }],
+              error: null
+            };
+          }
+          else if (query_text.includes('AVG(progression)')) {
+            return { 
+              data: [{
+                total_fascicules: 12,
+                avg_progress: 68.5
               }], 
               error: null 
             };
