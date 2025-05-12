@@ -1,3 +1,4 @@
+
 import { supabase } from '@/lib/supabase';
 import { Marche } from '@/services/types';
 
@@ -21,7 +22,7 @@ export const fetchMarches = async (): Promise<Marche[]> => {
       throw error;
     }
     
-    console.log("Marchés récupérés:", data);
+    console.log("Marchés récupérés:", data?.length || 0);
     
     // S'assurer que les données sont bien formatées avant de les retourner
     const formattedMarches = Array.isArray(data) ? data.map((marche: any) => ({
@@ -38,7 +39,7 @@ export const fetchMarches = async (): Promise<Marche[]> => {
       created_at: marche.created_at || null
     })) : [];
     
-    console.log("Marchés formatés:", formattedMarches);
+    console.log("Marchés formatés:", formattedMarches.length);
     return formattedMarches as Marche[];
   } catch (error) {
     console.error('Exception lors de la récupération des marchés:', error);
@@ -60,10 +61,16 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
         marche_id: id
       });
       
+    if (hasAccess.error) {
+      console.error(`Erreur lors de la vérification d'accès au marché ${id}:`, hasAccess.error);
+    }
+    
     if (hasAccess.error || !hasAccess.data) {
-      console.error(`Accès refusé au marché ${id}:`, hasAccess.error);
+      console.error(`Accès refusé au marché ${id}`);
       throw new Error('Accès refusé');
     }
+    
+    console.log(`Utilisateur a accès au marché ${id}, récupération des détails...`);
     
     // L'utilisateur a accès, récupérer les données du marché
     const { data, error } = await supabase
@@ -116,6 +123,12 @@ export const createMarche = async (marcheData: {
       marcheData.datecreation = new Date().toISOString();
     }
     
+    // Assurer que le user_id est défini
+    if (!marcheData.user_id) {
+      const { data: { user } } = await supabase.auth.getUser();
+      marcheData.user_id = user?.id;
+    }
+    
     console.log("Création d'un nouveau marché avec les données:", marcheData);
     
     const { data, error } = await supabase
@@ -130,6 +143,22 @@ export const createMarche = async (marcheData: {
     }
     
     console.log("Marché créé avec succès:", data);
+    
+    // Après la création réussie, attribuer automatiquement les droits de MOE au créateur
+    if (data && data.id && marcheData.user_id) {
+      try {
+        await supabase.rpc('assign_role_to_user', {
+          user_id: marcheData.user_id,
+          marche_id: data.id,
+          role_specifique: 'MOE'
+        });
+        console.log(`Rôle MOE attribué à ${marcheData.user_id} pour le marché ${data.id}`);
+      } catch (roleError) {
+        console.error('Erreur lors de l\'attribution du rôle MOE au créateur:', roleError);
+        // On continue même en cas d'erreur d'attribution de rôle
+      }
+    }
+    
     return data as Marche;
   } catch (error) {
     console.error('Exception lors de la création du marché:', error);

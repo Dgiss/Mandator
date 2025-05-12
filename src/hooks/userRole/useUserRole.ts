@@ -49,11 +49,44 @@ export function useUserRole(marcheId?: string): UserRoleInfo {
         // Si un marcheId est fourni, récupérer le rôle spécifique pour ce marché
         if (marcheId) {
           const specificRole = await fetchMarcheRole(user.id, marcheId);
-          setMarcheRoles(prev => ({...prev, [marcheId]: specificRole}));
+          
+          // Si pas de rôle spécifique, vérifier si l'utilisateur est le créateur du marché
+          if (!specificRole) {
+            const { data: marcheData, error: marcheError } = await supabase
+              .from('marches')
+              .select('user_id')
+              .eq('id', marcheId)
+              .single();
+            
+            if (!marcheError && marcheData && marcheData.user_id === user.id) {
+              // L'utilisateur est le créateur du marché, attribuer le rôle MOE
+              setMarcheRoles(prev => ({...prev, [marcheId]: 'MOE'}));
+              return;
+            }
+          } else {
+            setMarcheRoles(prev => ({...prev, [marcheId]: specificRole}));
+          }
         } else {
           // Sinon, récupérer tous les rôles spécifiques de l'utilisateur
           const userMarcheRoles = await fetchMarcheRoles(user.id);
-          setMarcheRoles(userMarcheRoles);
+          
+          // Ajouter les marchés dont l'utilisateur est créateur
+          const { data: createdMarches, error: marchesError } = await supabase
+            .from('marches')
+            .select('id')
+            .eq('user_id', user.id);
+          
+          if (!marchesError && createdMarches) {
+            const updatedRoles = { ...userMarcheRoles };
+            createdMarches.forEach(marche => {
+              if (!updatedRoles[marche.id]) {
+                updatedRoles[marche.id] = 'MOE';
+              }
+            });
+            setMarcheRoles(updatedRoles);
+          } else {
+            setMarcheRoles(userMarcheRoles);
+          }
         }
       } catch (error) {
         console.error('Erreur:', error);
@@ -75,6 +108,21 @@ export function useUserRole(marcheId?: string): UserRoleInfo {
     
     // Sinon, le récupérer depuis la base de données
     const role = await fetchMarcheRole(user?.id, marcheId);
+    
+    // Si pas de rôle spécifique, vérifier si l'utilisateur est le créateur du marché
+    if (!role && user) {
+      const { data: marcheData, error: marcheError } = await supabase
+        .from('marches')
+        .select('user_id')
+        .eq('id', marcheId)
+        .single();
+      
+      if (!marcheError && marcheData && marcheData.user_id === user.id) {
+        // Mettre à jour le cache
+        setMarcheRoles(prev => ({...prev, [marcheId]: 'MOE'}));
+        return 'MOE';
+      }
+    }
     
     // Mettre à jour le cache
     setMarcheRoles(prev => ({...prev, [marcheId]: role}));

@@ -9,6 +9,7 @@ export const fetchMarcheRoles = async (userId: string | undefined): Promise<Reco
   if (!userId) return {};
   
   try {
+    // Récupérer les rôles spécifiques attribués
     const { data, error } = await supabase
       .from('droits_marche')
       .select('marche_id, role_specifique')
@@ -23,6 +24,22 @@ export const fetchMarcheRoles = async (userId: string | undefined): Promise<Reco
     data?.forEach(item => {
       rolesMap[item.marche_id] = item.role_specifique as MarcheSpecificRole;
     });
+    
+    // Récupérer également les marchés dont l'utilisateur est le créateur
+    const { data: createdMarches, error: marchesError } = await supabase
+      .from('marches')
+      .select('id')
+      .eq('user_id', userId);
+    
+    if (!marchesError && createdMarches) {
+      createdMarches.forEach(marche => {
+        if (!rolesMap[marche.id]) {
+          // Si l'utilisateur est le créateur du marché mais n'a pas de rôle explicite,
+          // lui attribuer le rôle MOE par défaut
+          rolesMap[marche.id] = 'MOE';
+        }
+      });
+    }
     
     return rolesMap;
   } catch (error) {
@@ -50,10 +67,25 @@ export const fetchMarcheRole = async (
     
     if (error) {
       console.error(`Pas de rôle spécifique trouvé pour le marché ${marcheId}:`, error);
-      return null;
     }
     
-    return data as MarcheSpecificRole;
+    if (data) {
+      return data as MarcheSpecificRole;
+    }
+    
+    // Vérifier si l'utilisateur est le créateur du marché
+    const { data: marcheData, error: marcheError } = await supabase
+      .from('marches')
+      .select('user_id')
+      .eq('id', marcheId)
+      .single();
+    
+    if (!marcheError && marcheData && marcheData.user_id === userId) {
+      // L'utilisateur est le créateur du marché, attribuer le rôle MOE
+      return 'MOE';
+    }
+    
+    return null;
   } catch (error) {
     console.error('Erreur:', error);
     return null;

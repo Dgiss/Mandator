@@ -31,6 +31,8 @@ export const fetchMarcheStats = async (): Promise<MarcheStats> => {
       throw error;
     }
     
+    console.log("Nombre de marchés accessibles récupérés:", marches?.length || 0);
+    
     // Valeurs par défaut en cas de problème
     const stats: MarcheStats = {
       enCours: 0,
@@ -98,12 +100,16 @@ export const fetchRecentMarches = async (limit: number = 3): Promise<Marche[]> =
       return [];
     }
     
+    console.log("Nombre total de marchés récupérés avant filtrage:", data.length);
+    
     // Trier par date de création (plus récent d'abord) et limiter le nombre
     const sortedData = [...data].sort((a, b) => {
       const dateA = a.datecreation ? new Date(a.datecreation).getTime() : 0;
       const dateB = b.datecreation ? new Date(b.datecreation).getTime() : 0;
       return dateB - dateA;
     }).slice(0, limit);
+    
+    console.log("Marchés gardés après tri et filtre:", sortedData.length);
     
     // Formater les marchés pour s'assurer que toutes les propriétés sont définies
     const formattedData = sortedData.map((marche: any) => ({
