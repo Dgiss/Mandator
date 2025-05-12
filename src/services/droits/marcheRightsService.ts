@@ -7,14 +7,14 @@ export const marcheRightsService = {
   // Get all rights for a specific market
   async getDroitsByMarcheId(marcheId: string): Promise<UserDroit[]> {
     try {
-      // Fetch rights from droits_marche table
-      const { data: droitsData, error: droitsError } = await supabase
-        .from('droits_marche')
-        .select('*')
-        .eq('marche_id', marcheId);
-
-      if (droitsError) throw droitsError;
-
+      // Use direct query instead of chained query to avoid recursion
+      const { data: droitsData, error } = await supabase.rpc(
+        'get_droits_for_marche', 
+        { marche_id_param: marcheId }
+      );
+      
+      if (error) throw error;
+      
       // For each right, fetch the corresponding user info
       const droitsWithUserInfo = await Promise.all(
         (droitsData || []).map(async (droit) => {
@@ -50,10 +50,11 @@ export const marcheRightsService = {
   // Get all rights for a user
   async getDroitsByUserId(userId: string): Promise<UserDroit[]> {
     try {
-      const { data, error } = await supabase
-        .from('droits_marche')
-        .select('*')
-        .eq('user_id', userId);
+      // Use RPC call to avoid recursive RLS issues
+      const { data, error } = await supabase.rpc(
+        'get_droits_for_user',
+        { user_id_param: userId }
+      );
 
       if (error) throw error;
       
@@ -67,7 +68,7 @@ export const marcheRightsService = {
   // Assign a role to a user for a specific market
   async assignRole(userId: string, marcheId: string, role: MarcheSpecificRole): Promise<void> {
     try {
-      // Use our new security definer function to bypass RLS
+      // Use our security definer function to bypass RLS
       const { error } = await supabase
         .rpc('assign_role_to_user', {
           user_id: userId, 
@@ -102,11 +103,11 @@ export const marcheRightsService = {
   // Remove role assignment for a user on a market
   async removeRole(userId: string, marcheId: string): Promise<void> {
     try {
-      // Use our new security definer function to bypass RLS
+      // Use our security definer function to bypass RLS
       const { error } = await supabase
         .rpc('remove_role_from_user', {
           user_id: userId, 
-          marche_id: marcheId
+          marche_id: marche_id
         });
 
       if (error) throw error;
