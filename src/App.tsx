@@ -1,4 +1,3 @@
-
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -36,36 +35,42 @@ const RouterChangeHandler = () => {
   return null;
 };
 
+// Import the AI Assistant Provider
+import { AIAssistantProvider } from '@/components/layout/AIAssistantProvider';
+
 // Application main component with properly nested providers
-const App = () => {
+function App() {
   return (
-    <AppSettingsProvider>
-      <AuthProvider>
-        <CRMProvider>
-          <TooltipProvider>
-            <RouterChangeHandler />
-            <Routes>
-              <Route path="/" element={<Navigate to="/home" replace />} />
-              <Route path="/auth" element={<AuthPage />} />
-              <Route path="/home" element={<PrivateRoute><HomePage /></PrivateRoute>} />
-              <Route path="/marches" element={<PrivateRoute><MarchesPage /></PrivateRoute>} />
-              <Route path="/marches/:id" element={<PrivateRoute><MarcheDetailPage /></PrivateRoute>} />
-              <Route path="/marches/creation" element={<PrivateRoute><MarketCreationPage /></PrivateRoute>} />
-              <Route path="/questions-reponses" element={<PrivateRoute><QuestionsReponsesPage /></PrivateRoute>} />
-              <Route path="/admin" element={<PrivateRoute><AdminPage /></PrivateRoute>} />
-              <Route path="/parametres" element={
-                <PrivateRoute>
-                  <div className="container mx-auto p-6"><h1 className="text-2xl font-bold">Paramètres</h1></div>
-                </PrivateRoute>
-              } />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            <Toaster />
-          </TooltipProvider>
-        </CRMProvider>
-      </AuthProvider>
-    </AppSettingsProvider>
+    // Wrap the entire app with AIAssistantProvider
+    <AIAssistantProvider>
+      <AppSettingsProvider>
+        <AuthProvider>
+          <CRMProvider>
+            <TooltipProvider>
+              <RouterChangeHandler />
+              <Routes>
+                <Route path="/" element={<Navigate to="/home" replace />} />
+                <Route path="/auth" element={<AuthPage />} />
+                <Route path="/home" element={<PrivateRoute><HomePage /></PrivateRoute>} />
+                <Route path="/marches" element={<PrivateRoute><MarchesPage /></PrivateRoute>} />
+                <Route path="/marches/:id" element={<PrivateRoute><MarcheDetailPage /></PrivateRoute>} />
+                <Route path="/marches/creation" element={<PrivateRoute><MarketCreationPage /></PrivateRoute>} />
+                <Route path="/questions-reponses" element={<PrivateRoute><QuestionsReponsesPage /></PrivateRoute>} />
+                <Route path="/admin" element={<PrivateRoute><AdminPage /></PrivateRoute>} />
+                <Route path="/parametres" element={
+                  <PrivateRoute>
+                    <div className="container mx-auto p-6"><h1 className="text-2xl font-bold">Paramètres</h1></div>
+                  </PrivateRoute>
+                } />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <Toaster />
+            </TooltipProvider>
+          </CRMProvider>
+        </AuthProvider>
+      </AppSettingsProvider>
+    </AIAssistantProvider>
   );
-};
+}
 
 export default App;
