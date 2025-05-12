@@ -119,6 +119,32 @@ const MarchesList: React.FC<MarchesListProps> = ({
     );
   }
 
+  // No markets found message
+  if (validMarches.length === 0) {
+    return (
+      <div className="rounded-lg border shadow bg-white overflow-hidden">
+        <Table>
+          <TableHeader className="bg-gray-50">
+            <TableRow>
+              <TableHead>Marché</TableHead>
+              <TableHead className="hidden md:table-cell">Client</TableHead>
+              <TableHead className="hidden md:table-cell">Date</TableHead>
+              <TableHead className="hidden md:table-cell">Budget</TableHead>
+              <TableHead>Statut</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow>
+              <TableCell colSpan={5} className="h-24 text-center">
+                Aucun marché trouvé. {/* Removed mention of "Nouveau marché" button for non-authorized users */}
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-lg border shadow bg-white overflow-hidden">
       <Table>
@@ -132,40 +158,32 @@ const MarchesList: React.FC<MarchesListProps> = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {validMarches.length > 0 ? (
-            validMarches.map((marche) => (
-              <TableRow 
-                key={marche.id || `marche-${Math.random()}`} 
-                className="cursor-pointer hover:bg-gray-50 border-t"
-                onClick={() => marche.id && onMarcheClick(marche.id)}
-              >
-                <TableCell className="font-medium">
-                  <div className="flex items-center">
-                    <FileText className="h-5 w-5 mr-2 text-btp-blue flex-shrink-0" />
-                    <div>
-                      <p className="font-medium text-gray-900">{marche.titre || 'Sans titre'}</p>
-                      <p className="text-sm text-gray-500 md:hidden">{marche.client || 'Non spécifié'}</p>
-                    </div>
+          {validMarches.map((marche) => (
+            <TableRow 
+              key={marche.id || `marche-${Math.random()}`} 
+              className="cursor-pointer hover:bg-gray-50 border-t"
+              onClick={() => marche.id && onMarcheClick(marche.id)}
+            >
+              <TableCell className="font-medium">
+                <div className="flex items-center">
+                  <FileText className="h-5 w-5 mr-2 text-btp-blue flex-shrink-0" />
+                  <div>
+                    <p className="font-medium text-gray-900">{marche.titre || 'Sans titre'}</p>
+                    <p className="text-sm text-gray-500 md:hidden">{marche.client || 'Non spécifié'}</p>
                   </div>
-                </TableCell>
-                <TableCell className="hidden md:table-cell">{marche.client || 'Non spécifié'}</TableCell>
-                <TableCell className="hidden md:table-cell">{formatDate(marche.datecreation)}</TableCell>
-                <TableCell className="hidden md:table-cell">{marche.budget || 'Non défini'}</TableCell>
-                <TableCell>
-                  <div className="flex items-center">
-                    <div className={`h-2.5 w-2.5 rounded-full ${getStatusColor(marche.statut)} mr-2 flex-shrink-0`}></div>
-                    <span>{marche.statut || 'Non défini'}</span>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={5} className="h-24 text-center">
-                Aucun marché trouvé. Cliquez sur 'Nouveau marché' pour en créer un.
+                </div>
+              </TableCell>
+              <TableCell className="hidden md:table-cell">{marche.client || 'Non spécifié'}</TableCell>
+              <TableCell className="hidden md:table-cell">{formatDate(marche.datecreation)}</TableCell>
+              <TableCell className="hidden md:table-cell">{marche.budget || 'Non défini'}</TableCell>
+              <TableCell>
+                <div className="flex items-center">
+                  <div className={`h-2.5 w-2.5 rounded-full ${getStatusColor(marche.statut)} mr-2 flex-shrink-0`}></div>
+                  <span>{marche.statut || 'Non défini'}</span>
+                </div>
               </TableCell>
             </TableRow>
-          )}
+          ))}
         </TableBody>
       </Table>
       
@@ -177,6 +195,6 @@ const MarchesList: React.FC<MarchesListProps> = ({
       )}
     </div>
   );
-};
+}
 
 export default MarchesList;
