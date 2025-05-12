@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Marche, Visa } from '@/services/types';
@@ -7,6 +6,7 @@ import { visasService } from '@/services/visasService';
 import { versionsService } from '@/services/versionsService';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
+import { hasAccessToMarche } from '@/utils/authUtils';
 
 export interface DocumentStats {
   total: number;
@@ -23,6 +23,7 @@ interface UseMarcheDetailReturn {
   marche: Marche | null;
   loading: boolean;
   error: boolean;
+  accessDenied: boolean;
   visasEnAttente: Visa[];
   documentStats: DocumentStats;
   fasciculeProgress: FasciculeProgress[];
@@ -55,7 +56,34 @@ export const useMarcheDetail = (id: string | undefined): UseMarcheDetailReturn =
     }
   };
 
-  // Requête pour récupérer les détails du marché
+  // Vérifier d'abord si l'utilisateur a accès au marché
+  const accessCheckQuery = useQuery({
+    queryKey: ['marche-access', id],
+    queryFn: async () => {
+      if (!id) return false;
+      console.log(`Vérification de l'accès au marché ${id}...`);
+      return await hasAccessToMarche(id);
+    },
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+    meta: {
+      onSettled: (data: boolean | undefined, error: Error | null) => {
+        if (error) {
+          console.error("Erreur lors de la vérification des droits d'accès:", error);
+        } else if (data === false) {
+          console.warn(`L'utilisateur n'a pas accès au marché ${id}`);
+          toast({
+            title: "Accès refusé",
+            description: "Vous n'avez pas les droits nécessaires pour accéder à ce marché",
+            variant: "destructive",
+          });
+        }
+      }
+    }
+  });
+
+  // Requête pour récupérer les détails du marché, uniquement si l'accès est autorisé
   const marcheQuery = useQuery({
     queryKey: ['marche', id],
     queryFn: async () => {
@@ -63,23 +91,25 @@ export const useMarcheDetail = (id: string | undefined): UseMarcheDetailReturn =
       console.log("Chargement des données du marché:", id);
       return await fetchMarcheById(id);
     },
-    enabled: !!id,
+    enabled: !!id && accessCheckQuery.isSuccess && accessCheckQuery.data === true,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 1,
     meta: {
-      onError: (error: Error) => {
-        console.error("Erreur lors du chargement des données du marché:", error);
-        toast({
-          title: "Accès refusé",
-          description: "Vous n'avez pas accès à ce marché",
-          variant: "destructive",
-        });
+      onSettled: (data: Marche | null | undefined, error: Error | null) => {
+        if (error) {
+          console.error("Erreur lors du chargement des données du marché:", error);
+          toast({
+            title: "Erreur",
+            description: "Impossible de charger les données du marché",
+            variant: "destructive",
+          });
+        }
       }
     }
   });
 
   // Les autres requêtes ne devraient s'exécuter que si le marché est accessible
-  const shouldContinue = !!marcheQuery.data && !marcheQuery.isError;
+  const shouldContinue = !!marcheQuery.data && !marcheQuery.isError && !accessCheckQuery.isError && accessCheckQuery.data === true;
 
   // Requête pour récupérer les visas
   const visasQuery = useQuery({
@@ -187,15 +217,19 @@ export const useMarcheDetail = (id: string | undefined): UseMarcheDetailReturn =
   }, [documentsQuery.data]);
 
   // État de chargement global
-  const loading = marcheQuery.isLoading || visasQuery.isLoading || documentsQuery.isLoading || fasciculesQuery.isLoading;
+  const loading = accessCheckQuery.isLoading || marcheQuery.isLoading || 
+                  visasQuery.isLoading || documentsQuery.isLoading || 
+                  fasciculesQuery.isLoading;
 
   // État d'erreur (accès refusé)
   const error = marcheQuery.isError;
+  const accessDenied = accessCheckQuery.isError || accessCheckQuery.data === false;
 
   return {
     marche: marcheQuery.data,
     loading,
     error,
+    accessDenied,
     visasEnAttente,
     documentStats,
     fasciculeProgress,

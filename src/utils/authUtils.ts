@@ -1,4 +1,3 @@
-
 /**
  * Authentication utility functions for the application
  */
@@ -29,23 +28,26 @@ export const logout = async (): Promise<boolean> => {
  * @returns {Promise<UserRole|null>} Le rôle global de l'utilisateur ou null si pas connecté
  */
 export const getGlobalUserRole = async (): Promise<UserRole | null> => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  
-  // Récupérer le profil avec le rôle global
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('role_global')
-    .eq('id', user.id)
-    .single();
-  
-  if (error) {
-    console.error('Erreur lors de la récupération du rôle global:', error);
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    
+    // Récupérer le profil avec le rôle global en utilisant une fonction sécurisée 
+    // pour éviter les problèmes de récursion RLS
+    const { data, error } = await supabase
+      .rpc('get_user_global_role');  // Utiliser une fonction RPC à la place d'un accès direct
+    
+    if (error) {
+      console.error('Erreur lors de la récupération du rôle global:', error);
+      return null;
+    }
+    
+    // Normaliser le rôle
+    return data ? String(data).toUpperCase() as UserRole : null;
+  } catch (error) {
+    console.error('Exception lors de la récupération du rôle global:', error);
     return null;
   }
-  
-  // Normaliser le rôle
-  return data?.role_global ? String(data.role_global).toUpperCase() as UserRole : null;
 };
 
 /**
@@ -54,23 +56,28 @@ export const getGlobalUserRole = async (): Promise<UserRole | null> => {
  * @returns {Promise<MarcheSpecificRole|null>} Le rôle spécifique ou null si pas de rôle ou pas connecté
  */
 export const getMarcheSpecificRole = async (marcheId: string): Promise<MarcheSpecificRole | null> => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  
-  // Récupérer le rôle spécifique pour ce marché via la fonction RPC
-  const { data, error } = await supabase
-    .rpc('get_user_role_for_marche', {
-      user_id: user.id,
-      marche_id: marcheId
-    });
-  
-  if (error) {
-    console.error('Erreur lors de la récupération du rôle spécifique:', error);
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    
+    // Récupérer le rôle spécifique pour ce marché via la fonction RPC
+    const { data, error } = await supabase
+      .rpc('get_user_role_for_marche', {
+        user_id: user.id,
+        marche_id: marcheId
+      });
+    
+    if (error) {
+      console.error('Erreur lors de la récupération du rôle spécifique:', error);
+      return null;
+    }
+    
+    // Retourner le rôle spécifique
+    return data as MarcheSpecificRole || null;
+  } catch (error) {
+    console.error('Exception lors de la récupération du rôle spécifique:', error);
     return null;
   }
-  
-  // Retourner le rôle spécifique
-  return data as MarcheSpecificRole || null;
 };
 
 /**
@@ -148,9 +155,18 @@ export const canCreateMarches = async (): Promise<boolean> => {
 export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
   // Cette fonction utilise la RPC pour vérifier l'accès, ce qui respecte les politiques de sécurité
   try {
+    // Récupérer l'ID utilisateur actuel
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.warn("Utilisateur non connecté - accès refusé");
+      return false;
+    }
+    
+    console.log(`Vérification de l'accès au marché ${marcheId} pour l'utilisateur ${user.id}...`);
+    
     const { data, error } = await supabase
       .rpc('user_has_access_to_marche', {
-        user_id: (await supabase.auth.getUser()).data.user?.id,
+        user_id: user.id,
         marche_id: marcheId
       });
     
@@ -159,6 +175,7 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
       return false;
     }
     
+    console.log(`Résultat de la vérification d'accès:`, data);
     return !!data;
   } catch (error) {
     console.error('Exception lors de la vérification des droits d\'accès:', error);

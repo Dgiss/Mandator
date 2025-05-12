@@ -13,10 +13,10 @@ export const fetchMarches = async (): Promise<Marche[]> => {
       throw new Error("Client Supabase non initialisé");
     }
     
+    // Utiliser la fonction RPC sécurisée pour récupérer uniquement les marchés 
+    // auxquels l'utilisateur a accès (via ses droits ou en tant qu'admin)
     const { data, error } = await supabase
-      .from('marches')
-      .select('*')
-      .order('datecreation', { ascending: false });
+      .rpc('get_accessible_marches_for_user');
     
     if (error) {
       console.error('Erreur lors de la récupération des marchés:', error);
@@ -26,7 +26,6 @@ export const fetchMarches = async (): Promise<Marche[]> => {
     console.log("Marchés récupérés:", data);
     
     // S'assurer que les données sont bien formatées avant de les retourner
-    // Cela peut aider à résoudre les problèmes d'affichage
     const formattedMarches = data?.map((marche: any) => ({
       id: marche.id || '',
       titre: marche.titre || 'Sans titre',
@@ -54,7 +53,21 @@ export const fetchMarches = async (): Promise<Marche[]> => {
 // Récupérer un marché spécifique par son ID
 export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
   try {
-    // L'accès au marché est contrôlé par les politiques RLS de Supabase
+    console.log(`Vérification de l'accès au marché ${id}...`);
+    
+    // Vérifier d'abord si l'utilisateur a accès à ce marché
+    const hasAccess = await supabase
+      .rpc('user_has_access_to_marche', {
+        user_id: (await supabase.auth.getUser()).data.user?.id,
+        marche_id: id
+      });
+      
+    if (hasAccess.error || !hasAccess.data) {
+      console.error(`Accès refusé au marché ${id}:`, hasAccess.error);
+      throw new Error('Accès refusé');
+    }
+    
+    // L'utilisateur a accès, récupérer les données du marché
     const { data, error } = await supabase
       .from('marches')
       .select('*')
@@ -63,14 +76,10 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
     
     if (error) {
       console.error(`Erreur lors de la récupération du marché ${id}:`, error);
-      if (error.code === 'PGRST116') {
-        // Erreur de politique RLS - l'utilisateur n'a pas accès à ce marché
-        console.warn("L'utilisateur n'a pas accès à ce marché");
-        return null;
-      }
       throw error;
     }
     
+    console.log(`Marché ${id} récupéré avec succès:`, data);
     return data as Marche;
   } catch (error) {
     console.error('Exception lors de la récupération du marché:', error);
@@ -78,6 +87,7 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
   }
 };
 
+// Les autres fonctions restent inchangées
 export const createMarche = async (marcheData: {
   titre: string;
   description?: string | null;

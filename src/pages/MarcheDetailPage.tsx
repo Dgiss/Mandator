@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import PageLayout from '@/components/layout/PageLayout';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Lock } from 'lucide-react';
 
 // Custom hook pour la logique du marché
 import { useMarcheDetail } from '@/hooks/useMarcheDetail';
@@ -35,6 +34,7 @@ export default function MarcheDetailPage() {
     marche, 
     loading, 
     error,
+    accessDenied,
     visasEnAttente, 
     documentStats, 
     fasciculeProgress, 
@@ -53,7 +53,7 @@ export default function MarcheDetailPage() {
     );
   }
 
-  if (error) {
+  if (accessDenied || error) {
     return (
       <PageLayout>
         <div className="flex flex-col items-center justify-center h-64">
