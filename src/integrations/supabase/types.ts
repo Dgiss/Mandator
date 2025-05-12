@@ -537,6 +537,10 @@ export type Database = {
           updated_at: string | null
         }[]
       }
+      user_has_access_to_marche: {
+        Args: { user_id: string; marche_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

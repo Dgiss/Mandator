@@ -20,20 +20,18 @@ export const accessControlService = {
     // Administrators have access to all markets
     if (isAdminResult) return true;
 
-    // For others, check if they have specific rights to this market
+    // For others, check if they have access using our new security definer function
     const { data, error } = await supabase
-      .from('droits_marche')
-      .select('role_specifique')
-      .eq('user_id', user.id)
-      .eq('marche_id', marcheId)
-      .maybeSingle();
+      .rpc('user_has_access_to_marche', {
+        user_id: user.id,
+        marche_id: marcheId
+      });
 
     if (error) {
       console.error('Erreur lors de la vérification des droits:', error);
       return false;
     }
 
-    // If they have a specific role on this market, they have access
     return !!data;
   }
 };
