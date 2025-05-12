@@ -1,4 +1,3 @@
-
 /**
  * Authentication utility functions for the application
  */
@@ -211,7 +210,8 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
     
     console.log(`Vérification de l'accès au marché ${marcheId} pour l'utilisateur ${user.id}...`);
     
-    // Vérifier si l'utilisateur est le créateur du marché
+    // IMPORTANT: Vérifier d'abord si l'utilisateur est le créateur du marché
+    // Cette vérification doit passer avant tout le reste pour garantir l'accès au créateur
     const { data: marcheData, error: marcheError } = await supabase
       .from('marches')
       .select('user_id')
@@ -223,7 +223,19 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
       return true;
     }
     
-    // Sinon, utiliser la fonction RPC pour vérifier les droits
+    // Ensuite, vérifier le rôle global (admin a accès à tout)
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('role_global')
+      .eq('id', user.id)
+      .single();
+      
+    if (!profileError && profileData && profileData.role_global === 'ADMIN') {
+      console.log(`L'utilisateur ${user.id} est ADMIN - accès autorisé au marché ${marcheId}`);
+      return true;
+    }
+    
+    // Sinon, vérifier les droits spécifiques pour ce marché
     const { data, error } = await supabase
       .rpc('user_has_access_to_marche', {
         user_id: user.id,
