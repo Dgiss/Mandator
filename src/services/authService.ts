@@ -148,3 +148,6 @@ export const updateUserProfile = async (
     return { error };
   }
 };
+
+// Update the import
+export { logout } from '@/utils/auth/logout';

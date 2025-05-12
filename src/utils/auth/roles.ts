@@ -1,0 +1,176 @@
+
+/**
+ * Role management utilities
+ */
+import { supabase } from '@/lib/supabase';
+import { UserRole, MarcheSpecificRole } from '@/hooks/userRole/types';
+
+/**
+ * Récupère le rôle global de l'utilisateur actuel
+ * @returns {Promise<UserRole|null>} Le rôle global de l'utilisateur ou null si pas connecté
+ */
+export const getGlobalUserRole = async (): Promise<UserRole | null> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    
+    // Récupérer le profil avec le rôle global en utilisant une fonction sécurisée 
+    // pour éviter les problèmes de récursion RLS
+    const { data, error } = await supabase.rpc('get_user_global_role');
+    
+    if (error) {
+      console.error('Erreur lors de la récupération du rôle global:', error);
+      return null;
+    }
+    
+    // Normaliser le rôle
+    return data ? String(data).toUpperCase() as UserRole : null;
+  } catch (error) {
+    console.error('Exception lors de la récupération du rôle global:', error);
+    return null;
+  }
+};
+
+/**
+ * Récupère le rôle spécifique de l'utilisateur pour un marché donné
+ * @param {string} marcheId L'identifiant du marché
+ * @returns {Promise<MarcheSpecificRole|null>} Le rôle spécifique ou null si pas de rôle ou pas connecté
+ */
+export const getMarcheSpecificRole = async (marcheId: string): Promise<MarcheSpecificRole | null> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.log('Utilisateur non connecté, impossible de récupérer le rôle spécifique');
+      return null;
+    }
+    
+    console.log(`Récupération du rôle pour l'utilisateur ${user.id} sur le marché ${marcheId}...`);
+    
+    // Récupérer le rôle spécifique pour ce marché via la fonction RPC
+    const { data, error } = await supabase
+      .rpc('get_user_role_for_marche', {
+        user_id: user.id,
+        marche_id: marcheId
+      });
+    
+    if (error) {
+      console.error('Erreur lors de la récupération du rôle spécifique:', error);
+      return null;
+    }
+    
+    // Vérifier également si l'utilisateur est le créateur du marché
+    const { data: marcheData, error: marcheError } = await supabase
+      .from('marches')
+      .select('user_id')
+      .eq('id', marcheId)
+      .single();
+    
+    if (!marcheError && marcheData && marcheData.user_id === user.id) {
+      console.log(`L'utilisateur ${user.id} est le créateur du marché ${marcheId}`);
+      return 'MOE'; // Le créateur est considéré comme MOE par défaut
+    }
+    
+    // Retourner le rôle spécifique
+    console.log(`Rôle récupéré pour l'utilisateur ${user.id} sur le marché ${marcheId}: ${data || 'aucun'}`);
+    return data as MarcheSpecificRole || null;
+  } catch (error) {
+    console.error('Exception lors de la récupération du rôle spécifique:', error);
+    return null;
+  }
+};
+
+/**
+ * Vérifie si l'utilisateur a le rôle global spécifié
+ * @param {UserRole} role Le rôle à vérifier
+ * @returns {Promise<boolean>} True si l'utilisateur a le rôle spécifié
+ */
+export const hasGlobalRole = async (role: UserRole): Promise<boolean> => {
+  const userRole = await getGlobalUserRole();
+  
+  // Les administrateurs ont tous les droits
+  if (userRole === 'ADMIN') return true;
+  
+  return userRole === role;
+};
+
+/**
+ * Vérifie si l'utilisateur a le rôle spécifié pour un marché donné
+ * @param {string} marcheId L'identifiant du marché
+ * @param {MarcheSpecificRole} role Le rôle à vérifier
+ * @returns {Promise<boolean>} True si l'utilisateur a le rôle spécifié
+ */
+export const hasMarcheRole = async (marcheId: string, role: MarcheSpecificRole): Promise<boolean> => {
+  // Vérifier d'abord le rôle global
+  const globalRole = await getGlobalUserRole();
+  
+  // Les administrateurs ont tous les droits
+  if (globalRole === 'ADMIN') return true;
+  
+  // Vérifier si l'utilisateur est le créateur du marché
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    const { data: marcheData, error: marcheError } = await supabase
+      .from('marches')
+      .select('user_id')
+      .eq('id', marcheId)
+      .single();
+    
+    if (!marcheError && marcheData && marcheData.user_id === user.id) {
+      // Si on vérifie le rôle MOE et que l'utilisateur est le créateur, c'est vrai
+      if (role === 'MOE') return true;
+    }
+  }
+  
+  // Vérifier le rôle spécifique
+  const specificRole = await getMarcheSpecificRole(marcheId);
+  return specificRole === role;
+};
+
+/**
+ * Vérifie si l'utilisateur est un ADMIN
+ * @returns {Promise<boolean>} True si l'utilisateur est un ADMIN
+ */
+export const isAdmin = async (): Promise<boolean> => {
+  return await hasGlobalRole('ADMIN');
+};
+
+/**
+ * Vérifie si l'utilisateur est un MOE pour un marché spécifique
+ * @param {string} marcheId L'identifiant du marché
+ * @returns {Promise<boolean>} True si l'utilisateur est un MOE pour ce marché
+ */
+export const isMOEForMarche = async (marcheId: string): Promise<boolean> => {
+  // Vérifier d'abord si l'utilisateur est le créateur du marché
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    const { data: marcheData, error: marcheError } = await supabase
+      .from('marches')
+      .select('user_id')
+      .eq('id', marcheId)
+      .single();
+    
+    if (!marcheError && marcheData && marcheData.user_id === user.id) {
+      return true; // Le créateur est considéré comme MOE
+    }
+  }
+  
+  return await hasMarcheRole(marcheId, 'MOE');
+};
+
+/**
+ * Vérifie si l'utilisateur est un MANDATAIRE pour un marché spécifique
+ * @param {string} marcheId L'identifiant du marché
+ * @returns {Promise<boolean>} True si l'utilisateur est un MANDATAIRE pour ce marché
+ */
+export const isMandataireForMarche = async (marcheId: string): Promise<boolean> => {
+  return await hasMarcheRole(marcheId, 'MANDATAIRE');
+};
+
+/**
+ * Vérifie si l'utilisateur peut créer des marchés
+ * @returns {Promise<boolean>} True si l'utilisateur peut créer des marchés
+ */
+export const canCreateMarches = async (): Promise<boolean> => {
+  const role = await getGlobalUserRole();
+  return role === 'ADMIN' || role === 'MOE';
+};
