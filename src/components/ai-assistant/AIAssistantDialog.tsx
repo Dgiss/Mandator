@@ -4,10 +4,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Bot, User, Send, Loader2 } from 'lucide-react';
+import { Bot, User, Send, Loader2, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAIAssistant } from '@/hooks/useAIAssistant';
+import { cn } from '@/lib/utils';
 
 type Message = {
   id: string;
@@ -29,7 +30,7 @@ const SUGGESTED_QUESTIONS = [
 ];
 
 const AIAssistantDialog: React.FC<AIAssistantDialogProps> = ({ open, onOpenChange }) => {
-  const { message: initialMessage, clearMessage } = useAIAssistant();
+  const { message: initialMessage, clearMessage, loading, setLoading } = useAIAssistant();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '0',
@@ -39,7 +40,6 @@ const AIAssistantDialog: React.FC<AIAssistantDialogProps> = ({ open, onOpenChang
     },
   ]);
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -80,7 +80,7 @@ const AIAssistantDialog: React.FC<AIAssistantDialogProps> = ({ open, onOpenChang
     
     setMessages((prev) => [...prev, newUserMessage]);
     setInput('');
-    setIsLoading(true);
+    setLoading(true);
     
     try {
       const response = await supabase.functions.invoke('ai-assistant', {
@@ -120,7 +120,7 @@ const AIAssistantDialog: React.FC<AIAssistantDialogProps> = ({ open, onOpenChang
       
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -128,104 +128,120 @@ const AIAssistantDialog: React.FC<AIAssistantDialogProps> = ({ open, onOpenChang
     setInput(question);
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] h-[600px] flex flex-col p-0">
-        <DialogHeader className="px-4 py-2 border-b">
-          <DialogTitle className="flex items-center gap-2">
-            <Bot className="h-5 w-5 text-btp-blue" />
-            Assistant IA
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="flex-1 overflow-hidden flex flex-col">
-          <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
-            <div className="space-y-4">
-              {messages.map((message) => (
+  // Utilise une div au lieu de Dialog pour un affichage flottant
+  return open ? (
+    <div className={cn(
+      "fixed bottom-20 right-6 z-40",
+      "bg-white rounded-lg shadow-xl border",
+      "w-[350px] h-[500px] md:w-[420px]",
+      "flex flex-col",
+      "animate-scale-in"
+    )}>
+      <div className="px-4 py-3 border-b flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Bot className="h-5 w-5 text-btp-blue" />
+          <h3 className="text-sm font-medium">Assistant IA</h3>
+        </div>
+        <button 
+          onClick={() => onOpenChange(false)} 
+          className="text-gray-500 hover:text-gray-700"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+      
+      <div className="flex-1 overflow-hidden flex flex-col">
+        <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+          <div className="space-y-4">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${
+                  message.role === 'assistant' ? 'justify-start' : 'justify-end'
+                }`}
+              >
                 <div
-                  key={message.id}
-                  className={`flex ${
-                    message.role === 'assistant' ? 'justify-start' : 'justify-end'
+                  className={`max-w-[80%] px-3 py-2 rounded-lg ${
+                    message.role === 'assistant'
+                      ? 'bg-gray-100 text-foreground'
+                      : 'bg-btp-blue text-white'
                   }`}
                 >
-                  <div
-                    className={`max-w-[80%] px-4 py-2 rounded-lg ${
-                      message.role === 'assistant'
-                        ? 'bg-muted text-foreground'
-                        : 'bg-btp-blue text-white'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      {message.role === 'assistant' ? (
-                        <Bot className="h-4 w-4" />
-                      ) : (
-                        <User className="h-4 w-4" />
-                      )}
-                      <span className="text-xs opacity-70">
-                        {message.role === 'assistant' ? 'Assistant' : 'Vous'}
-                      </span>
-                    </div>
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    {message.role === 'assistant' ? (
+                      <Bot className="h-3 w-3" />
+                    ) : (
+                      <User className="h-3 w-3" />
+                    )}
+                    <span className="text-xs opacity-70">
+                      {message.role === 'assistant' ? 'Assistant' : 'Vous'}
+                    </span>
                   </div>
+                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                 </div>
-              ))}
-              {isLoading && (
-                <div className="flex justify-start">
-                  <div className="max-w-[80%] px-4 py-3 rounded-lg bg-muted">
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span className="text-xs">L'assistant réfléchit...</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-
-          {messages.length === 1 && (
-            <div className="p-4 border-t">
-              <h4 className="text-sm font-medium mb-2">Questions suggérées :</h4>
-              <div className="flex flex-wrap gap-2">
-                {SUGGESTED_QUESTIONS.map((question, index) => (
-                  <Button
-                    key={index}
-                    variant="outline"
-                    size="sm"
-                    className="text-xs"
-                    onClick={() => handleSuggestedQuestion(question)}
-                  >
-                    {question}
-                  </Button>
-                ))}
               </div>
-            </div>
-          )}
-
-          <div className="p-4 border-t">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSendMessage();
-              }}
-              className="flex items-center gap-2"
-            >
-              <Input
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Posez votre question..."
-                className="flex-1"
-                disabled={isLoading}
-              />
-              <Button type="submit" size="icon" disabled={!input.trim() || isLoading}>
-                <Send className="h-4 w-4" />
-              </Button>
-            </form>
+            ))}
+            {loading && (
+              <div className="flex justify-start">
+                <div className="max-w-[80%] px-3 py-2 rounded-lg bg-gray-100">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-xs">L'assistant réfléchit...</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
+        </ScrollArea>
+
+        {messages.length === 1 && (
+          <div className="p-4 border-t">
+            <h4 className="text-xs font-medium mb-2">Questions suggérées :</h4>
+            <div className="flex flex-wrap gap-2">
+              {SUGGESTED_QUESTIONS.map((question, index) => (
+                <Button
+                  key={index}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => handleSuggestedQuestion(question)}
+                >
+                  {question}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="p-4 border-t">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSendMessage();
+            }}
+            className="flex items-center gap-2"
+          >
+            <Input
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Posez votre question..."
+              className="flex-1"
+              disabled={loading}
+            />
+            <Button 
+              type="submit" 
+              size="icon" 
+              disabled={!input.trim() || loading}
+              className="bg-btp-blue hover:bg-btp-navy"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </form>
         </div>
-      </DialogContent>
-    </Dialog>
-  );
+      </div>
+    </div>
+  ) : null;
 };
 
 export default AIAssistantDialog;
