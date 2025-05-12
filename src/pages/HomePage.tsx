@@ -10,6 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 // Import les services
 import { fetchMarcheStats, fetchRecentMarches, MarcheStats } from '@/services/statsService';
 import { Marche } from '@/services/types';
+import { useAuth } from '@/contexts/AuthContext';
+import { useUserRole } from '@/hooks/useUserRole';
 
 // Import the components
 import StatsCards from '@/components/home/StatsCards';
@@ -19,6 +21,8 @@ import QuickActions from '@/components/home/QuickActions';
 export default function HomePage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { canCreateMarche } = useUserRole();
   
   // États pour stocker les données
   const [loading, setLoading] = useState(true);
@@ -158,8 +162,8 @@ export default function HomePage() {
     navigate(path);
   }, [navigate]);
 
-  // Actions for the page
-  const pageActions = (
+  // Actions for the page - only show if user can create marche
+  const pageActions = canCreateMarche ? (
     <Button 
       variant="btpPrimary" 
       onClick={() => handleNavigation('/marches/creation')}
@@ -167,7 +171,7 @@ export default function HomePage() {
       <FileText className="mr-2 h-4 w-4" />
       Nouveau marché
     </Button>
-  );
+  ) : null;
 
   return (
     <PageLayout 

@@ -21,10 +21,10 @@ export const fetchMarcheStats = async (): Promise<MarcheStats> => {
       throw new Error("Client Supabase non initialisé");
     }
     
-    // Récupérer tous les marchés pour calculer les statistiques
+    // Utiliser la fonction RPC sécurisée pour récupérer uniquement les marchés 
+    // auxquels l'utilisateur a accès
     const { data: marches, error } = await supabase
-      .from('marches')
-      .select('*');
+      .rpc('get_accessible_marches_for_user');
     
     if (error) {
       console.error('Erreur lors de la récupération des statistiques:', error);
@@ -83,11 +83,9 @@ export const fetchRecentMarches = async (limit: number = 3): Promise<Marche[]> =
       return [];
     }
     
+    // Utiliser la fonction RPC sécurisée au lieu d'accéder directement à la table
     const { data, error } = await supabase
-      .from('marches')
-      .select('*')
-      .order('datecreation', { ascending: false })
-      .limit(limit);
+      .rpc('get_accessible_marches_for_user');
     
     if (error) {
       console.error('Erreur lors de la récupération des marchés récents:', error);
@@ -100,8 +98,15 @@ export const fetchRecentMarches = async (limit: number = 3): Promise<Marche[]> =
       return [];
     }
     
+    // Trier par date de création (plus récent d'abord) et limiter le nombre
+    const sortedData = [...data].sort((a, b) => {
+      const dateA = a.datecreation ? new Date(a.datecreation).getTime() : 0;
+      const dateB = b.datecreation ? new Date(b.datecreation).getTime() : 0;
+      return dateB - dateA;
+    }).slice(0, limit);
+    
     // Formater les marchés pour s'assurer que toutes les propriétés sont définies
-    const formattedData = data.map((marche: any) => ({
+    const formattedData = sortedData.map((marche: any) => ({
       id: marche.id || '',
       titre: marche.titre || 'Sans titre',
       description: marche.description || '',

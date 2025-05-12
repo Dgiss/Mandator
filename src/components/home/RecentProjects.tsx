@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { ChevronRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useUserRole } from '@/hooks/useUserRole';
 
 type ProjectItem = {
   id: string | number;
@@ -19,6 +20,7 @@ interface RecentProjectsProps {
 
 const RecentProjects: React.FC<RecentProjectsProps> = ({ projects, loading = false }) => {
   const navigate = useNavigate();
+  const { canCreateMarche } = useUserRole();
   
   // Garantir que projects est un tableau valide
   const validProjects = Array.isArray(projects) ? projects : [];
@@ -99,15 +101,28 @@ const RecentProjects: React.FC<RecentProjectsProps> = ({ projects, loading = fal
         ) : (
           // Aucun projet
           <div className="text-center py-8 text-gray-500">
-            Aucun projet récent à afficher.
-            <div className="mt-2">
-              <span 
-                className="text-blue-600 cursor-pointer hover:underline"
-                onClick={() => navigate('/marches/creation')}
-              >
-                Créer un nouveau marché
-              </span>
-            </div>
+            {canCreateMarche ? (
+              <>
+                Aucun projet récent à afficher.
+                <div className="mt-2">
+                  <span 
+                    className="text-blue-600 cursor-pointer hover:underline"
+                    onClick={() => navigate('/marches/creation')}
+                  >
+                    Créer un nouveau marché
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                Vous n'avez pas accès à des projets.
+                <div className="mt-2">
+                  <span className="text-gray-500">
+                    Contactez votre administrateur pour obtenir des droits d'accès.
+                  </span>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
