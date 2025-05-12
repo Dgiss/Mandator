@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { droitsService } from '@/services/droitsService';
 import { useUserRole, UserRole } from '@/hooks/useUserRole';
 import { Shield, RefreshCw } from 'lucide-react';
@@ -20,7 +20,7 @@ export default function AdminPage() {
   const { isAdmin, role } = useUserRole();
 
   useEffect(() => {
-    // Rediriger les utilisateurs non-administrateurs
+    // Redirect non-admin users
     if (!isAdmin && role !== 'STANDARD' && !loading) {
       navigate('/home');
       toast({
@@ -31,12 +31,12 @@ export default function AdminPage() {
     }
   }, [isAdmin, role, navigate, toast, loading]);
 
-  // Charger les utilisateurs au chargement du composant
+  // Load users when component mounts
   useEffect(() => {
     loadUsers();
   }, []);
 
-  // Fonction pour charger les utilisateurs
+  // Function to load users
   const loadUsers = async () => {
     setLoading(true);
     try {
@@ -54,7 +54,7 @@ export default function AdminPage() {
     }
   };
 
-  // Fonction pour mettre à jour le rôle global d'un utilisateur
+  // Function to update user's global role
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
     try {
       await droitsService.updateGlobalRole(userId, newRole);
@@ -64,7 +64,7 @@ export default function AdminPage() {
         variant: "success",
       });
       
-      // Mettre à jour la liste des utilisateurs
+      // Refresh user list
       loadUsers();
     } catch (error) {
       console.error('Erreur lors de la mise à jour du rôle:', error);
@@ -76,7 +76,7 @@ export default function AdminPage() {
     }
   };
 
-  // Filtrer les utilisateurs en fonction de la recherche
+  // Filter users based on search
   const filteredUsers = users.filter(user => {
     const searchLower = searchQuery.toLowerCase();
     const email = (user.email?.toLowerCase() || '');

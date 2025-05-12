@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { Users, Shield, Plus, X, RefreshCw } from 'lucide-react';
 import { droitsService } from '@/services/droitsService';
 import { useUserRole, MarcheSpecificRole } from '@/hooks/useUserRole';
@@ -44,25 +44,25 @@ const MarcheRolesDialog: React.FC<MarcheRolesDialogProps> = ({ marcheId, marcheT
   const { toast } = useToast();
   const { canManageRoles } = useUserRole();
   
-  // Vérifier si l'utilisateur peut gérer les rôles pour ce marché
+  // Check if user can manage roles for this market
   const userCanManageRoles = canManageRoles(marcheId);
 
-  // Charger les utilisateurs et les droits au chargement du composant
+  // Load users and rights when dialog opens
   useEffect(() => {
     if (open) {
       loadData();
     }
   }, [open, marcheId]);
 
-  // Fonction pour charger les données
+  // Function to load data
   const loadData = async () => {
     setLoading(true);
     try {
-      // Charger tous les utilisateurs
+      // Load all users
       const usersData = await droitsService.getUsers();
       setUsers(usersData);
       
-      // Charger les droits pour ce marché
+      // Load rights for this market
       const droitsData = await droitsService.getDroitsByMarcheId(marcheId);
       setDroits(droitsData);
     } catch (error) {
@@ -77,7 +77,7 @@ const MarcheRolesDialog: React.FC<MarcheRolesDialogProps> = ({ marcheId, marcheT
     }
   };
 
-  // Fonction pour attribuer un rôle à un utilisateur
+  // Function to assign a role to a user
   const handleAssignRole = async () => {
     if (!selectedUserId || !selectedRole) {
       toast({
@@ -96,10 +96,10 @@ const MarcheRolesDialog: React.FC<MarcheRolesDialogProps> = ({ marcheId, marcheT
         variant: "success",
       });
       
-      // Recharger les données
+      // Reload data
       loadData();
       
-      // Réinitialiser les sélections
+      // Reset selections
       setSelectedUserId('');
       setSelectedRole('MANDATAIRE');
     } catch (error) {
@@ -112,7 +112,7 @@ const MarcheRolesDialog: React.FC<MarcheRolesDialogProps> = ({ marcheId, marcheT
     }
   };
 
-  // Fonction pour supprimer un rôle
+  // Function to remove a role
   const handleRemoveRole = async (userId: string) => {
     try {
       await droitsService.removeRole(userId, marcheId);
@@ -122,7 +122,7 @@ const MarcheRolesDialog: React.FC<MarcheRolesDialogProps> = ({ marcheId, marcheT
         variant: "success",
       });
       
-      // Recharger les données
+      // Reload data
       loadData();
     } catch (error) {
       console.error('Erreur lors de la suppression du rôle:', error);
@@ -134,7 +134,7 @@ const MarcheRolesDialog: React.FC<MarcheRolesDialogProps> = ({ marcheId, marcheT
     }
   };
 
-  // Filtrer les utilisateurs en fonction de la recherche
+  // Filter users based on search
   const filteredUsers = users.filter(user => {
     const searchLower = searchQuery.toLowerCase();
     const email = user.email?.toLowerCase() || '';
@@ -146,10 +146,10 @@ const MarcheRolesDialog: React.FC<MarcheRolesDialogProps> = ({ marcheId, marcheT
            prenom.includes(searchLower);
   });
 
-  // Liste des utilisateurs qui ont déjà un droit sur ce marché
+  // Users who already have rights for this market
   const usersWithDroits = droits.map(droit => droit.user_id);
 
-  // Utilisateurs disponibles pour l'attribution (ceux qui n'ont pas déjà un droit)
+  // Available users for assignment (those who don't already have a right)
   const availableUsers = filteredUsers.filter(user => !usersWithDroits.includes(user.id));
 
   return (
@@ -180,7 +180,7 @@ const MarcheRolesDialog: React.FC<MarcheRolesDialogProps> = ({ marcheId, marcheT
             </div>
           ) : (
             <>
-              {/* Liste des utilisateurs avec droits */}
+              {/* List of users with rights */}
               <div className="space-y-2">
                 <h3 className="text-lg font-semibold">Utilisateurs ayant accès à ce marché</h3>
                 
@@ -203,7 +203,7 @@ const MarcheRolesDialog: React.FC<MarcheRolesDialogProps> = ({ marcheId, marcheT
                         </TableRow>
                       ) : (
                         droits.map((droit) => {
-                          // Trouver les informations de l'utilisateur
+                          // Find user information
                           const user = users.find(u => u.id === droit.user_id);
                           return (
                             <TableRow key={droit.id}>
@@ -245,7 +245,7 @@ const MarcheRolesDialog: React.FC<MarcheRolesDialogProps> = ({ marcheId, marcheT
                 </ScrollArea>
               </div>
               
-              {/* Formulaire d'attribution de rôle */}
+              {/* Role assignment form */}
               <div className="space-y-4 rounded-md border p-4">
                 <h3 className="text-lg font-semibold">Attribuer un accès</h3>
                 

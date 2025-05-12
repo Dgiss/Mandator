@@ -16,7 +16,7 @@ export interface UserDroit {
 }
 
 export const droitsService = {
-  // Récupérer tous les droits pour un marché spécifique
+  // Get all rights for a specific market
   async getDroitsByMarcheId(marcheId: string): Promise<UserDroit[]> {
     try {
       // Fetch rights from droits_marche table
@@ -59,7 +59,7 @@ export const droitsService = {
     }
   },
 
-  // Récupérer tous les droits pour un utilisateur
+  // Get all rights for a user
   async getDroitsByUserId(userId: string): Promise<UserDroit[]> {
     try {
       const { data, error } = await supabase
@@ -76,7 +76,7 @@ export const droitsService = {
     }
   },
 
-  // Récupérer les utilisateurs avec leur rôle global
+  // Get users with their global role
   async getUsers(): Promise<any[]> {
     try {
       // Get all profiles with their global role
@@ -102,7 +102,7 @@ export const droitsService = {
     }
   },
 
-  // Rechercher des utilisateurs par terme de recherche (email, nom, prénom)
+  // Search users by search term (email, name, first name)
   async searchUsers(searchTerm: string): Promise<any[]> {
     if (!searchTerm || searchTerm.trim() === '') {
       return []; // Return empty array if search term is empty
@@ -131,9 +131,9 @@ export const droitsService = {
     }
   },
 
-  // Attribuer un rôle à un utilisateur sur un marché spécifique
+  // Assign a role to a user for a specific market
   async assignRole(userId: string, marcheId: string, role: MarcheSpecificRole): Promise<void> {
-    // Vérifier si l'attribution existe déjà
+    // Check if assignment already exists
     const { data: existing } = await supabase
       .from('droits_marche')
       .select('id')
@@ -143,7 +143,7 @@ export const droitsService = {
 
     try {
       if (existing) {
-        // Mettre à jour l'attribution existante
+        // Update existing assignment
         const { error } = await supabase
           .from('droits_marche')
           .update({ role_specifique: role })
@@ -151,7 +151,7 @@ export const droitsService = {
 
         if (error) throw error;
       } else {
-        // Créer une nouvelle attribution
+        // Create new assignment
         const { error } = await supabase
           .from('droits_marche')
           .insert({
@@ -168,7 +168,7 @@ export const droitsService = {
     }
   },
 
-  // Supprimer l'attribution de rôle d'un utilisateur sur un marché
+  // Remove role assignment for a user on a market
   async removeRole(userId: string, marcheId: string): Promise<void> {
     try {
       const { error } = await supabase
@@ -184,7 +184,7 @@ export const droitsService = {
     }
   },
 
-  // Mettre à jour le rôle global d'un utilisateur
+  // Update global role for a user
   async updateGlobalRole(userId: string, role: UserRole): Promise<void> {
     try {
       const { error } = await supabase
@@ -199,13 +199,13 @@ export const droitsService = {
     }
   },
 
-  // Vérifier si l'utilisateur actuel a des droits sur un marché spécifique
+  // Check if current user has rights to a specific market
   async checkUserAccessToMarche(marcheId: string): Promise<boolean> {
-    // Récupérer l'utilisateur courant
+    // Get current user
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return false;
 
-    // Vérifier si l'utilisateur est admin en utilisant notre nouvelle fonction
+    // Check if user is admin using our new function
     const { data: isAdminResult, error: adminError } = await supabase
       .rpc('is_admin');
 
@@ -214,10 +214,10 @@ export const droitsService = {
       return false;
     }
 
-    // Les administrateurs ont accès à tous les marchés
+    // Administrators have access to all markets
     if (isAdminResult) return true;
 
-    // Pour les autres, vérifier s'ils ont des droits spécifiques sur ce marché
+    // For others, check if they have specific rights to this market
     const { data, error } = await supabase
       .from('droits_marche')
       .select('role_specifique')
@@ -230,7 +230,7 @@ export const droitsService = {
       return false;
     }
 
-    // S'ils ont un rôle spécifique sur ce marché, ils y ont accès
+    // If they have a specific role on this market, they have access
     return !!data;
   }
 };
