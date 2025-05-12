@@ -78,7 +78,7 @@ export function useUserRole(marcheId?: string): UserRoleInfo {
     if (!user) return;
     
     try {
-      // Use a direct query approach to avoid RLS issues
+      // Use our security definer function through RPC to avoid recursion
       const { data, error } = await supabase
         .from('droits_marche')
         .select('marche_id, role_specifique')
@@ -111,13 +111,12 @@ export function useUserRole(marcheId?: string): UserRoleInfo {
     if (!user) return null;
     
     try {
-      // Use a more direct query approach
+      // Use our security definer function through RPC to avoid recursion
       const { data, error } = await supabase
-        .from('droits_marche')
-        .select('role_specifique')
-        .eq('user_id', user.id)
-        .eq('marche_id', marcheId)
-        .maybeSingle();
+        .rpc('get_user_role_for_marche', {
+          user_id: user.id,
+          marche_id: marcheId
+        });
       
       if (error) {
         console.error(`Pas de rôle spécifique trouvé pour le marché ${marcheId}:`, error);
@@ -125,7 +124,7 @@ export function useUserRole(marcheId?: string): UserRoleInfo {
       }
       
       // Mettre à jour le cache
-      const role = data?.role_specifique as MarcheSpecificRole;
+      const role = data as MarcheSpecificRole;
       setMarcheRoles(prev => ({...prev, [marcheId]: role}));
       return role;
     } catch (error) {
