@@ -1,7 +1,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { UserDroit } from './types';
-import { MarcheSpecificRole } from '@/hooks/useUserRole';
+import { MarcheSpecificRole } from '@/hooks/userRole/types';
 
 export const marcheRightsService = {
   // Get all rights for a specific market
