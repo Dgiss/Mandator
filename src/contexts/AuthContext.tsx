@@ -24,13 +24,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Configurer l'écouteur d'événements d'authentification
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
+        console.log('Auth state changed:', event);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
-        // En cas de changement d'état d'authentification, charger le profil utilisateur
+        // If session changed and user exists, fetch profile
         if (currentSession?.user) {
           setTimeout(() => {
             fetchUserProfile(currentSession.user.id);
@@ -41,12 +42,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // Vérifier s'il existe une session
+    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       
-      // Charger le profil utilisateur s'il est connecté
+      // Fetch profile if user is logged in
       if (currentSession?.user) {
         fetchUserProfile(currentSession.user.id);
       }
@@ -54,12 +55,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     });
 
+    // Clean up the subscription when the component unmounts
     return () => {
       subscription.unsubscribe();
     };
   }, []);
 
-  // Fonction pour récupérer le profil utilisateur
+  // Function to fetch user profile
   const fetchUserProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -79,7 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Fonction de connexion
+  // Sign in function
   const signIn = async (email: string, password: string) => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -100,17 +102,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Fonction d'inscription
+  // Sign up function
   const signUp = async (
     email: string, 
     password: string, 
     userData?: { nom?: string; prenom?: string; entreprise?: string; email?: string }
   ) => {
     try {
-      // S'assurer que l'email est inclus dans les données utilisateur
+      // Add email to user metadata
       const userMetadata = {
         ...userData,
-        email: email // Ajouter l'email aux métadonnées
+        email: email
       };
 
       const { data, error } = await supabase.auth.signUp({
@@ -134,24 +136,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Fonction de déconnexion
+  // Sign out function - Fixed to handle session state properly
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
+      // First update local state to prevent multiple logout attempts
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      
+      // Then perform the actual signout
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('Erreur lors de la déconnexion:', error);
+        toast.error(`Erreur de déconnexion: ${error.message}`);
+        return;
+      }
+      
       toast.success('Déconnexion réussie !');
     } catch (error: any) {
+      console.error('Exception lors de la déconnexion:', error);
       toast.error(`Erreur de déconnexion: ${error.message}`);
     }
   };
 
-  // Fonction de mise à jour du profil
+  // Update profile function
   const updateProfile = async (data: { nom?: string; prenom?: string; entreprise?: string; email?: string }) => {
     if (!user) {
       return { error: { message: "Aucun utilisateur connecté" } };
     }
 
     try {
-      // Mettre à jour l'email dans auth.users si l'email a été modifié
+      // Update email in auth.users if email was changed
       if (data.email && data.email !== user.email) {
         const { error: updateAuthError } = await supabase.auth.updateUser({
           email: data.email
@@ -173,7 +189,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { error };
       }
 
-      // Mettre à jour le profil dans le state
+      // Update profile in state
       fetchUserProfile(user.id);
       toast.success('Profil mis à jour avec succès !');
       return { error: null };

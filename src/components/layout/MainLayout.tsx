@@ -46,11 +46,16 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     return location.pathname.startsWith(path);
   };
   
+  // Updated logout handler to avoid multiple calls and properly handle navigation
   const handleLogout = async () => {
     try {
-      await signOut();
+      // Disable any UI interaction during logout
+      // First navigate to auth page
       navigate('/auth');
+      // Then perform the signout
+      await signOut();
     } catch (error) {
+      console.error('Error during logout:', error);
       toast.error("Erreur lors de la déconnexion");
     }
   };

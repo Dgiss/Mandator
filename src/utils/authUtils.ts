@@ -19,8 +19,23 @@ export const checkAuth = async (): Promise<boolean> => {
  * @returns {Promise<boolean>} True if logout was successful
  */
 export const logout = async (): Promise<boolean> => {
-  const { error } = await supabase.auth.signOut();
-  return !error;
+  try {
+    // Clear any cached session data first
+    localStorage.removeItem('supabase.auth.token');
+    
+    // Then perform the signout operation
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) {
+      console.error('Erreur de déconnexion:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Exception lors de la déconnexion:', error);
+    return false;
+  }
 };
 
 /**
