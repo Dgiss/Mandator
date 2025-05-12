@@ -136,7 +136,7 @@ export const questionsService = {
       document_id: question.document_id || null,
       fascicule_id: question.fascicule_id || null,
       attachment_path: attachmentPath,
-      user_id: user.id,
+      user_id: user.id, // Make sure we're using the correct user_id
       date_creation: new Date().toISOString(),
       statut: question.statut || 'En attente'
     };

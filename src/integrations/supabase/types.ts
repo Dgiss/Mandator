@@ -325,6 +325,7 @@ export type Database = {
           id: string
           marche_id: string
           statut: string
+          user_id: string | null
         }
         Insert: {
           attachment_path?: string | null
@@ -336,6 +337,7 @@ export type Database = {
           id?: string
           marche_id: string
           statut?: string
+          user_id?: string | null
         }
         Update: {
           attachment_path?: string | null
@@ -347,6 +349,7 @@ export type Database = {
           id?: string
           marche_id?: string
           statut?: string
+          user_id?: string | null
         }
         Relationships: [
           {
