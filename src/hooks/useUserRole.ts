@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 
 export type UserRole = 'ADMIN' | 'MOE' | 'MANDATAIRE' | 'STANDARD';
-export type MarcheSpecificRole = 'MOE' | 'MANDATAIRE' | null;
+export type MarcheSpecificRole = 'MOE' | 'MANDATAIRE' | 'CONSULTANT' | null;
 
 export interface UserRoleInfo {
   role: UserRole;

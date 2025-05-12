@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase';
 import { UserRole, MarcheSpecificRole } from '@/hooks/useUserRole';
 
@@ -164,6 +163,24 @@ export const droitsService = {
       }
     } catch (error) {
       console.error('Erreur lors de l\'attribution du rôle:', error);
+      throw error;
+    }
+  },
+
+  // Assign creator as MOE for a new market
+  async assignCreatorAsMOE(userId: string, marcheId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('droits_marche')
+        .insert({
+          user_id: userId,
+          marche_id: marcheId,
+          role_specifique: 'MOE'
+        });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Erreur lors de l\'attribution du rôle de MOE au créateur:', error);
       throw error;
     }
   },

@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { RefreshCw, Plus, X, Search, Users, Mail } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { RefreshCw, Plus, X, Search, Users, Mail, AlertCircle, InfoIcon } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { droitsService, UserDroit } from '@/services/droitsService';
@@ -26,7 +27,18 @@ const MarcheCollaborateurs: React.FC<MarcheCollaborateursProps> = ({ marcheId })
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const { toast } = useToast();
-  const { canManageRoles, isAdmin } = useUserRole(marcheId);
+  const { canManageRoles, role, getMarcheRole } = useUserRole(marcheId);
+  const [userMarcheRole, setUserMarcheRole] = useState<MarcheSpecificRole>(null);
+  
+  // Charger le rôle spécifique de l'utilisateur pour ce marché
+  useEffect(() => {
+    const loadUserRole = async () => {
+      const specificRole = await getMarcheRole(marcheId);
+      setUserMarcheRole(specificRole);
+    };
+    
+    loadUserRole();
+  }, [marcheId, getMarcheRole]);
 
   // Charger les données initiales
   useEffect(() => {
@@ -143,6 +155,19 @@ const MarcheCollaborateurs: React.FC<MarcheCollaborateursProps> = ({ marcheId })
     setSearchQuery(''); // Clear search when a user is selected
     setSearchResults([]);
   };
+  
+  // Fonction pour obtenir la couleur du badge selon le rôle
+  const getRoleBadgeVariant = (role: string) => {
+    switch(role) {
+      case 'MOE': return 'default';
+      case 'MANDATAIRE': return 'secondary';
+      case 'CONSULTANT': return 'outline';
+      default: return 'secondary';
+    }
+  };
+
+  // Vérifier si l'utilisateur peut gérer les droits (est MOE sur ce marché ou admin)
+  const canManageMarketRoles = role === 'ADMIN' || userMarcheRole === 'MOE';
 
   return (
     <div className="space-y-6">
@@ -158,6 +183,17 @@ const MarcheCollaborateurs: React.FC<MarcheCollaborateursProps> = ({ marcheId })
           Actualiser
         </Button>
       </div>
+
+      {userMarcheRole && (
+        <Alert className="bg-blue-50 border-blue-200">
+          <InfoIcon className="h-4 w-4" />
+          <AlertTitle>Votre rôle sur ce marché</AlertTitle>
+          <AlertDescription>
+            Vous avez le rôle <Badge variant={getRoleBadgeVariant(userMarcheRole)}>{userMarcheRole}</Badge> sur ce marché.
+            {userMarcheRole === 'MOE' && " Vous pouvez gérer les accès des autres utilisateurs."}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Liste des collaborateurs existants */}
       <Card>
@@ -204,17 +240,18 @@ const MarcheCollaborateurs: React.FC<MarcheCollaborateursProps> = ({ marcheId })
                           {availableUsers.find(u => u.id === collab.user_id)?.role_global || 'STANDARD'}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={collab.role_specifique === 'MOE' ? 'default' : 'secondary'}>
+                          <Badge variant={getRoleBadgeVariant(collab.role_specifique)}>
                             {collab.role_specifique}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {canManageRoles && (
+                          {canManageMarketRoles && (
                             <Button
                               variant="ghost" 
                               size="icon"
                               onClick={() => handleRemoveRole(collab.user_id)}
                               title="Supprimer l'accès"
+                              disabled={userMarcheRole === 'MOE' && collab.role_specifique === 'MOE' && collab.user_id !== supabase.auth.getUser()?.data?.user?.id}
                             >
                               <X className="h-4 w-4 text-red-500" />
                             </Button>
@@ -231,7 +268,7 @@ const MarcheCollaborateurs: React.FC<MarcheCollaborateursProps> = ({ marcheId })
       </Card>
 
       {/* Formulaire d'ajout de collaborateur */}
-      {canManageRoles && (
+      {canManageMarketRoles && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -305,13 +342,19 @@ const MarcheCollaborateurs: React.FC<MarcheCollaborateursProps> = ({ marcheId })
                         <SelectValue placeholder="Sélectionner un rôle" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="MANDATAIRE">
-                          <div className="font-medium">Mandataire</div>
+                        <SelectItem value="CONSULTANT">
+                          <div className="font-medium">Consultant</div>
                           <div className="text-xs text-muted-foreground mt-1">
                             Accès en lecture seule
                           </div>
                         </SelectItem>
-                        {isAdmin && (
+                        <SelectItem value="MANDATAIRE">
+                          <div className="font-medium">Mandataire</div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Peut diffuser des documents
+                          </div>
+                        </SelectItem>
+                        {(role === 'ADMIN' || userMarcheRole === 'MOE') && (
                           <SelectItem value="MOE">
                             <div className="font-medium">Maître d'œuvre (MOE)</div>
                             <div className="text-xs text-muted-foreground mt-1">
@@ -340,15 +383,27 @@ const MarcheCollaborateurs: React.FC<MarcheCollaborateursProps> = ({ marcheId })
         </Card>
       )}
 
-      {!canManageRoles && (
-        <Card className="bg-muted">
-          <CardContent className="py-6">
-            <p className="text-center text-muted-foreground">
-              Vous n'avez pas les droits nécessaires pour gérer les collaborateurs sur ce marché.
-            </p>
-          </CardContent>
-        </Card>
+      {!canManageMarketRoles && (
+        <Alert variant="default" className="bg-muted">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Accès restreint</AlertTitle>
+          <AlertDescription>
+            Vous n'avez pas les droits nécessaires pour gérer les collaborateurs sur ce marché. 
+            Seuls les administrateurs et les maîtres d'œuvre (MOE) du marché peuvent gérer les accès.
+          </AlertDescription>
+        </Alert>
       )}
+      
+      <Card className="bg-blue-50 border border-blue-200">
+        <CardContent className="pt-6">
+          <h3 className="font-semibold mb-2">Informations sur les rôles:</h3>
+          <ul className="list-disc list-inside space-y-1">
+            <li><strong>Maître d'œuvre (MOE)</strong>: Accès complet au marché, peut gérer les droits d'accès des autres utilisateurs.</li>
+            <li><strong>Mandataire</strong>: Peut consulter et diffuser des documents sur le marché.</li>
+            <li><strong>Consultant</strong>: Accès en lecture seule aux informations du marché.</li>
+          </ul>
+        </CardContent>
+      </Card>
     </div>
   );
 };
