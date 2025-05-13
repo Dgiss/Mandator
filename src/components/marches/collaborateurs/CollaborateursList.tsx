@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { RefreshCw, Users, X } from 'lucide-react';
-import { UserDroit } from '@/services/droits';
+import { UserDroit } from '@/services/droits/types';
 import RoleTypeBadge from '../roles/RoleTypeBadge';
 
 interface CollaborateursListProps {

@@ -1,9 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { droitsService, UserDroit } from '@/services/droits';
-import { useUserRole, MarcheSpecificRole } from '@/hooks/useUserRole';
+import { droitsService } from '@/services/droits';
+import { UserDroit } from '@/services/droits/types';
+import { useUserRole, MarcheSpecificRole } from '@/hooks/userRole';
 
 export function useCollaborateursManager(marcheId: string) {
   const [isLoading, setIsLoading] = useState(true);
