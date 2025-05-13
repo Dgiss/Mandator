@@ -11,9 +11,8 @@ export const uploadImage = async (file: File, path: string): Promise<string | nu
     const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
     const filePath = `${path}/${fileName}`;
     
-    // Check that the bucket exists
-    const { data: buckets } = await supabase.storage.listBuckets();
-    console.log("Buckets disponibles avant upload:", buckets);
+    // Vérifier que le bucket existe avant l'upload
+    await ensureBucketExists('marches');
     
     const { error: uploadError, data: uploadData } = await supabase.storage
       .from('marches')
@@ -120,7 +119,7 @@ export const ensureBucketExists = async (bucketName: string): Promise<boolean> =
     if (buckets && !buckets.some(b => b.name === bucketName)) {
       console.log(`Le bucket ${bucketName} n'existe pas, création...`);
       const { error } = await supabase.storage.createBucket(bucketName, {
-        public: false,
+        public: bucketName === 'marches', // Only make marches bucket public
         fileSizeLimit: 10485760 // 10MB limit
       });
       
