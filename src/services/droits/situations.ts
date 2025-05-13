@@ -14,7 +14,7 @@ export const getSituationsForMarche = async (marcheId: string) => {
     .from('situations')
     .select('*')
     .eq('marche_id', marcheId)
-    .order('date', { ascending: false });
+    .order('numero', { ascending: false });
 
   if (error) {
     console.error('Erreur lors de la récupération des situations:', error);

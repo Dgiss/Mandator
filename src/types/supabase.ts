@@ -1,3 +1,4 @@
+
 import { Database as SupabaseDatabase } from '@/integrations/supabase/types';
 
 // Extend the Supabase types with our custom database schema
@@ -367,6 +368,151 @@ export interface Database {
           file_type?: string;
           file_size?: string;
           uploaded_at?: string | null;
+        };
+        Relationships: [];
+      };
+      // Ajout des nouvelles tables
+      ordres_service: {
+        Row: {
+          id: string;
+          marche_id: string;
+          reference: string;
+          type: string;
+          date_emission: string;
+          delai: number | null;
+          description: string;
+          destinataire: string;
+          impact: string | null;
+          statut: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          marche_id: string;
+          reference: string;
+          type: string;
+          date_emission: string;
+          delai?: number | null;
+          description: string;
+          destinataire: string;
+          impact?: string | null;
+          statut: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          marche_id?: string;
+          reference?: string;
+          type?: string;
+          date_emission?: string;
+          delai?: number | null;
+          description?: string;
+          destinataire?: string;
+          impact?: string | null;
+          statut?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      prix_nouveaux: {
+        Row: {
+          id: string;
+          marche_id: string;
+          reference: string;
+          designation: string;
+          unite: string;
+          quantite: number;
+          prix_unitaire: number;
+          justification: string;
+          materiaux_montant: number | null;
+          main_oeuvre_montant: number | null;
+          materiel_montant: number | null;
+          frais_generaux: number | null;
+          benefice: number | null;
+          statut: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          marche_id: string;
+          reference: string;
+          designation: string;
+          unite: string;
+          quantite: number;
+          prix_unitaire: number;
+          justification: string;
+          materiaux_montant?: number | null;
+          main_oeuvre_montant?: number | null;
+          materiel_montant?: number | null;
+          frais_generaux?: number | null;
+          benefice?: number | null;
+          statut: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          marche_id?: string;
+          reference?: string;
+          designation?: string;
+          unite?: string;
+          quantite?: number;
+          prix_unitaire?: number;
+          justification?: string;
+          materiaux_montant?: number | null;
+          main_oeuvre_montant?: number | null;
+          materiel_montant?: number | null;
+          frais_generaux?: number | null;
+          benefice?: number | null;
+          statut?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      situations: {
+        Row: {
+          id: string;
+          marche_id: string;
+          numero: number;
+          date: string;
+          lot: string;
+          montant_ht: number;
+          montant_ttc: number;
+          avancement: number;
+          statut: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          marche_id: string;
+          numero: number;
+          date: string;
+          lot: string;
+          montant_ht: number;
+          montant_ttc: number;
+          avancement: number;
+          statut: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          marche_id?: string;
+          numero?: number;
+          date?: string;
+          lot?: string;
+          montant_ht?: number;
+          montant_ttc?: number;
+          avancement?: number;
+          statut?: string;
+          created_at?: string;
+          updated_at?: string;
         };
         Relationships: [];
       };
