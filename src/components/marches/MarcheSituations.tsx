@@ -3,10 +3,11 @@ import React from 'react';
 import { useParams } from 'react-router-dom';
 import { SituationForm } from '@/components/forms/SituationForm';
 
-const MarcheSituations: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const marcheId = id || '';
+interface MarcheSituationsProps {
+  marcheId: string;
+}
 
+const MarcheSituations: React.FC<MarcheSituationsProps> = ({ marcheId }) => {
   return (
     <div>
       <SituationForm marcheId={marcheId} />
