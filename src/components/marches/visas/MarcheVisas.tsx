@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useVisaManagement } from './useVisaManagement';
 import { VisasHeader } from './VisasHeader';
@@ -7,8 +6,8 @@ import { VisasTable } from './VisasTable';
 import { VisasLoading } from './VisasLoading';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import DiffusionDialog from './DiffusionDialog';
-import VisaDialog from './VisaDialog';
+import { DiffusionDialog } from './DiffusionDialog';
+import { VisaDialog } from './VisaDialog';
 import { Document, Version } from './types';
 import { useUserRole } from '@/hooks/userRole';
 
@@ -110,30 +109,28 @@ const MarcheVisas: React.FC<MarcheVisasProps> = ({ marcheId }) => {
         <>
           <DiffusionDialog
             open={diffusionDialogOpen}
-            onClose={handleDiffusionDialogClose}
-            onConfirm={handleDiffusionSubmit}
-            document={selectedDocument}
-            comment={diffusionComment}
-            setComment={setDiffusionComment}
+            setOpen={handleDiffusionDialogClose}
+            selectedDocument={selectedDocument}
+            selectedVersion={selectedVersion}
+            diffusionComment={diffusionComment}
+            setDiffusionComment={setDiffusionComment}
             attachmentName={attachmentName}
-            onFileChange={handleFileChange}
-            isLoading={loadingStates[selectedDocument.id] || false}
+            handleFileChange={handleFileChange}
+            handleDiffusionSubmit={handleDiffusionSubmit}
           />
           
           <VisaDialog
             open={visaDialogOpen}
-            onClose={handleVisaDialogClose}
-            onConfirm={handleVisaSubmit}
-            document={selectedDocument}
-            comment={visaComment}
-            setComment={setVisaComment}
-            selectedDestinataire={visaSelectedDestinaire}
-            setSelectedDestinataire={setVisaSelectedDestinaire}
-            echeance={visaEcheance}
-            setEcheance={setVisaEcheance}
+            setOpen={handleVisaDialogClose}
+            selectedDocument={selectedDocument}
+            selectedVersion={selectedVersion}
+            visaType={visaSelectedDestinaire}
+            setVisaType={setVisaSelectedDestinaire}
+            visaComment={visaComment}
+            setVisaComment={setVisaComment}
             attachmentName={attachmentName}
-            onFileChange={handleFileChange}
-            isLoading={loadingStates[selectedDocument.id] || false}
+            handleFileChange={handleFileChange}
+            handleVisaSubmit={handleVisaSubmit}
           />
         </>
       )}
