@@ -363,6 +363,124 @@ export type Database = {
           },
         ]
       }
+      ordres_service: {
+        Row: {
+          created_at: string
+          date_emission: string
+          delai: number | null
+          description: string
+          destinataire: string
+          id: string
+          impact: string | null
+          marche_id: string
+          reference: string
+          statut: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date_emission: string
+          delai?: number | null
+          description: string
+          destinataire: string
+          id?: string
+          impact?: string | null
+          marche_id: string
+          reference: string
+          statut: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date_emission?: string
+          delai?: number | null
+          description?: string
+          destinataire?: string
+          id?: string
+          impact?: string | null
+          marche_id?: string
+          reference?: string
+          statut?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ordres_service_marche_id_fkey"
+            columns: ["marche_id"]
+            isOneToOne: false
+            referencedRelation: "marches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prix_nouveaux: {
+        Row: {
+          benefice: number | null
+          created_at: string
+          designation: string
+          frais_generaux: number | null
+          id: string
+          justification: string
+          main_oeuvre_montant: number | null
+          marche_id: string
+          materiaux_montant: number | null
+          materiel_montant: number | null
+          prix_unitaire: number
+          quantite: number
+          reference: string
+          statut: string
+          unite: string
+          updated_at: string
+        }
+        Insert: {
+          benefice?: number | null
+          created_at?: string
+          designation: string
+          frais_generaux?: number | null
+          id?: string
+          justification: string
+          main_oeuvre_montant?: number | null
+          marche_id: string
+          materiaux_montant?: number | null
+          materiel_montant?: number | null
+          prix_unitaire: number
+          quantite: number
+          reference: string
+          statut: string
+          unite: string
+          updated_at?: string
+        }
+        Update: {
+          benefice?: number | null
+          created_at?: string
+          designation?: string
+          frais_generaux?: number | null
+          id?: string
+          justification?: string
+          main_oeuvre_montant?: number | null
+          marche_id?: string
+          materiaux_montant?: number | null
+          materiel_montant?: number | null
+          prix_unitaire?: number
+          quantite?: number
+          reference?: string
+          statut?: string
+          unite?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prix_nouveaux_marche_id_fkey"
+            columns: ["marche_id"]
+            isOneToOne: false
+            referencedRelation: "marches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -487,6 +605,56 @@ export type Database = {
             columns: ["question_id"]
             isOneToOne: false
             referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      situations: {
+        Row: {
+          avancement: number
+          created_at: string
+          date: string
+          id: string
+          lot: string
+          marche_id: string
+          montant_ht: number
+          montant_ttc: number
+          numero: number
+          statut: string
+          updated_at: string
+        }
+        Insert: {
+          avancement: number
+          created_at?: string
+          date: string
+          id?: string
+          lot: string
+          marche_id: string
+          montant_ht: number
+          montant_ttc: number
+          numero: number
+          statut: string
+          updated_at?: string
+        }
+        Update: {
+          avancement?: number
+          created_at?: string
+          date?: string
+          id?: string
+          lot?: string
+          marche_id?: string
+          montant_ht?: number
+          montant_ttc?: number
+          numero?: number
+          statut?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "situations_marche_id_fkey"
+            columns: ["marche_id"]
+            isOneToOne: false
+            referencedRelation: "marches"
             referencedColumns: ["id"]
           },
         ]

@@ -1,305 +1,159 @@
 
-import React, { useState } from 'react';
-import { 
-  Card, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription, 
-  CardContent 
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { 
-  Table, 
-  TableHeader, 
-  TableRow, 
-  TableHead, 
-  TableBody, 
-  TableCell 
-} from '@/components/ui/table';
-import { 
-  FileText, 
-  FileEdit, 
-  ClipboardList, 
-  Check, 
-  AlertCircle 
-} from 'lucide-react';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import MarcheSituationForm from './MarcheSituationForm';
+import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { PlusCircle } from 'lucide-react';
 
-interface SituationProps {
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import SituationForm from '@/components/forms/SituationForm';
+import { getSituationsForMarche, Situation } from '@/services/droits/situations';
+
+interface MarcheSituationsProps {
   marcheId: string;
 }
 
-// Type pour les situations de travaux
-interface Situation {
-  id: string;
-  numero: number;
-  date: string;
-  lot: string;
-  montantHT: number;
-  montantTTC: number;
-  avancement: number;
-  statut: 'En attente' | 'Approuvée' | 'Rejetée' | 'En révision';
-}
+const MarcheSituations: React.FC<MarcheSituationsProps> = ({ marcheId }) => {
+  const [situations, setSituations] = useState<Situation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-// Données fictives pour les situations
-const situationsMock: Situation[] = [
-  { 
-    id: 's1', 
-    numero: 1, 
-    date: '15/01/2024', 
-    lot: 'Gros œuvre', 
-    montantHT: 95000, 
-    montantTTC: 114000, 
-    avancement: 15, 
-    statut: 'Approuvée' 
-  },
-  { 
-    id: 's2', 
-    numero: 2, 
-    date: '15/02/2024', 
-    lot: 'Gros œuvre', 
-    montantHT: 125000, 
-    montantTTC: 150000, 
-    avancement: 35, 
-    statut: 'Approuvée' 
-  },
-  { 
-    id: 's3', 
-    numero: 1, 
-    date: '15/02/2024', 
-    lot: 'Électricité', 
-    montantHT: 28000, 
-    montantTTC: 33600, 
-    avancement: 20, 
-    statut: 'Approuvée' 
-  },
-  { 
-    id: 's4', 
-    numero: 3, 
-    date: '15/03/2024', 
-    lot: 'Gros œuvre', 
-    montantHT: 150000, 
-    montantTTC: 180000, 
-    avancement: 45, 
-    statut: 'En révision' 
-  },
-  { 
-    id: 's5', 
-    numero: 2, 
-    date: '15/03/2024', 
-    lot: 'Électricité', 
-    montantHT: 42000, 
-    montantTTC: 50400, 
-    avancement: 40, 
-    statut: 'En attente' 
-  }
-];
+  useEffect(() => {
+    fetchSituations();
+  }, [marcheId]);
 
-const MarcheSituations: React.FC<SituationProps> = ({ marcheId }) => {
-  const [situations, setSituations] = useState<Situation[]>(situationsMock);
-  const [selectedLot, setSelectedLot] = useState<string>('all');
-  const [selectedStatut, setSelectedStatut] = useState<string>('all');
-
-  // Filtrer les situations en fonction des critères sélectionnés
-  const filteredSituations = situations.filter(situation => {
-    const lotMatch = selectedLot === 'all' || situation.lot === selectedLot;
-    const statutMatch = selectedStatut === 'all' || situation.statut === selectedStatut;
-    return lotMatch && statutMatch;
-  });
-
-  // Extraire les lots uniques pour le filtre
-  const lots = Array.from(new Set(situations.map(s => s.lot)));
-  
-  // Calculer les statistiques
-  const totalMontantHT = situations.reduce((sum, sit) => sum + sit.montantHT, 0);
-  const totalApprouve = situations
-    .filter(sit => sit.statut === 'Approuvée')
-    .reduce((sum, sit) => sum + sit.montantHT, 0);
-  
-  // Fonction pour formater les montants en euros
-  const formatMontant = (montant: number): string => {
-    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(montant);
-  };
-
-  // Fonction pour obtenir la couleur du statut
-  const getStatusColor = (statut: string): string => {
-    switch(statut) {
-      case 'Approuvée': return 'bg-green-500';
-      case 'En révision': return 'bg-amber-500';
-      case 'Rejetée': return 'bg-red-500';
-      case 'En attente': return 'bg-blue-500';
-      default: return 'bg-gray-500';
+  const fetchSituations = async () => {
+    try {
+      setIsLoading(true);
+      const situationsData = await getSituationsForMarche(marcheId);
+      setSituations(situationsData || []);
+    } catch (error) {
+      console.error("Erreur lors de la récupération des situations:", error);
+      toast.error("Erreur", {
+        description: "Impossible de charger les situations."
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Fonction de classe CSS pour badge
-  const getStatusBadge = (statut: string): string => {
-    switch(statut) {
-      case 'Approuvée': return 'bg-green-100 text-green-800';
-      case 'En révision': return 'bg-amber-100 text-amber-800';
-      case 'Rejetée': return 'bg-red-100 text-red-800';
-      case 'En attente': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  // Handler pour ajouter une nouvelle situation
   const handleSituationCreated = () => {
-    // Dans un cas réel, cette fonction serait utilisée pour rafraîchir les données depuis l'API
-    console.log('Rafraîchissement des situations après création');
+    setIsDialogOpen(false);
+    fetchSituations();
+    toast.success("Succès", {
+      description: "La situation a été ajoutée avec succès."
+    });
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'brouillon':
+        return <Badge variant="outline">Brouillon</Badge>;
+      case 'soumis':
+        return <Badge variant="secondary">Soumise</Badge>;
+      case 'valide':
+        return <Badge variant="default">Validée</Badge>;
+      case 'facture':
+        return <Badge className="bg-green-600">Facturée</Badge>;
+      case 'paye':
+        return <Badge className="bg-blue-600">Payée</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
   };
 
   return (
-    <div className="space-y-6 py-4">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-        <h2 className="text-2xl font-bold">Situations de Travaux</h2>
-        <MarcheSituationForm marcheId={marcheId} onSituationCreated={handleSituationCreated} />
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold">Situations de travaux</h2>
+        <Button onClick={() => setIsDialogOpen(true)}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Nouvelle situation
+        </Button>
       </div>
 
-      {/* Dashboard des situations */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <p className="text-sm text-gray-500">Total des situations</p>
-              <p className="text-3xl font-bold">{formatMontant(totalMontantHT)}</p>
-              <p className="text-sm text-gray-600">HT</p>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <p className="text-sm text-gray-500">Montant approuvé</p>
-              <p className="text-3xl font-bold text-green-600">{formatMontant(totalApprouve)}</p>
-              <p className="text-sm text-gray-600">HT</p>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <p className="text-sm text-gray-500">Avancement global</p>
-              <p className="text-3xl font-bold">{Math.round((totalApprouve / totalMontantHT) * 100)}%</p>
-              <Progress value={(totalApprouve / totalMontantHT) * 100} className="h-2 mt-2" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filtres */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
-        <div className="w-full md:w-1/4">
-          <Select value={selectedLot} onValueChange={setSelectedLot}>
-            <SelectTrigger>
-              <SelectValue placeholder="Filtrer par lot" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous les lots</SelectItem>
-              {lots.map(lot => (
-                <SelectItem key={lot} value={lot}>{lot}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {isLoading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-btp-blue"></div>
         </div>
-        
-        <div className="w-full md:w-1/4">
-          <Select value={selectedStatut} onValueChange={setSelectedStatut}>
-            <SelectTrigger>
-              <SelectValue placeholder="Filtrer par statut" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous les statuts</SelectItem>
-              <SelectItem value="En attente">En attente</SelectItem>
-              <SelectItem value="Approuvée">Approuvée</SelectItem>
-              <SelectItem value="Rejetée">Rejetée</SelectItem>
-              <SelectItem value="En révision">En révision</SelectItem>
-            </SelectContent>
-          </Select>
+      ) : situations.length === 0 ? (
+        <div className="text-center p-12 border rounded-md bg-muted/30">
+          <p className="text-lg font-medium">Aucune situation de travaux</p>
+          <p className="text-muted-foreground mt-2">
+            Les situations de travaux permettent de suivre l'avancement financier du marché.
+          </p>
+          <Button 
+            className="mt-6" 
+            onClick={() => setIsDialogOpen(true)}
+          >
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Créer une situation
+          </Button>
         </div>
-      </div>
-
-      {/* Liste des situations */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Liste des situations</CardTitle>
-          <CardDescription>
-            Situations mensuelles de travaux par lot
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      ) : (
+        <div className="border rounded-md overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>N°</TableHead>
-                <TableHead>Lot</TableHead>
                 <TableHead>Date</TableHead>
-                <TableHead>Montant HT</TableHead>
-                <TableHead>Montant TTC</TableHead>
+                <TableHead>Lot</TableHead>
+                <TableHead className="text-right">Montant HT</TableHead>
+                <TableHead className="text-right">Montant TTC</TableHead>
                 <TableHead>Avancement</TableHead>
                 <TableHead>Statut</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredSituations.length > 0 ? (
-                filteredSituations.map((situation) => (
-                  <TableRow key={situation.id}>
-                    <TableCell>{situation.numero}</TableCell>
-                    <TableCell>{situation.lot}</TableCell>
-                    <TableCell>{situation.date}</TableCell>
-                    <TableCell>{formatMontant(situation.montantHT)}</TableCell>
-                    <TableCell>{formatMontant(situation.montantTTC)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Progress value={situation.avancement} className="h-2 w-20" />
-                        <span>{situation.avancement}%</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getStatusBadge(situation.statut)}>
-                        {situation.statut}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                          <FileText className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                          <FileEdit className="h-4 w-4" />
-                        </Button>
-                        {situation.statut === 'En attente' && (
-                          <Button variant="outline" size="sm" className="h-8 w-8 p-0 text-green-600">
-                            <Check className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-6">
-                    Aucune situation trouvée avec les filtres sélectionnés
+              {situations.map((situation) => (
+                <TableRow key={situation.id} className="cursor-pointer hover:bg-muted/50">
+                  <TableCell className="font-medium">Situation n°{situation.numero}</TableCell>
+                  <TableCell>
+                    {situation.date 
+                      ? format(new Date(situation.date), "dd MMM yyyy", { locale: fr }) 
+                      : "Non définie"}
                   </TableCell>
+                  <TableCell>{situation.lot}</TableCell>
+                  <TableCell className="text-right font-medium">
+                    {situation.montant_ht.toLocaleString('fr-FR')} €
+                  </TableCell>
+                  <TableCell className="text-right font-medium">
+                    {situation.montant_ttc.toLocaleString('fr-FR')} €
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center">
+                      <div className="w-full bg-gray-200 rounded-full h-2 mr-2">
+                        <div 
+                          className="bg-blue-600 rounded-full h-2" 
+                          style={{ width: `${situation.avancement}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-sm font-medium">{situation.avancement}%</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>{getStatusBadge(situation.statut)}</TableCell>
                 </TableRow>
-              )}
+              ))}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        </div>
+      )}
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Nouvelle situation de travaux</DialogTitle>
+          </DialogHeader>
+          <SituationForm 
+            marcheId={marcheId}
+            onSuccess={handleSituationCreated}
+            onCancel={() => setIsDialogOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

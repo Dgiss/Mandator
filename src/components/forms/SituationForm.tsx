@@ -1,21 +1,21 @@
 
 import React, { useState } from 'react';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { toast } from 'sonner';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { CalendarIcon, Save, PlusCircle, Trash2, Calculator, FileSpreadsheet, Info } from 'lucide-react';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { CalendarIcon, Save, PlusCircle, Trash2, Calculator } from 'lucide-react';
+import { createSituation } from '@/services/droits/situations';
 
 interface LigneSituation {
   id: string;
@@ -31,33 +31,34 @@ interface LigneSituation {
   reste: number;
 }
 
-const SituationForm = () => {
+interface SituationFormProps {
+  marcheId: string;
+  onSuccess?: () => void;
+  onCancel?: () => void;
+}
+
+const SituationForm = ({ marcheId, onSuccess, onCancel }: SituationFormProps) => {
   const [situationData, setSituationData] = useState({
-    reference: '',
-    marche: '',
-    numero: '1',
-    titre: '',
-    dateSituation: undefined as Date | undefined,
-    dateValidation: undefined as Date | undefined,
-    dateEcheance: undefined as Date | undefined,
-    montantHT: 0,
-    montantTTC: 0,
-    tva: 20,
-    retenue: 5,
-    commentaires: '',
-    facture: '',
-    status: 'brouillon',
-    isAcompte: false,
-    estSolde: false
+    marche_id: marcheId,
+    numero: 1,
+    date: new Date(),
+    lot: '',
+    montant_ht: 0,
+    montant_ttc: 0,
+    avancement: 0,
+    statut: 'brouillon',
+    commentaires: ''
   });
   
   const [lignes, setLignes] = useState<LigneSituation[]>([]);
   
   // Mock data for select fields
-  const marches = [
-    { id: 'marche-001', titre: 'Marché de rénovation du pont de Grande-Terre' },
-    { id: 'marche-002', titre: 'Construction école Marie-Galante' },
-    { id: 'marche-003', titre: 'Aménagement place de la Victoire' }
+  const lots = [
+    { id: 'lot-001', nom: 'Gros œuvre' },
+    { id: 'lot-002', nom: 'Électricité' },
+    { id: 'lot-003', nom: 'Plomberie' },
+    { id: 'lot-004', nom: 'Peinture' },
+    { id: 'lot-005', nom: 'Menuiseries' }
   ];
   
   const articles = [
@@ -71,42 +72,40 @@ const SituationForm = () => {
   
   const unites = ['m', 'm²', 'm³', 'u', 'kg', 'tonne', 'forfait', 'jour'];
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFonctuateData({ ...situationData, [name]: value });
-  };
-
-  const handleSelectChange = (name: string) => (value: string) => {
-    setFonctuateData({ ...situationData, [name]: value });
-  };
-
-  const handleCheckboxChange = (name: string) => (checked: boolean) => {
-    setFonctuateData({ ...situationData, [name]: checked });
+    setSituationData({ ...situationData, [name]: value });
   };
 
   const handleNumberInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     const numberValue = value === '' ? 0 : parseFloat(value);
-    setFonctuateData({ ...situationData, [name]: numberValue });
+    setSituationData({ ...situationData, [name]: numberValue });
   };
 
-  const handleDateChange = (name: string) => (date: Date | undefined) => {
-    setFonctuateData({ ...situationData, [name]: date });
+  const handleSelectChange = (name: string) => (value: string) => {
+    setSituationData({ ...situationData, [name]: value });
   };
 
+  const handleDateChange = (date: Date | undefined) => {
+    if (date) {
+      setSituationData({ ...situationData, date });
+    }
+  };
+  
   // Fonction pour recalculer les montants et l'état financier
   const recalculerMontants = () => {
     // Calcul du montant HT total à partir des lignes
     const totalHT = lignes.reduce((total, ligne) => total + ligne.montantHT, 0);
     
-    // Calcul du montant TTC
-    const calculTVA = totalHT * (situationData.tva / 100);
+    // Calcul du montant TTC avec TVA à 20%
+    const calculTVA = totalHT * 0.2;
     const totalTTC = totalHT + calculTVA;
     
-    setFonctuateData({
+    setSituationData({
       ...situationData,
-      montantHT: parseFloat(totalHT.toFixed(2)),
-      montantTTC: parseFloat(totalTTC.toFixed(2))
+      montant_ht: parseFloat(totalHT.toFixed(2)),
+      montant_ttc: parseFloat(totalTTC.toFixed(2))
     });
   };
   
@@ -184,13 +183,13 @@ const SituationForm = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validation simple
-    if (!situationData.reference || !situationData.marche || !situationData.dateSituation) {
+    if (!situationData.lot) {
       toast.error("Formulaire incomplet", {
-        description: "Veuillez remplir tous les champs obligatoires"
+        description: "Veuillez sélectionner un lot"
       });
       return;
     }
@@ -202,52 +201,35 @@ const SituationForm = () => {
       return;
     }
     
-    // Simulation de l'envoi des données
-    console.log('Situation soumise :', { ...situationData, lignes });
-    toast.success("Situation enregistrée", {
-      description: `La situation n°${situationData.numero} a été enregistrée avec succès.`
-    });
-  };
-
-  // Fonction pour définir l'état des données de la situation
-  const setFonctuateData = (newData: typeof situationData) => {
-    setSituationData(newData);
-  };
-
-  // Fonction pour générer la facture
-  const genererFacture = () => {
-    if (!situationData.reference || !situationData.marche) {
-      toast.error("Informations manquantes", {
-        description: "Veuillez compléter les informations de la situation avant de générer une facture"
+    try {
+      // Préparation des données pour l'envoi
+      const situationToSave = {
+        marche_id: situationData.marche_id,
+        numero: situationData.numero,
+        date: situationData.date,
+        lot: situationData.lot,
+        montant_ht: situationData.montant_ht,
+        montant_ttc: situationData.montant_ttc,
+        avancement: situationData.avancement,
+        statut: situationData.statut
+      };
+      
+      // Envoi des données à l'API
+      await createSituation(situationToSave);
+      
+      toast.success("Situation créée avec succès", {
+        description: `La situation n°${situationData.numero} a été créée avec succès.`
       });
-      return;
+      
+      if (onSuccess) {
+        onSuccess();
+      }
+    } catch (error) {
+      console.error('Erreur lors de la création de la situation:', error);
+      toast.error("Erreur de création", {
+        description: "Une erreur s'est produite lors de la création de la situation."
+      });
     }
-    
-    toast.success("Facture générée", {
-      description: `La facture pour la situation n°${situationData.numero} a été générée avec succès.`
-    });
-    
-    // Générer un numéro de facture et le stocker
-    const numeroFacture = `F-${Date.now().toString().substring(6)}`;
-    setFonctuateData({
-      ...situationData,
-      facture: numeroFacture,
-      status: 'facture'
-    });
-  };
-  
-  // Fonction pour exporter au format Excel
-  const exporterExcel = () => {
-    toast.info("Export en cours", {
-      description: "Préparation du fichier Excel..."
-    });
-    
-    // Simulation d'export
-    setTimeout(() => {
-      toast.success("Export réussi", {
-        description: "Le fichier Excel a été téléchargé avec succès."
-      });
-    }, 1500);
   };
 
   return (
@@ -258,55 +240,14 @@ const SituationForm = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div className="space-y-2">
-              <Label htmlFor="reference">Référence de la situation *</Label>
-              <Input 
-                id="reference" 
-                name="reference"
-                value={situationData.reference}
-                onChange={handleInputChange}
-                placeholder="Ex: SIT-2023-001"
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
               <Label htmlFor="numero">Numéro de situation</Label>
               <Input 
                 id="numero" 
                 name="numero"
+                type="number"
                 value={situationData.numero}
-                onChange={handleInputChange}
+                onChange={handleNumberInputChange}
                 placeholder="Ex: 1"
-              />
-            </div>
-            
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="marche">Marché associé *</Label>
-              <Select 
-                value={situationData.marche} 
-                onValueChange={handleSelectChange('marche')}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez un marché" />
-                </SelectTrigger>
-                <SelectContent>
-                  {marches.map(marche => (
-                    <SelectItem key={marche.id} value={marche.id}>
-                      {marche.titre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="titre">Titre de la situation</Label>
-              <Input 
-                id="titre" 
-                name="titre"
-                value={situationData.titre}
-                onChange={handleInputChange}
-                placeholder="Ex: Situation mensuelle - Janvier 2023"
               />
             </div>
             
@@ -318,12 +259,12 @@ const SituationForm = () => {
                     variant={"outline"}
                     className={cn(
                       "w-full justify-start text-left font-normal",
-                      !situationData.dateSituation && "text-muted-foreground"
+                      !situationData.date && "text-muted-foreground"
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {situationData.dateSituation ? (
-                      format(situationData.dateSituation, "dd MMMM yyyy", { locale: fr })
+                    {situationData.date ? (
+                      format(situationData.date, "dd MMMM yyyy", { locale: fr })
                     ) : (
                       <span>Sélectionner une date</span>
                     )}
@@ -332,8 +273,8 @@ const SituationForm = () => {
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={situationData.dateSituation}
-                    onSelect={handleDateChange('dateSituation')}
+                    selected={situationData.date}
+                    onSelect={handleDateChange}
                     initialFocus
                     className="p-3 pointer-events-auto"
                   />
@@ -342,101 +283,36 @@ const SituationForm = () => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="dateEcheance">Date d'échéance</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !situationData.dateEcheance && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {situationData.dateEcheance ? (
-                      format(situationData.dateEcheance, "dd MMMM yyyy", { locale: fr })
-                    ) : (
-                      <span>Sélectionner une date</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={situationData.dateEcheance}
-                    onSelect={handleDateChange('dateEcheance')}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div className="space-y-2">
-              <Label htmlFor="tva">Taux de TVA (%)</Label>
-              <Input 
-                id="tva" 
-                name="tva"
-                type="number"
-                value={situationData.tva}
-                onChange={handleNumberInputChange}
-                min="0"
-                max="100"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="retenue">Retenue de garantie (%)</Label>
-              <Input 
-                id="retenue" 
-                name="retenue"
-                type="number"
-                value={situationData.retenue}
-                onChange={handleNumberInputChange}
-                min="0"
-                max="100"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="status">Statut</Label>
+              <Label htmlFor="lot">Lot associé *</Label>
               <Select 
-                value={situationData.status} 
-                onValueChange={handleSelectChange('status')}
+                value={situationData.lot} 
+                onValueChange={handleSelectChange('lot')}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez un statut" />
+                  <SelectValue placeholder="Sélectionnez un lot" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="brouillon">Brouillon</SelectItem>
-                  <SelectItem value="soumis">Soumise</SelectItem>
-                  <SelectItem value="valide">Validée</SelectItem>
-                  <SelectItem value="facture">Facturée</SelectItem>
-                  <SelectItem value="paye">Payée</SelectItem>
+                  {lots.map(lot => (
+                    <SelectItem key={lot.id} value={lot.id}>
+                      {lot.nom}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-          </div>
-          
-          <div className="flex flex-col md:flex-row gap-6 mb-6">
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="isAcompte" 
-                checked={situationData.isAcompte}
-                onCheckedChange={handleCheckboxChange('isAcompte')}
-              />
-              <Label htmlFor="isAcompte">Acompte</Label>
-            </div>
             
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="estSolde" 
-                checked={situationData.estSolde}
-                onCheckedChange={handleCheckboxChange('estSolde')}
+            <div className="space-y-2">
+              <Label htmlFor="avancement">Avancement global (%)</Label>
+              <Input 
+                id="avancement" 
+                name="avancement"
+                type="number"
+                min="0"
+                max="100"
+                value={situationData.avancement}
+                onChange={handleNumberInputChange}
+                placeholder="Ex: 30"
               />
-              <Label htmlFor="estSolde">Situation de solde</Label>
             </div>
           </div>
           
@@ -444,24 +320,14 @@ const SituationForm = () => {
           
           <div className="flex justify-between items-center mb-4">
             <div className="text-lg font-semibold">Détail de la situation</div>
-            <div className="flex space-x-2">
-              <Button 
-                type="button"
-                variant="outline" 
-                onClick={exporterExcel}
-              >
-                <FileSpreadsheet className="h-4 w-4 mr-2" />
-                Exporter Excel
-              </Button>
-              <Button 
-                type="button"
-                variant="outline" 
-                onClick={ajouterLigne}
-              >
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Ajouter une ligne
-              </Button>
-            </div>
+            <Button 
+              type="button"
+              variant="outline" 
+              onClick={ajouterLigne}
+            >
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Ajouter une ligne
+            </Button>
           </div>
           
           {lignes.length === 0 ? (
@@ -590,7 +456,7 @@ const SituationForm = () => {
                       TOTAL :
                     </TableCell>
                     <TableCell className="font-bold">
-                      {situationData.montantHT.toFixed(2)} €
+                      {situationData.montant_ht.toFixed(2)} €
                     </TableCell>
                     <TableCell colSpan={5}></TableCell>
                   </TableRow>
@@ -600,87 +466,41 @@ const SituationForm = () => {
           )}
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div>
-              <div className="space-y-2 mb-4">
-                <Label htmlFor="commentaires">Commentaires</Label>
-                <Textarea 
-                  id="commentaires" 
-                  name="commentaires"
-                  value={situationData.commentaires}
-                  onChange={handleInputChange}
-                  placeholder="Observations ou commentaires sur cette situation..."
-                  rows={4}
-                />
-              </div>
-            </div>
-            
+            <div></div>
             <div className="border rounded-md p-4">
               <h4 className="text-base font-medium mb-4">Récapitulatif financier</h4>
               
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span>Montant HT :</span>
-                  <span className="font-medium">{situationData.montantHT.toFixed(2)} €</span>
+                  <span className="font-medium">{situationData.montant_ht.toFixed(2)} €</span>
                 </div>
                 
                 <div className="flex justify-between">
-                  <span>TVA ({situationData.tva}%) :</span>
-                  <span>{(situationData.montantHT * situationData.tva / 100).toFixed(2)} €</span>
+                  <span>TVA (20%) :</span>
+                  <span>{(situationData.montant_ht * 0.2).toFixed(2)} €</span>
                 </div>
                 
                 <div className="flex justify-between">
                   <span>Montant TTC :</span>
-                  <span className="font-medium">{situationData.montantTTC.toFixed(2)} €</span>
+                  <span className="font-medium">{situationData.montant_ttc.toFixed(2)} €</span>
                 </div>
-                
-                <div className="pt-2 border-t">
-                  <div className="flex justify-between">
-                    <span>Retenue de garantie ({situationData.retenue}%) :</span>
-                    <span className="font-medium">
-                      {(situationData.montantTTC * situationData.retenue / 100).toFixed(2)} €
-                    </span>
-                  </div>
-                  
-                  <div className="flex justify-between mt-2">
-                    <span className="font-semibold">Net à payer :</span>
-                    <span className="font-bold text-lg">
-                      {(situationData.montantTTC * (1 - situationData.retenue / 100)).toFixed(2)} €
-                    </span>
-                  </div>
-                </div>
-                
-                {situationData.facture && (
-                  <div className="mt-4 p-2 bg-blue-50 border border-blue-100 rounded flex items-start">
-                    <Info className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-blue-700">Facture générée :</p>
-                      <p className="text-sm text-blue-600">N° {situationData.facture}</p>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
       
-      <div className="flex justify-between">
-        <Button 
-          type="button" 
-          variant="outline" 
-          onClick={genererFacture}
-          disabled={!!situationData.facture}
-        >
-          {situationData.facture ? "Facture déjà générée" : "Générer la facture"}
-        </Button>
-        
-        <div className="flex space-x-3">
-          <Button type="button" variant="outline">Annuler</Button>
-          <Button type="submit" className="bg-agri-primary hover:bg-agri-primary-dark">
-            <Save className="mr-2 h-4 w-4" />
-            Enregistrer la situation
+      <div className="flex justify-end space-x-3">
+        {onCancel && (
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Annuler
           </Button>
-        </div>
+        )}
+        <Button type="submit" className="bg-agri-primary hover:bg-agri-primary-dark">
+          <Save className="mr-2 h-4 w-4" />
+          Enregistrer la situation
+        </Button>
       </div>
     </form>
   );

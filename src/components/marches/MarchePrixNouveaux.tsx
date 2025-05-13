@@ -1,302 +1,144 @@
 
-import React, { useState } from 'react';
-import { 
-  Card, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription, 
-  CardContent 
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { 
-  Table, 
-  TableHeader, 
-  TableRow, 
-  TableHead, 
-  TableBody, 
-  TableCell 
-} from '@/components/ui/table';
-import { 
-  Plus, 
-  FileText, 
-  FileEdit, 
-  DollarSign,
-  TrendingUp,
-  Search
-} from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
+import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+import { PlusCircle, Calculator } from 'lucide-react';
 
-interface PrixNouveauxProps {
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import PrixNouveauForm from '@/components/forms/PrixNouveauForm';
+import { getPrixNouveauxForMarche, PrixNouveau } from '@/services/droits/prixNouveaux';
+
+interface MarchePrixNouveauxProps {
   marcheId: string;
 }
 
-// Type pour les prix nouveaux
-interface PrixNouveau {
-  id: string;
-  reference: string;
-  designation: string;
-  unite: string;
-  prixUnitaireHT: number;
-  dateProposition: string;
-  statut: 'Proposé' | 'En négociation' | 'Accepté' | 'Refusé';
-  lot: string;
-}
+const MarchePrixNouveaux: React.FC<MarchePrixNouveauxProps> = ({ marcheId }) => {
+  const [prixNouveaux, setPrixNouveaux] = useState<PrixNouveau[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-// Données fictives pour les prix nouveaux
-const prixNouveauxMock: PrixNouveau[] = [
-  {
-    id: 'pn1',
-    reference: 'PN-GO-001',
-    designation: 'Fondation spéciale type pieux',
-    unite: 'm3',
-    prixUnitaireHT: 350,
-    dateProposition: '15/02/2024',
-    statut: 'Accepté',
-    lot: 'Gros œuvre'
-  },
-  {
-    id: 'pn2',
-    reference: 'PN-GO-002',
-    designation: 'Reprise en sous-œuvre',
-    unite: 'm2',
-    prixUnitaireHT: 420,
-    dateProposition: '20/02/2024',
-    statut: 'Accepté',
-    lot: 'Gros œuvre'
-  },
-  {
-    id: 'pn3',
-    reference: 'PN-ELEC-001',
-    designation: 'Fourniture et pose de luminaires LED spécifiques',
-    unite: 'U',
-    prixUnitaireHT: 180,
-    dateProposition: '05/03/2024',
-    statut: 'En négociation',
-    lot: 'Électricité'
-  },
-  {
-    id: 'pn4',
-    reference: 'PN-PAY-001',
-    designation: 'Plantation d\'arbres supplémentaires',
-    unite: 'U',
-    prixUnitaireHT: 650,
-    dateProposition: '15/03/2024',
-    statut: 'Proposé',
-    lot: 'Paysage'
-  },
-  {
-    id: 'pn5',
-    reference: 'PN-GO-003',
-    designation: 'Béton architectural spécifique',
-    unite: 'm3',
-    prixUnitaireHT: 520,
-    dateProposition: '02/04/2024',
-    statut: 'Refusé',
-    lot: 'Gros œuvre'
-  }
-];
+  useEffect(() => {
+    fetchPrixNouveaux();
+  }, [marcheId]);
 
-const MarchePrixNouveaux: React.FC<PrixNouveauxProps> = ({ marcheId }) => {
-  const [prixNouveaux, setPrixNouveaux] = useState<PrixNouveau[]>(prixNouveauxMock);
-  const [search, setSearch] = useState('');
-  const [lotFilter, setLotFilter] = useState('all');
-  const [statutFilter, setStatutFilter] = useState('all');
-
-  // Filtrer les prix nouveaux
-  const filteredPrix = prixNouveaux.filter(prix => {
-    const searchMatch = 
-      prix.reference.toLowerCase().includes(search.toLowerCase()) ||
-      prix.designation.toLowerCase().includes(search.toLowerCase());
-    
-    const lotMatch = lotFilter === 'all' || prix.lot === lotFilter;
-    const statutMatch = statutFilter === 'all' || prix.statut === statutFilter;
-
-    return searchMatch && lotMatch && statutMatch;
-  });
-
-  // Extraire les lots uniques pour le filtre
-  const lots = Array.from(new Set(prixNouveaux.map(prix => prix.lot)));
-
-  // Calculer les statistiques
-  const totalPrix = prixNouveaux.length;
-  const prixAcceptes = prixNouveaux.filter(prix => prix.statut === 'Accepté').length;
-  const montantTotalAccepte = prixNouveaux
-    .filter(prix => prix.statut === 'Accepté')
-    .reduce((sum, prix) => sum + prix.prixUnitaireHT, 0);
-
-  // Fonction pour formatter les montants en euros
-  const formatMontant = (montant: number): string => {
-    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(montant);
+  const fetchPrixNouveaux = async () => {
+    try {
+      setIsLoading(true);
+      const data = await getPrixNouveauxForMarche(marcheId);
+      setPrixNouveaux(data || []);
+    } catch (error) {
+      console.error("Erreur lors de la récupération des prix nouveaux:", error);
+      toast.error("Erreur", {
+        description: "Impossible de charger les prix nouveaux."
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Fonction pour obtenir la classe CSS du badge statut
-  const getStatusBadge = (statut: string): string => {
-    switch(statut) {
-      case 'Proposé': return 'bg-blue-100 text-blue-800';
-      case 'En négociation': return 'bg-amber-100 text-amber-800';
-      case 'Accepté': return 'bg-green-100 text-green-800';
-      case 'Refusé': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+  const handlePrixNouveauCreated = () => {
+    setIsDialogOpen(false);
+    fetchPrixNouveaux();
+    toast.success("Succès", {
+      description: "Le prix nouveau a été ajouté avec succès."
+    });
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'brouillon':
+        return <Badge variant="outline">Brouillon</Badge>;
+      case 'propose':
+        return <Badge variant="secondary">Proposé</Badge>;
+      case 'enattente':
+        return <Badge variant="default">En attente</Badge>;
+      case 'valide':
+        return <Badge className="bg-green-600">Validé</Badge>;
+      case 'refuse':
+        return <Badge variant="destructive">Refusé</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
   return (
-    <div className="space-y-6 py-4">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-        <h2 className="text-2xl font-bold">Prix Nouveaux</h2>
-        <Button className="flex items-center">
-          <Plus className="mr-2 h-4 w-4" /> Nouveau prix
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold">Prix nouveaux</h2>
+        <Button onClick={() => setIsDialogOpen(true)}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Nouveau prix
         </Button>
       </div>
 
-      {/* Dashboard des prix nouveaux */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <p className="text-sm text-gray-500">Total des prix nouveaux</p>
-              <p className="text-3xl font-bold">{totalPrix}</p>
-              <p className="text-sm text-gray-600">prix proposés</p>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <p className="text-sm text-gray-500">Prix acceptés</p>
-              <p className="text-3xl font-bold text-green-600">{prixAcceptes}</p>
-              <p className="text-sm text-gray-600">({Math.round((prixAcceptes / totalPrix) * 100)}%)</p>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <p className="text-sm text-gray-500">Montant total accepté</p>
-              <p className="text-3xl font-bold">{formatMontant(montantTotalAccepte)}</p>
-              <p className="text-sm text-gray-600">HT</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filtres */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
-        <div className="w-full md:w-1/3">
-          <Input
-            placeholder="Rechercher un prix nouveau..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+      {isLoading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-btp-blue"></div>
         </div>
-        
-        <div className="w-full md:w-1/4">
-          <Select value={lotFilter} onValueChange={setLotFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Filtrer par lot" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous les lots</SelectItem>
-              {lots.map(lot => (
-                <SelectItem key={lot} value={lot}>{lot}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      ) : prixNouveaux.length === 0 ? (
+        <div className="text-center p-12 border rounded-md bg-muted/30">
+          <Calculator className="mx-auto h-12 w-12 text-muted-foreground" />
+          <p className="text-lg font-medium mt-4">Aucun prix nouveau</p>
+          <p className="text-muted-foreground mt-2">
+            Les prix nouveaux permettent de facturer des prestations non prévues initialement au marché.
+          </p>
+          <Button 
+            className="mt-6" 
+            onClick={() => setIsDialogOpen(true)}
+          >
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Créer un prix nouveau
+          </Button>
         </div>
-        
-        <div className="w-full md:w-1/4">
-          <Select value={statutFilter} onValueChange={setStatutFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Filtrer par statut" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous les statuts</SelectItem>
-              <SelectItem value="Proposé">Proposé</SelectItem>
-              <SelectItem value="En négociation">En négociation</SelectItem>
-              <SelectItem value="Accepté">Accepté</SelectItem>
-              <SelectItem value="Refusé">Refusé</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Liste des prix nouveaux */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Liste des prix nouveaux</CardTitle>
-          <CardDescription>
-            Prix non prévus au marché initial
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      ) : (
+        <div className="border rounded-md overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Référence</TableHead>
                 <TableHead>Désignation</TableHead>
-                <TableHead>Lot</TableHead>
                 <TableHead>Unité</TableHead>
-                <TableHead>Prix unitaire</TableHead>
-                <TableHead>Date proposition</TableHead>
+                <TableHead className="text-right">Quantité</TableHead>
+                <TableHead className="text-right">Prix unitaire</TableHead>
+                <TableHead className="text-right">Total HT</TableHead>
                 <TableHead>Statut</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredPrix.length > 0 ? (
-                filteredPrix.map(prix => (
-                  <TableRow key={prix.id}>
-                    <TableCell className="font-medium">{prix.reference}</TableCell>
-                    <TableCell>{prix.designation}</TableCell>
-                    <TableCell>{prix.lot}</TableCell>
-                    <TableCell>{prix.unite}</TableCell>
-                    <TableCell>{formatMontant(prix.prixUnitaireHT)}</TableCell>
-                    <TableCell>{prix.dateProposition}</TableCell>
-                    <TableCell>
-                      <Badge className={getStatusBadge(prix.statut)}>
-                        {prix.statut}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                          <Search className="h-4 w-4" />
-                        </Button>
-                        {['Proposé', 'En négociation'].includes(prix.statut) && (
-                          <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                            <FileEdit className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {prix.statut === 'En négociation' && (
-                          <Button variant="outline" size="sm" className="h-8 w-8 p-0 text-green-600">
-                            <DollarSign className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-6">
-                    Aucun prix nouveau trouvé avec les filtres sélectionnés
+              {prixNouveaux.map((prix) => (
+                <TableRow key={prix.id} className="cursor-pointer hover:bg-muted/50">
+                  <TableCell className="font-medium">{prix.reference}</TableCell>
+                  <TableCell>{prix.designation}</TableCell>
+                  <TableCell>{prix.unite}</TableCell>
+                  <TableCell className="text-right">{prix.quantite.toLocaleString('fr-FR')}</TableCell>
+                  <TableCell className="text-right">
+                    {prix.prix_unitaire.toLocaleString('fr-FR')} €
                   </TableCell>
+                  <TableCell className="text-right font-medium">
+                    {(prix.prix_unitaire * prix.quantite).toLocaleString('fr-FR')} €
+                  </TableCell>
+                  <TableCell>{getStatusBadge(prix.statut)}</TableCell>
                 </TableRow>
-              )}
+              ))}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        </div>
+      )}
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Nouveau prix</DialogTitle>
+          </DialogHeader>
+          <PrixNouveauForm 
+            marcheId={marcheId}
+            onSuccess={handlePrixNouveauCreated}
+            onCancel={() => setIsDialogOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
