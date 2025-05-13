@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { useNotifications } from '@/hooks/use-notifications';
 import { formatDate } from '@/utils/crm-operations';
 import { cn } from '@/lib/utils';
+import { Notification } from '@/services/droits/notificationsService';
 
 const NotificationCenter: React.FC = () => {
   const [open, setOpen] = useState(false);
@@ -21,7 +22,7 @@ const NotificationCenter: React.FC = () => {
     clearAllNotifications
   } = useNotifications();
 
-  const handleMarkAsRead = (id: number) => {
+  const handleMarkAsRead = (id: string) => {
     markAsRead(id);
   };
 
@@ -29,7 +30,7 @@ const NotificationCenter: React.FC = () => {
     markAllAsRead();
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: string) => {
     deleteNotification(id);
   };
 
@@ -113,7 +114,7 @@ const NotificationCenter: React.FC = () => {
                   key={notification.id} 
                   className={cn(
                     "p-3 flex gap-3", 
-                    notification.read ? "bg-background" : getBgForType(notification.type)
+                    notification.lue ? "bg-background" : getBgForType(notification.type)
                   )}
                 >
                   <div className="p-1 mt-0.5">
@@ -121,11 +122,11 @@ const NotificationCenter: React.FC = () => {
                   </div>
                   <div className="flex-1 space-y-1">
                     <div className="flex justify-between items-start">
-                      <p className={cn("font-medium text-sm", !notification.read && "font-bold")}>
-                        {notification.title}
+                      <p className={cn("font-medium text-sm", !notification.lue && "font-bold")}>
+                        {notification.titre}
                       </p>
                       <div className="flex gap-1">
-                        {!notification.read && (
+                        {!notification.lue && (
                           <Button 
                             variant="ghost" 
                             size="icon" 
@@ -147,7 +148,7 @@ const NotificationCenter: React.FC = () => {
                     </div>
                     <p className="text-xs text-muted-foreground">{notification.message}</p>
                     <p className="text-[10px] text-muted-foreground">
-                      {formatDate(notification.date)}
+                      {formatDate(notification.created_at)}
                     </p>
                   </div>
                 </div>

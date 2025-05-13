@@ -26,141 +26,181 @@ export interface Alerte {
 
 export const notificationsService = {
   // Récupérer les notifications d'un utilisateur
-  async getUserNotifications() {
+  async getUserNotifications(): Promise<Notification[]> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
-    const { data, error } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Erreur lors de la récupération des notifications:', error);
+      if (error) {
+        console.error('Erreur lors de la récupération des notifications:', error);
+        return [];
+      }
+
+      return data as Notification[];
+    } catch (error) {
+      console.error('Erreur inattendue lors de la récupération des notifications:', error);
       return [];
     }
-
-    return data as Notification[];
   },
 
   // Marquer une notification comme lue
-  async markNotificationAsRead(notificationId: string) {
-    const { error } = await supabase
-      .from('notifications')
-      .update({ lue: true })
-      .eq('id', notificationId);
+  async markNotificationAsRead(notificationId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ lue: true })
+        .eq('id', notificationId);
 
-    if (error) {
-      console.error('Erreur lors du marquage de la notification comme lue:', error);
+      if (error) {
+        console.error('Erreur lors du marquage de la notification comme lue:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Erreur inattendue lors du marquage de la notification:', error);
       return false;
     }
-
-    return true;
   },
 
   // Marquer toutes les notifications d'un utilisateur comme lues
-  async markAllNotificationsAsRead() {
+  async markAllNotificationsAsRead(): Promise<boolean> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return false;
 
-    const { error } = await supabase
-      .from('notifications')
-      .update({ lue: true })
-      .eq('user_id', user.id);
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ lue: true })
+        .eq('user_id', user.id);
 
-    if (error) {
-      console.error('Erreur lors du marquage de toutes les notifications comme lues:', error);
+      if (error) {
+        console.error('Erreur lors du marquage de toutes les notifications comme lues:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Erreur inattendue lors du marquage des notifications:', error);
       return false;
     }
-
-    return true;
   },
 
   // Supprimer une notification
-  async deleteNotification(notificationId: string) {
-    const { error } = await supabase
-      .from('notifications')
-      .delete()
-      .eq('id', notificationId);
+  async deleteNotification(notificationId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', notificationId);
 
-    if (error) {
-      console.error('Erreur lors de la suppression de la notification:', error);
+      if (error) {
+        console.error('Erreur lors de la suppression de la notification:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Erreur inattendue lors de la suppression de la notification:', error);
       return false;
     }
-
-    return true;
   },
 
   // Supprimer toutes les notifications d'un utilisateur
-  async deleteAllNotifications() {
+  async deleteAllNotifications(): Promise<boolean> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return false;
 
-    const { error } = await supabase
-      .from('notifications')
-      .delete()
-      .eq('user_id', user.id);
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', user.id);
 
-    if (error) {
-      console.error('Erreur lors de la suppression de toutes les notifications:', error);
+      if (error) {
+        console.error('Erreur lors de la suppression de toutes les notifications:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Erreur inattendue lors de la suppression des notifications:', error);
       return false;
     }
-
-    return true;
   },
 
   // Configurer une alerte pour un marché
-  async configureAlerte(marcheId: string, type: string, delaiJours: number, active: boolean = true) {
-    const { data, error } = await supabase
-      .from('alertes')
-      .upsert([
-        {
-          marche_id: marcheId,
-          type,
-          delai_jours: delaiJours,
-          active,
-          updated_at: new Date().toISOString()
-        }
-      ])
-      .select();
+  async configureAlerte(marcheId: string, type: string, delaiJours: number, active: boolean = true): Promise<Alerte | null> {
+    try {
+      const { data, error } = await supabase
+        .from('alertes')
+        .upsert([
+          {
+            marche_id: marcheId,
+            type,
+            delai_jours: delaiJours,
+            active,
+            updated_at: new Date().toISOString()
+          }
+        ])
+        .select();
 
-    if (error) {
-      console.error('Erreur lors de la configuration de l\'alerte:', error);
+      if (error) {
+        console.error('Erreur lors de la configuration de l\'alerte:', error);
+        return null;
+      }
+
+      return data[0] as Alerte;
+    } catch (error) {
+      console.error('Erreur inattendue lors de la configuration de l\'alerte:', error);
       return null;
     }
-
-    return data[0] as Alerte;
   },
 
   // Récupérer les alertes configurées pour un marché
-  async getAlertesForMarche(marcheId: string) {
-    const { data, error } = await supabase
-      .from('alertes')
-      .select('*')
-      .eq('marche_id', marcheId);
+  async getAlertesForMarche(marcheId: string): Promise<Alerte[]> {
+    try {
+      const { data, error } = await supabase
+        .from('alertes')
+        .select('*')
+        .eq('marche_id', marcheId);
 
-    if (error) {
-      console.error('Erreur lors de la récupération des alertes:', error);
+      if (error) {
+        console.error('Erreur lors de la récupération des alertes:', error);
+        return [];
+      }
+
+      return data as Alerte[];
+    } catch (error) {
+      console.error('Erreur inattendue lors de la récupération des alertes:', error);
       return [];
     }
-
-    return data as Alerte[];
   },
 
   // Activer/désactiver une alerte
-  async toggleAlerteActive(alerteId: string, active: boolean) {
-    const { error } = await supabase
-      .from('alertes')
-      .update({ active, updated_at: new Date().toISOString() })
-      .eq('id', alerteId);
+  async toggleAlerteActive(alerteId: string, active: boolean): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('alertes')
+        .update({ active, updated_at: new Date().toISOString() })
+        .eq('id', alerteId);
 
-    if (error) {
-      console.error('Erreur lors de la modification de l\'alerte:', error);
+      if (error) {
+        console.error('Erreur lors de la modification de l\'alerte:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Erreur inattendue lors de la modification de l\'alerte:', error);
       return false;
     }
-
-    return true;
   },
 
   // Exécuter les vérifications d'alertes manuellement
