@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { FileText, CheckCircle, FilePen, XCircle } from 'lucide-react';
-import { Visa } from './types';
+import { Visa, Version } from './types';
 
 interface VisaStatusBadgeProps {
   statut: Visa['statut'] | Version['statut'];
