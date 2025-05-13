@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { droitsService } from '@/services/droits';
+import { marcheRightsService, usersService } from '@/services/droits';
 import { UserDroit } from '@/services/droits/types';
 import { useUserRole, MarcheSpecificRole } from '@/hooks/userRole';
 
@@ -46,8 +47,8 @@ export function useCollaborateursManager(marcheId: string) {
     const delayDebounceFn = setTimeout(async () => {
       if (searchQuery && searchQuery.length >= 2) {
         try {
-          const results = await droitsService.searchUsers(searchQuery);
-          setSearchResults(results);
+          const results = await usersService.searchUsers(searchQuery);
+          setSearchResults(results || []);
         } catch (error) {
           console.error('Erreur lors de la recherche:', error);
           setSearchResults([]);
@@ -65,12 +66,12 @@ export function useCollaborateursManager(marcheId: string) {
     setIsLoading(true);
     try {
       // Get market collaborators
-      const droitsData = await droitsService.getDroitsByMarcheId(marcheId);
-      setCollaborateurs(droitsData);
+      const droitsData = await marcheRightsService.getDroitsByMarcheId(marcheId);
+      setCollaborateurs(droitsData || []);
 
       // Get all users for selection
-      const usersData = await droitsService.getUsers();
-      setAvailableUsers(usersData);
+      const usersData = await usersService.getUsers();
+      setAvailableUsers(usersData || []);
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
       toast({
@@ -95,7 +96,7 @@ export function useCollaborateursManager(marcheId: string) {
     }
 
     try {
-      await droitsService.assignRole(selectedUserId, marcheId, selectedRole);
+      await marcheRightsService.assignRole(selectedUserId, marcheId, selectedRole);
       toast({
         title: "Succès",
         description: `Rôle ${selectedRole} attribué avec succès.`,
@@ -121,7 +122,7 @@ export function useCollaborateursManager(marcheId: string) {
   // Function to remove a role
   const handleRemoveRole = async (userId: string) => {
     try {
-      await droitsService.removeRole(userId, marcheId);
+      await marcheRightsService.removeRole(userId, marcheId);
       toast({
         title: "Succès",
         description: "Accès supprimé avec succès.",

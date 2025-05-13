@@ -6,10 +6,11 @@ export const usersService = {
   // Search for users by email, name or first name
   async searchUsers(query: string) {
     try {
+      // Direct query instead of RPC call since we don't have that function
       const { data, error } = await supabase
-        .rpc('search_users', { 
-          search_query: query
-        });
+        .from('profiles')
+        .select('id, email, nom, prenom, role_global')
+        .or(`nom.ilike.%${query}%,prenom.ilike.%${query}%,email.ilike.%${query}%`);
         
       if (error) throw error;
       return data || [];
@@ -37,12 +38,11 @@ export const usersService = {
   // Update a user's global role
   async updateGlobalRole(userId: string, role: UserRole) {
     try {
-      // Use a security definer function to avoid recursive RLS issues
+      // Direct update instead of using RPC
       const { error } = await supabase
-        .rpc('update_user_global_role', { 
-          user_id: userId, 
-          new_role: role 
-        });
+        .from('profiles')
+        .update({ role_global: role })
+        .eq('id', userId);
         
       if (error) throw error;
       return true;

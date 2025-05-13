@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -25,7 +26,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { createSituation, SituationInput } from "@/services/droits";
+import { createSituation, SituationInsert } from "@/services/droits";
 import { toast } from "sonner";
 
 // Définition du schema de validation avec Zod
@@ -111,7 +112,7 @@ export const SituationForm: React.FC<SituationFormProps> = ({
       const dateString = situationData.date.toISOString().split('T')[0];
       
       // Préparation des données pour l'envoi
-      const situationToSave = {
+      const situationToSave: SituationInsert = {
         marche_id: situationData.marche_id,
         numero: situationData.numero,
         date: dateString,
@@ -135,6 +136,8 @@ export const SituationForm: React.FC<SituationFormProps> = ({
       toast.error("Erreur de création", {
         description: "Une erreur s'est produite lors de la création de la situation."
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -293,3 +296,5 @@ export const SituationForm: React.FC<SituationFormProps> = ({
     </Card>
   );
 };
+
+export default SituationForm;

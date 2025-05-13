@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { droitsService } from '@/services/droits';
+import { marcheRightsService, usersService } from '@/services/droits';
 import { supabase } from '@/lib/supabase';
 import { MarcheSpecificRole } from '@/hooks/userRole/types';
 
@@ -40,8 +40,8 @@ export function useRoleManagement(marcheId: string) {
     const delayDebounceFn = setTimeout(async () => {
       if (searchQuery && searchQuery.length >= 2) {
         try {
-          const results = await droitsService.searchUsers(searchQuery);
-          setSearchResults(results);
+          const results = await usersService.searchUsers(searchQuery);
+          setSearchResults(results || []);
         } catch (error) {
           console.error('Erreur lors de la recherche:', error);
           setSearchResults([]);
@@ -59,12 +59,12 @@ export function useRoleManagement(marcheId: string) {
     setIsLoading(true);
     try {
       // Get market collaborators
-      const droitsData = await droitsService.getDroitsByMarcheId(marcheId);
-      setDroits(droitsData);
+      const droitsData = await marcheRightsService.getDroitsByMarcheId(marcheId);
+      setDroits(droitsData || []);
 
       // Get all users for selection
-      const usersData = await droitsService.getUsers();
-      setUsers(usersData);
+      const usersData = await usersService.getUsers();
+      setUsers(usersData || []);
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
       toast({
@@ -89,7 +89,7 @@ export function useRoleManagement(marcheId: string) {
     }
 
     try {
-      await droitsService.assignRole(selectedUserId, marcheId, selectedRole);
+      await marcheRightsService.assignRole(selectedUserId, marcheId, selectedRole);
       toast({
         title: "Succès",
         description: `Rôle ${selectedRole} attribué avec succès.`,
@@ -112,7 +112,7 @@ export function useRoleManagement(marcheId: string) {
   // Role removal
   const handleRemoveRole = async (userId: string) => {
     try {
-      await droitsService.removeRole(userId, marcheId);
+      await marcheRightsService.removeRole(userId, marcheId);
       toast({
         title: "Succès",
         description: "Accès supprimé avec succès.",

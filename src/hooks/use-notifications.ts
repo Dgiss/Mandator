@@ -1,7 +1,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import notificationsService, { Notification } from '@/services/droits/notificationsService';
+import { notificationsService, Notification } from '@/services/droits/notificationsService';
 
 // Interface pour les notifications avec des méthodes supplémentaires pour l'interaction
 export interface UseNotificationsReturn {
@@ -31,7 +31,9 @@ export const useNotifications = (): UseNotificationsReturn => {
     try {
       setLoading(true);
       const data = await notificationsService.getUserNotifications();
-      setNotifications(data);
+      if (Array.isArray(data)) {
+        setNotifications(data);
+      }
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Une erreur est survenue'));
