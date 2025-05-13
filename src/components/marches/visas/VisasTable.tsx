@@ -1,8 +1,15 @@
 
-import React from 'react';
-import { FileText, Upload, Eye } from 'lucide-react';
+import React, { useState } from 'react';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
+import { Loader } from 'lucide-react';
 import { VisaStatusBadge } from './VisaStatusBadge';
 import { Document, Version } from './types';
 
@@ -14,83 +21,118 @@ interface VisasTableProps {
   openVisaDialog: (document: Document, version: Version) => void;
 }
 
-export const VisasTable = ({
+export const VisasTable: React.FC<VisasTableProps> = ({
   documents,
   canShowDiffuseButton,
   canShowVisaButton,
   openDiffusionDialog,
   openVisaDialog
-}: VisasTableProps) => {
+}) => {
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Wrapper to track loading states for buttons
+  const handleAction = async (
+    documentId: string, 
+    versionId: string,
+    action: 'diffuse' | 'visa',
+    callback: () => void
+  ) => {
+    const loadingKey = `${action}-${documentId}-${versionId}`;
+    setActionLoading(loadingKey);
+    
+    try {
+      // Small delay to simulate network request for better UX
+      await new Promise(resolve => setTimeout(resolve, 300));
+      callback();
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  if (documents.length === 0) {
+    return (
+      <div className="py-8 text-center text-muted-foreground">
+        Aucun document à afficher
+      </div>
+    );
+  }
+
   return (
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead>Document</TableHead>
-          <TableHead className="hidden md:table-cell">Version</TableHead>
-          <TableHead className="hidden md:table-cell">Demandé par</TableHead>
-          <TableHead className="hidden md:table-cell">Date demande</TableHead>
-          <TableHead>Échéance</TableHead>
+          <TableHead>Version</TableHead>
           <TableHead>Statut</TableHead>
-          <TableHead>Actions</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {documents.map(document => (
-          document.versions.map(version => (
-            <TableRow key={version.id}>
-              <TableCell className="font-medium">
-                <div className="flex items-center">
-                  <FileText className="h-5 w-5 mr-2 text-btp-blue" />
-                  {document.nom}
-                </div>
-              </TableCell>
-              <TableCell className="hidden md:table-cell">{version.version}</TableCell>
-              <TableCell className="hidden md:table-cell">-</TableCell>
-              <TableCell className="hidden md:table-cell">-</TableCell>
-              <TableCell>-</TableCell>
-              <TableCell>
-                <VisaStatusBadge statut={version.statut} />
-              </TableCell>
-              <TableCell>
-                <div className="flex space-x-2">
-                  {/* Bouton pour diffuser (MOE uniquement) */}
-                  {canShowDiffuseButton(document, version) && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                      onClick={() => openDiffusionDialog(document, version)}
-                    >
-                      <Upload className="h-4 w-4 mr-1.5" />
-                      Diffuser
-                    </Button>
-                  )}
-                  
-                  {/* Bouton pour viser (Mandataire uniquement) */}
-                  {canShowVisaButton(document, version) && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-green-600 border-green-200 hover:bg-green-50"
-                      onClick={() => openVisaDialog(document, version)}
-                    >
-                      <Eye className="h-4 w-4 mr-1.5" />
-                      Viser
-                    </Button>
-                  )}
-                </div>
-              </TableCell>
-            </TableRow>
-          ))
+          document.versions.map(version => {
+            const diffuseLoadingKey = `diffuse-${document.id}-${version.id}`;
+            const visaLoadingKey = `visa-${document.id}-${version.id}`;
+            const showDiffuseButton = canShowDiffuseButton(document, version);
+            const showVisaButton = canShowVisaButton(document, version);
+            
+            return (
+              <TableRow key={`${document.id}-${version.id}`}>
+                <TableCell className="font-medium">{document.nom}</TableCell>
+                <TableCell>{version.version}</TableCell>
+                <TableCell>
+                  <VisaStatusBadge statut={version.statut} />
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    {showDiffuseButton && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700"
+                        disabled={actionLoading !== null}
+                        onClick={() => handleAction(
+                          document.id, 
+                          version.id,
+                          'diffuse', 
+                          () => openDiffusionDialog(document, version)
+                        )}
+                      >
+                        {actionLoading === diffuseLoadingKey ? (
+                          <>
+                            <Loader className="h-4 w-4 mr-2 animate-spin" />
+                            Chargement...
+                          </>
+                        ) : 'Diffuser'}
+                      </Button>
+                    )}
+                    
+                    {showVisaButton && (
+                      <Button
+                        size="sm"
+                        variant="outline" 
+                        className="bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700"
+                        disabled={actionLoading !== null}
+                        onClick={() => handleAction(
+                          document.id, 
+                          version.id,
+                          'visa', 
+                          () => openVisaDialog(document, version)
+                        )}
+                      >
+                        {actionLoading === visaLoadingKey ? (
+                          <>
+                            <Loader className="h-4 w-4 mr-2 animate-spin" />
+                            Chargement...
+                          </>
+                        ) : 'Viser'}
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })
         ))}
-        
-        {documents.length === 0 && (
-          <TableRow>
-            <TableCell colSpan={7} className="h-24 text-center">
-              Aucun document trouvé
-            </TableCell>
-          </TableRow>
-        )}
       </TableBody>
     </Table>
   );

@@ -10,6 +10,7 @@ export const useVisaManagement = (marcheId: string) => {
   const [activeTab, setActiveTab] = useState('tous');
   const [visas, setVisas] = useState<Visa[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
   
@@ -29,6 +30,7 @@ export const useVisaManagement = (marcheId: string) => {
   // Chargement des documents et visas depuis Supabase
   useEffect(() => {
     const loadDocuments = async () => {
+      setLoading(true);
       try {
         // Charger les documents
         const { data: documentsData, error: documentsError } = await supabase
@@ -100,6 +102,8 @@ export const useVisaManagement = (marcheId: string) => {
           description: "Impossible de charger les données",
           variant: "destructive",
         });
+      } finally {
+        setLoading(false);
       }
     };
     
@@ -521,6 +525,7 @@ export const useVisaManagement = (marcheId: string) => {
   return {
     documents,
     visas: filteredVisas,
+    loading,
     searchTerm,
     setSearchTerm,
     activeTab,

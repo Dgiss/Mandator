@@ -5,6 +5,7 @@ import { useUserRole } from '@/hooks/userRole';
 import { VisasHeader } from './VisasHeader';
 import { VisaFilters } from './VisaFilters';
 import { VisasTable } from './VisasTable';
+import { VisasLoading } from './VisasLoading';
 import { DiffusionDialog } from './DiffusionDialog';
 import { VisaDialog } from './VisaDialog';
 import { useVisaManagement } from './useVisaManagement';
@@ -27,6 +28,7 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
     setSearchTerm,
     activeTab,
     setActiveTab,
+    loading,
     diffusionDialogOpen,
     setDiffusionDialogOpen,
     visaDialogOpen,
@@ -58,6 +60,11 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
   const canShowVisaButton = (document, version) => {
     return (isMandataire || isAdmin) && baseCanShowVisaButton(document, version);
   };
+
+  // If data is loading, show the loading state
+  if (loading) {
+    return <VisasLoading />;
+  }
 
   return (
     <div className="pt-6">
