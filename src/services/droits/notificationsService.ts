@@ -1,9 +1,9 @@
 
 // Create this file if it doesn't exist
 import { supabase } from '@/lib/supabase';
-import { Notification } from './types/notifications';
+import type { Notification } from './types/notifications';
 
-export { Notification };
+export type { Notification };
 
 export const notificationsService = {
   // Get all notifications for the current user
