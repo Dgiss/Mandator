@@ -7,3 +7,6 @@ export * from './usersService';
 export * from './ordresService';
 export * from './prixNouveaux';
 export * from './situations';
+
+// Service principal pour la rétrocompatibilité
+export * as droitsService from './legacyService';

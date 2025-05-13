@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -92,7 +91,20 @@ const OrdreServiceForm = ({ marcheId, onSuccess, onCancel }: OrdreServiceFormPro
     }
     
     try {
-      await createOrdreService(formData);
+      // Convertir la date au format ISO string pour la base de données
+      const dateEmissionString = formData.date_emission.toISOString().split('T')[0];
+      
+      await createOrdreService({
+        marche_id: formData.marche_id,
+        reference: formData.reference,
+        type: formData.type,
+        date_emission: dateEmissionString,
+        delai: formData.delai,
+        description: formData.description,
+        destinataire: formData.destinataire,
+        impact: formData.impact,
+        statut: formData.statut
+      });
       
       toast.success("Ordre de service créé", {
         description: `L'ordre de service ${formData.reference} a été créé avec succès.`

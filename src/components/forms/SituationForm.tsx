@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -202,11 +201,14 @@ const SituationForm = ({ marcheId, onSuccess, onCancel }: SituationFormProps) =>
     }
     
     try {
+      // Convertir la date au format ISO string pour la base de données
+      const dateString = situationData.date.toISOString().split('T')[0];
+      
       // Préparation des données pour l'envoi
       const situationToSave = {
         marche_id: situationData.marche_id,
         numero: situationData.numero,
-        date: situationData.date,
+        date: dateString,
         lot: situationData.lot,
         montant_ht: situationData.montant_ht,
         montant_ttc: situationData.montant_ttc,
@@ -227,7 +229,7 @@ const SituationForm = ({ marcheId, onSuccess, onCancel }: SituationFormProps) =>
     } catch (error) {
       console.error('Erreur lors de la création de la situation:', error);
       toast.error("Erreur de création", {
-        description: "Une erreur s'est produite lors de la création de la situation."
+        description: "Une erreur s'est produite lors de la cr��tion de la situation."
       });
     }
   };
