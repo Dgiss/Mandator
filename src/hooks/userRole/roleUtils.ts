@@ -2,11 +2,19 @@
 import { supabase } from '@/lib/supabase';
 import { MarcheSpecificRole } from './types';
 
+// Cache for market roles
+const roleCache: Record<string, Record<string, MarcheSpecificRole>> = {};
+
 /**
  * Fetches all market-specific roles for a user
  */
 export const fetchMarcheRoles = async (userId: string | undefined): Promise<Record<string, MarcheSpecificRole>> => {
   if (!userId) return {};
+  
+  // Check cache first
+  if (roleCache[userId]) {
+    return {...roleCache[userId]};
+  }
   
   try {
     // First check if user is creator of any markets (they should have MOE role)
@@ -45,12 +53,18 @@ export const fetchMarcheRoles = async (userId: string | undefined): Promise<Reco
       });
     }
     
+    // Cache the result
+    roleCache[userId] = rolesMap;
+    
     return rolesMap;
   } catch (error) {
     console.error('Error retrieving market roles:', error);
     return {};
   }
 };
+
+// Cache for specific market roles
+const specificRoleCache: Record<string, MarcheSpecificRole> = {};
 
 /**
  * Fetches the specific role for a user on a specific market
@@ -60,6 +74,14 @@ export const fetchMarcheRole = async (
   marcheId: string
 ): Promise<MarcheSpecificRole> => {
   if (!userId || !marcheId) return null;
+  
+  // Generate a cache key
+  const cacheKey = `${userId}_${marcheId}`;
+  
+  // Check cache first
+  if (specificRoleCache[cacheKey] !== undefined) {
+    return specificRoleCache[cacheKey];
+  }
   
   try {
     // IMPORTANT: Check if user is creator first (highest priority)
@@ -72,11 +94,9 @@ export const fetchMarcheRole = async (
     
     if (!marcheError && marcheData && marcheData.user_id === userId) {
       console.log(`User ${userId} is creator of market ${marcheId} - assigning MOE role`);
+      specificRoleCache[cacheKey] = 'MOE';
       return 'MOE';
     }
-    
-    // IMPORTANT: DO NOT query droits_marche directly - use the RPC function
-    console.log(`Getting specific role for user ${userId} on market ${marcheId}...`);
     
     // CRITICAL: Use RPC function to avoid RLS recursion
     console.log(`Trying RPC for user ${userId} on market ${marcheId}...`);
@@ -88,13 +108,35 @@ export const fetchMarcheRole = async (
     
     if (error) {
       console.error(`Failed to find specific role for market ${marcheId}:`, error);
+      specificRoleCache[cacheKey] = null;
       return null;
     }
     
     console.log(`Role retrieved for user ${userId} on market ${marcheId}:`, data);
+    specificRoleCache[cacheKey] = data as MarcheSpecificRole;
     return data as MarcheSpecificRole;
   } catch (error) {
     console.error('Error retrieving specific role:', error);
+    specificRoleCache[cacheKey] = null;
     return null;
+  }
+};
+
+// Function to clear role cache
+export const clearRoleCache = (userId?: string) => {
+  if (userId) {
+    // Clear only for specific user
+    delete roleCache[userId];
+    
+    // Clear specific role cache for this user
+    Object.keys(specificRoleCache).forEach(key => {
+      if (key.startsWith(`${userId}_`)) {
+        delete specificRoleCache[key];
+      }
+    });
+  } else {
+    // Clear all caches
+    Object.keys(roleCache).forEach(key => delete roleCache[key]);
+    Object.keys(specificRoleCache).forEach(key => delete specificRoleCache[key]);
   }
 };

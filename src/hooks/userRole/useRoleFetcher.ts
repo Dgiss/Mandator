@@ -11,10 +11,16 @@ export function useRoleFetcher(marcheId?: string) {
   const [globalRole, setGlobalRole] = useState<UserRole>('STANDARD');
   const [marcheRoles, setMarcheRoles] = useState<Record<string, MarcheSpecificRole>>({});
   const [loading, setLoading] = useState(true);
+  const [rolesFetched, setRolesFetched] = useState(false);
   const { user } = useAuth();
   
   // Fetch the user's global role and market-specific roles
   useEffect(() => {
+    // Skip if we've already fetched roles
+    if (rolesFetched && marcheId && marcheRoles[marcheId] !== undefined) {
+      return;
+    }
+    
     const fetchUserRole = async () => {
       setLoading(true);
       
@@ -22,6 +28,7 @@ export function useRoleFetcher(marcheId?: string) {
         if (!user) {
           setGlobalRole('STANDARD');
           setMarcheRoles({});
+          setRolesFetched(true);
           setLoading(false);
           return;
         }
@@ -40,6 +47,7 @@ export function useRoleFetcher(marcheId?: string) {
           
           // If user is ADMIN, they might not need specific market roles
           if (userGlobalRole === 'ADMIN' && !marcheId) {
+            setRolesFetched(true);
             setLoading(false);
             return;
           }
@@ -66,6 +74,8 @@ export function useRoleFetcher(marcheId?: string) {
           const userMarcheRoles = await fetchMarcheRoles(user.id);
           setMarcheRoles(userMarcheRoles);
         }
+        
+        setRolesFetched(true);
       } catch (error) {
         console.error('Error:', error);
         setGlobalRole('STANDARD');
@@ -75,23 +85,28 @@ export function useRoleFetcher(marcheId?: string) {
     };
     
     fetchUserRole();
-  }, [user, marcheId]);
+  }, [user, marcheId, rolesFetched]);
 
   // Function to fetch a specific market role (with caching)
   const getMarcheRole = async (marcheId: string): Promise<MarcheSpecificRole> => {
     if (!user) return null;
     
     // If the role is already cached, return it
-    if (marcheRoles[marcheId]) {
+    if (marcheRoles[marcheId] !== undefined) {
       return marcheRoles[marcheId];
     }
     
     // Otherwise, fetch from the database
-    const role = await fetchMarcheRole(user.id, marcheId);
-    
-    // Update the cache
-    setMarcheRoles(prev => ({...prev, [marcheId]: role}));
-    return role;
+    try {
+      const role = await fetchMarcheRole(user.id, marcheId);
+      
+      // Update the cache
+      setMarcheRoles(prev => ({...prev, [marcheId]: role}));
+      return role;
+    } catch (error) {
+      console.error('Error fetching market role:', error);
+      return null;
+    }
   };
 
   return {

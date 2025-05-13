@@ -21,6 +21,12 @@ export function useAccessChecker(
   
   // Check if user can manage roles on a market
   const canManageRoles = (marcheId?: string) => {
+    // Admins can always manage roles
+    if (globalRole === 'ADMIN') return true;
+    
+    // Check specific market role
+    if (marcheId && marcheRoles[marcheId] === 'MOE') return true;
+    
     return canManageRolesMarche(globalRole, marcheRoles, marcheId);
   };
   
