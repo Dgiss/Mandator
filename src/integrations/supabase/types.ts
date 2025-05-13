@@ -9,6 +9,44 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      alertes: {
+        Row: {
+          active: boolean
+          created_at: string
+          delai_jours: number
+          id: string
+          marche_id: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          delai_jours: number
+          id?: string
+          marche_id: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          delai_jours?: number
+          id?: string
+          marche_id?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alertes_marche_id_fkey"
+            columns: ["marche_id"]
+            isOneToOne: false
+            referencedRelation: "marches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_attachments: {
         Row: {
           document_id: string
@@ -278,6 +316,53 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          lue: boolean
+          marche_id: string
+          message: string
+          objet_id: string
+          objet_type: string
+          titre: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lue?: boolean
+          marche_id: string
+          message: string
+          objet_id: string
+          objet_type: string
+          titre: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lue?: boolean
+          marche_id?: string
+          message?: string
+          objet_id?: string
+          objet_type?: string
+          titre?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_marche_id_fkey"
+            columns: ["marche_id"]
+            isOneToOne: false
+            referencedRelation: "marches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -514,6 +599,36 @@ export type Database = {
       assign_role_to_user: {
         Args: { user_id: string; marche_id: string; role_specifique: string }
         Returns: undefined
+      }
+      check_versions_non_diffusees: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          id: string
+          lue: boolean
+          marche_id: string
+          message: string
+          objet_id: string
+          objet_type: string
+          titre: string
+          type: string
+          user_id: string
+        }[]
+      }
+      check_visas_en_attente: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          id: string
+          lue: boolean
+          marche_id: string
+          message: string
+          objet_id: string
+          objet_type: string
+          titre: string
+          type: string
+          user_id: string
+        }[]
       }
       get_accessible_marches_for_user: {
         Args: Record<PropertyKey, never>
