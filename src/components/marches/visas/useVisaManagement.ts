@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Document, Version } from './types';
 import { useToast } from '@/hooks/use-toast';
@@ -35,11 +35,18 @@ export const useVisaManagement = (marcheId: string) => {
 
   // Load documents with retry mechanism and error handling
   const loadDocuments = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+    // Skip if no marcheId is provided
+    if (!marcheId) {
+      console.log("No marcheId provided, skipping document load");
+      setLoading(false);
+      return;
+    }
+
+    console.log(`Chargement des documents pour le marché ${marcheId}...`);
     
     try {
-      console.log(`Chargement des documents pour le marché ${marcheId}...`);
+      setLoading(true);
+      setError(null);
       
       // Get documents for the specified marche
       const { data: documentsData, error: documentsError } = await supabase
@@ -124,13 +131,16 @@ export const useVisaManagement = (marcheId: string) => {
     setLoadAttempts(prev => prev + 1);
   }, []);
 
+  // Load documents only when marcheId changes or loadAttempts changes
   useEffect(() => {
-    loadDocuments();
-  }, [loadDocuments, loadAttempts]);
+    if (marcheId) {
+      loadDocuments();
+    }
+  }, [loadDocuments, loadAttempts, marcheId]);
 
-  // Filter documents based on selected options
-  useEffect(() => {
-    if (!documents) return;
+  // Filter documents based on selected options - use useMemo for performance
+  const updateFilteredDocuments = useCallback(() => {
+    if (!documents.length) return;
     
     let filtered = [...documents];
     
@@ -143,7 +153,12 @@ export const useVisaManagement = (marcheId: string) => {
     }
     
     setFilteredDocuments(filtered);
-  }, [filterOptions, documents]);
+  }, [documents, filterOptions]);
+
+  // Apply filters when filterOptions or documents change
+  useEffect(() => {
+    updateFilteredDocuments();
+  }, [updateFilteredDocuments]);
 
   // Handle document selection
   const handleDocumentSelect = useCallback((document: Document) => {

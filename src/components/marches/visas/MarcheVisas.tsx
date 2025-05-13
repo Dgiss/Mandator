@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useVisaManagement } from './useVisaManagement';
 import { VisasHeader } from './VisasHeader';
 import { VisaFilters } from './VisaFilters';
@@ -50,19 +50,20 @@ const MarcheVisas: React.FC<MarcheVisasProps> = ({ marcheId }) => {
   } = useVisaManagement(marcheId);
 
   // Use our role hooks to check permissions
-  const { canDiffuse, canVisa } = useUserRole();
+  // Using the specific marcheId to avoid unnecessary permission checks
+  const { canDiffuse, canVisa } = useUserRole(marcheId);
 
-  // Function to determine if diffuse button should be shown
-  const canShowDiffuseButton = (document: Document, version: Version | null) => {
+  // Function to determine if diffuse button should be shown - memoize permission check results
+  const canShowDiffuseButton = React.useCallback((document: Document, version: Version | null) => {
     if (!version) return false;
     return canDiffuse(marcheId) && version.statut === 'En attente de diffusion';
-  };
+  }, [canDiffuse, marcheId]);
 
-  // Function to determine if visa button should be shown
-  const canShowVisaButton = (document: Document, version: Version | null) => {
+  // Function to determine if visa button should be shown - memoize permission check results
+  const canShowVisaButton = React.useCallback((document: Document, version: Version | null) => {
     if (!version) return false;
     return canVisa(marcheId) && version.statut === 'En attente de visa';
-  };
+  }, [canVisa, marcheId]);
 
   if (error) {
     return (

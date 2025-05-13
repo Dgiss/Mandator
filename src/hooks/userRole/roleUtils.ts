@@ -2,116 +2,78 @@
 import { supabase } from '@/lib/supabase';
 import { MarcheSpecificRole } from './types';
 
-/**
- * Clears the role cache for a specific market
- * @param marcheId The ID of the market to clear the cache for
- */
-export const clearRoleCache = (marcheId?: string) => {
-  // This function would be implemented to clear cached roles
-  console.log(`Cache cleared for market: ${marcheId || 'all'}`);
-};
+// Global cache to avoid redundant fetches
+const roleCache: Record<string, MarcheSpecificRole> = {};
 
 /**
- * Fetches the role for a user on a specific market
- * @param userId The user ID
- * @param marcheId The market ID
- * @returns The market-specific role for the user
+ * Fetches all market roles for a specific user
  */
-export const fetchMarcheRole = async (userId: string, marcheId: string): Promise<MarcheSpecificRole> => {
+export async function fetchMarcheRoles(userId: string): Promise<Record<string, MarcheSpecificRole>> {
   try {
-    console.log(`Fetching role for user ${userId} on market ${marcheId}...`);
+    // Using RPC to avoid recursive RLS issues
+    const { data, error } = await supabase.rpc('get_droits_for_user', { user_id_param: userId });
     
-    // First check if the user is the creator of the market (creator = MOE)
-    const { data: marcheData, error: marcheError } = await supabase
-      .from('marches')
-      .select('user_id')
-      .eq('id', marcheId)
-      .single();
-    
-    if (!marcheError && marcheData && marcheData.user_id === userId) {
-      console.log(`User ${userId} is creator of market ${marcheId} - role is MOE`);
-      return 'MOE';
-    }
-    
-    // Try direct query first (safer than RPC call)
-    const { data: droitData, error: droitError } = await supabase
-      .from('droits_marche')
-      .select('role_specifique')
-      .eq('user_id', userId)
-      .eq('marche_id', marcheId)
-      .maybeSingle();
-      
-    if (!droitError && droitData) {
-      console.log(`Direct query result for user ${userId} on market ${marcheId}:`, droitData.role_specifique);
-      return droitData.role_specifique as MarcheSpecificRole;
-    }
-    
-    // Fall back to RPC if direct query failed
-    console.log(`No direct role found, trying RPC for user ${userId} on market ${marcheId}...`);
-    const { data: rpcData, error: rpcError } = await supabase
-      .rpc('get_user_role_for_marche', {
-        user_id: userId,
-        marche_id: marcheId
-      });
-    
-    if (rpcError) {
-      console.error('Error fetching role via RPC:', rpcError);
-      return null;
-    }
-    
-    console.log(`RPC result for user ${userId} on market ${marcheId}:`, rpcData);
-    return rpcData as MarcheSpecificRole;
-  } catch (error) {
-    console.error('Exception fetching market role:', error);
-    return null;
-  }
-};
-
-/**
- * Fetches all market roles for a user
- * @param userId The user ID
- * @returns A record of market IDs to roles
- */
-export const fetchMarcheRoles = async (userId: string): Promise<Record<string, MarcheSpecificRole>> => {
-  try {
-    console.log(`Fetching all market roles for user ${userId}...`);
-    
-    // Try direct query first
-    const { data: droitsData, error: droitsError } = await supabase
-      .from('droits_marche')
-      .select('marche_id, role_specifique')
-      .eq('user_id', userId);
-      
-    if (droitsError) {
-      console.error('Error fetching roles:', droitsError);
+    if (error) {
+      console.error('Error fetching user market roles:', error);
       return {};
     }
     
-    // Also get markets created by the user (creator = MOE)
-    const { data: createdMarches, error: createdError } = await supabase
-      .from('marches')
-      .select('id')
-      .eq('user_id', userId);
-    
-    // Create record of market IDs to roles
     const roles: Record<string, MarcheSpecificRole> = {};
     
-    // Add roles from droits_marche
-    (droitsData || []).forEach(droit => {
-      roles[droit.marche_id] = droit.role_specifique as MarcheSpecificRole;
-    });
-    
-    // Add MOE role for created markets
-    if (!createdError && createdMarches) {
-      createdMarches.forEach(marche => {
-        roles[marche.id] = 'MOE';
+    // Map the result to our expected format
+    if (data && Array.isArray(data)) {
+      data.forEach(role => {
+        roles[role.marche_id] = role.role_specifique as MarcheSpecificRole;
+        // Update cache
+        roleCache[role.marche_id] = role.role_specifique as MarcheSpecificRole;
       });
     }
     
-    console.log(`All market roles for user ${userId}:`, roles);
     return roles;
   } catch (error) {
-    console.error('Exception fetching all market roles:', error);
+    console.error('Exception fetching market roles:', error);
     return {};
   }
-};
+}
+
+/**
+ * Fetches a specific role for a user and market
+ */
+export async function fetchMarcheRole(userId: string, marcheId: string): Promise<MarcheSpecificRole> {
+  // Check cache first to prevent redundant fetches
+  if (roleCache[marcheId]) {
+    return roleCache[marcheId];
+  }
+  
+  try {
+    // Using RPC to avoid recursive RLS issues
+    const { data, error } = await supabase.rpc('get_user_role_for_marche', {
+      user_id: userId,
+      marche_id: marcheId
+    });
+    
+    if (error) {
+      console.error(`Error fetching role for market ${marcheId}:`, error);
+      return null;
+    }
+    
+    // Update cache
+    roleCache[marcheId] = data as MarcheSpecificRole;
+    return data as MarcheSpecificRole;
+  } catch (error) {
+    console.error(`Exception fetching role for market ${marcheId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Clears the role cache to force fresh data fetching
+ * Useful when roles are updated
+ */
+export function clearRoleCache(marcheId?: string): void {
+  if (marcheId) {
+    delete roleCache[marcheId];
+  } else {
+    Object.keys(roleCache).forEach(key => delete roleCache[key]);
+  }
+}
