@@ -18,11 +18,11 @@ export interface Version {
 export interface Document {
   id: string;
   nom: string;
-  type?: string; // Added type as optional
+  type?: string;
   currentVersionId: string;
   statut: 'En attente de diffusion' | 'En attente de validation' | 'Validé' | 'Refusé';
   versions: Version[];
-  latestVersion?: Version | null; // Added latestVersion as optional
+  latestVersion?: Version | null;
 }
 
 export interface MarcheVisasProps {

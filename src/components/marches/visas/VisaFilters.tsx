@@ -1,36 +1,62 @@
 
 import React from 'react';
-import { VisasFiltersProps } from './types';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
-export const VisaFilters: React.FC<VisasFiltersProps> = ({ options, onFilterChange }) => {
+export interface VisaFiltersProps {
+  options: Record<string, string>;
+  onFilterChange: (name: string, value: string) => void;
+}
+
+export const VisaFilters: React.FC<VisaFiltersProps> = ({ options, onFilterChange }) => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-      <div>
-        <label className="block text-sm font-medium mb-1">Statut</label>
-        <select 
-          className="w-full border border-gray-300 rounded-md px-3 py-2"
-          value={options.statut} 
-          onChange={(e) => onFilterChange('statut', e.target.value)}
+    <div className="flex flex-col md:flex-row gap-4 mb-6">
+      <div className="w-full md:w-1/3">
+        <Label htmlFor="statut-filter" className="mb-2 block text-sm">
+          Filtrer par statut
+        </Label>
+        <Select
+          defaultValue={options.statut}
+          onValueChange={(value) => onFilterChange('statut', value)}
         >
-          <option value="Tous">Tous les statuts</option>
-          <option value="En attente de diffusion">En attente de diffusion</option>
-          <option value="En attente de validation">En attente de validation</option>
-          <option value="Validé">Validé</option>
-          <option value="Refusé">Refusé</option>
-        </select>
+          <SelectTrigger id="statut-filter">
+            <SelectValue placeholder="Tous les statuts" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Tous">Tous les statuts</SelectItem>
+            <SelectItem value="En attente de diffusion">En attente de diffusion</SelectItem>
+            <SelectItem value="En attente de validation">En attente de validation</SelectItem>
+            <SelectItem value="Validé">Validé</SelectItem>
+            <SelectItem value="Refusé">Refusé</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
-      <div>
-        <label className="block text-sm font-medium mb-1">Type</label>
-        <select 
-          className="w-full border border-gray-300 rounded-md px-3 py-2"
-          value={options.type} 
-          onChange={(e) => onFilterChange('type', e.target.value)}
+
+      <div className="w-full md:w-1/3">
+        <Label htmlFor="type-filter" className="mb-2 block text-sm">
+          Filtrer par type
+        </Label>
+        <Select
+          defaultValue={options.type}
+          onValueChange={(value) => onFilterChange('type', value)}
         >
-          <option value="Tous">Tous les types</option>
-          <option value="Plan">Plan</option>
-          <option value="Rapport">Rapport</option>
-          <option value="Étude">Étude</option>
-        </select>
+          <SelectTrigger id="type-filter">
+            <SelectValue placeholder="Tous les types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Tous">Tous les types</SelectItem>
+            <SelectItem value="PDF">PDF</SelectItem>
+            <SelectItem value="DOC">DOC</SelectItem>
+            <SelectItem value="XLS">XLS</SelectItem>
+            <SelectItem value="DWG">DWG</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );

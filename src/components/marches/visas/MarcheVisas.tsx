@@ -2,7 +2,7 @@
 import React from 'react';
 import { useVisaManagement } from './useVisaManagement';
 import { VisasHeader } from './VisasHeader';
-import { VisaFilters } from './VisaFilters';  // Fixed import name to match actual export
+import { VisaFilters } from './VisaFilters';
 import { VisasTable } from './VisasTable';
 import { VisasLoading } from './VisasLoading';
 import { AlertCircle } from 'lucide-react';
