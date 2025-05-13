@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { marcheRightsService, usersService } from '@/services/droits';
+import { marcheRightsService, usersService } from '@/services/droits/index';
 import { UserDroit } from '@/services/droits/types';
 import { useUserRole, MarcheSpecificRole } from '@/hooks/userRole';
 

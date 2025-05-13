@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-import { droitsService } from '@/services/droits';
+import { droitsService } from '@/services/droitsService';
 import { useUserRole, UserRole } from '@/hooks/useUserRole';
 import { Shield, RefreshCw } from 'lucide-react';
 
