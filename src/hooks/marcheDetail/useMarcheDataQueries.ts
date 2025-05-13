@@ -1,10 +1,10 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { fetchMarcheById } from '@/services/marches';
 import { supabase } from '@/lib/supabase';
 import { visasService } from '@/services/visasService';
 import { useToast } from '@/hooks/use-toast';
 import { hasAccessToMarche } from '@/utils/auth';
+import { getGlobalUserRole } from '@/utils/auth/roles';
 
 /**
  * Hook that manages data fetching queries for a marché
@@ -17,12 +17,24 @@ export const useMarcheDataQueries = (id: string | undefined) => {
     queryKey: ['marche-access', id],
     queryFn: async () => {
       if (!id) return false;
+      
       console.log(`Vérification de l'accès au marché ${id}...`);
+      
+      // Attempt to get the global role first
+      const globalRole = await getGlobalUserRole();
+      
+      // Short circuit for admin users to reduce database queries
+      if (globalRole === 'ADMIN') {
+        console.log(`User is ADMIN, automatic access granted to market ${id}`);
+        return true;
+      }
+      
+      // Otherwise perform the full access check
       return await hasAccessToMarche(id);
     },
     enabled: !!id,
     staleTime: 5 * 60 * 1000,
-    retry: 1,
+    retry: 2, // Increased retries for access check
     meta: {
       onSettled: (data: boolean | undefined, error: Error | null) => {
         if (error) {
@@ -45,6 +57,28 @@ export const useMarcheDataQueries = (id: string | undefined) => {
     queryFn: async () => {
       if (!id) return null;
       console.log("Chargement des données du marché:", id);
+      
+      // Double-check admin access here as a safety measure
+      const globalRole = await getGlobalUserRole();
+      if (globalRole === 'ADMIN') {
+        console.log("Admin user detected, proceeding with marché fetch");
+        try {
+          // Direct fetch for admin users
+          const { data, error } = await supabase
+            .from('marches')
+            .select('*')
+            .eq('id', id)
+            .single();
+            
+          if (error) throw error;
+          return data;
+        } catch (adminFetchError) {
+          console.error("Admin fetch failed, falling back to standard fetch:", adminFetchError);
+          // Fall back to standard fetch method
+          return await fetchMarcheById(id);
+        }
+      }
+      
       return await fetchMarcheById(id);
     },
     enabled: !!id && accessCheckQuery.isSuccess && accessCheckQuery.data === true,

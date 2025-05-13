@@ -21,19 +21,7 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
     
     console.log(`Checking access to market ${marcheId} for user ${user.id}...`);
     
-    // IMPORTANT: First check if user is creator (highest priority)
-    const { data: marcheData, error: marcheError } = await supabase
-      .from('marches')
-      .select('user_id')
-      .eq('id', marcheId)
-      .single();
-    
-    if (!marcheError && marcheData && marcheData.user_id === user.id) {
-      console.log(`User ${user.id} is creator of market ${marcheId} - access granted`);
-      return true;
-    }
-    
-    // Check global role (admin has access to everything)
+    // CRITICAL: First check if user has ADMIN role (highest priority)
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('role_global')
@@ -42,6 +30,18 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
       
     if (!profileError && profileData && profileData.role_global === 'ADMIN') {
       console.log(`User ${user.id} is ADMIN - access granted to market ${marcheId}`);
+      return true; // Admin always has access
+    }
+    
+    // Check if user is creator (second highest priority)
+    const { data: marcheData, error: marcheError } = await supabase
+      .from('marches')
+      .select('user_id')
+      .eq('id', marcheId)
+      .single();
+    
+    if (!marcheError && marcheData && marcheData.user_id === user.id) {
+      console.log(`User ${user.id} is creator of market ${marcheId} - access granted`);
       return true;
     }
     
@@ -79,6 +79,16 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
     return false;
   } catch (error) {
     console.error('Exception checking access rights:', error);
+    // On error, let's check one last time directly for ADMIN role
+    try {
+      const role = await getGlobalUserRole();
+      if (role === 'ADMIN') {
+        console.log(`Exception recovery: Confirmed user is ADMIN - granting access to market ${marcheId}`);
+        return true;
+      }
+    } catch (secondaryError) {
+      console.error('Secondary error checking admin status:', secondaryError);
+    }
     return false;
   }
 };

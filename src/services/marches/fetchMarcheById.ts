@@ -2,6 +2,7 @@
 import { supabase } from '@/lib/supabase';
 import { Marche } from './types';
 import { hasAccessToMarche } from '@/utils/auth';
+import { getGlobalUserRole } from '@/utils/auth/roles';
 
 /**
  * Récupérer un marché spécifique par son ID
@@ -19,7 +20,26 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
       throw new Error('Utilisateur non connecté');
     }
     
-    // Vérifier l'accès au marché
+    // Fast path for admin users
+    const globalRole = await getGlobalUserRole();
+    if (globalRole === 'ADMIN') {
+      console.log(`Utilisateur ${user.id} est ADMIN - accès direct au marché ${id}`);
+      const { data, error } = await supabase
+        .from('marches')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error) {
+        console.error(`Erreur lors de la récupération du marché ${id} (admin path):`, error);
+        throw error;
+      }
+      
+      console.log(`Marché ${id} récupéré avec succès par admin`);
+      return data as Marche;
+    }
+    
+    // Standard access check for non-admin users
     const hasAccess = await hasAccessToMarche(id);
     if (!hasAccess) {
       console.error(`Accès refusé au marché ${id} pour l'utilisateur ${user.id}`);
