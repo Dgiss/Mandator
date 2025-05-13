@@ -1,104 +1,91 @@
 
+// Create this file if it doesn't exist
 import { supabase } from '@/lib/supabase';
 import { Notification } from './types/notifications';
 
+export { Notification };
+
 export const notificationsService = {
-  // Get notifications for a user
-  async getUserNotifications(userId: string = '') {
-    try {
-      if (!userId) {
-        const { data: userData } = await supabase.auth.getUser();
-        userId = userData.user?.id || '';
-      }
-      
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-        
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Erreur lors de la récupération des notifications:', error);
-      throw error;
+  // Get all notifications for the current user
+  async getUserNotifications(): Promise<Notification[]> {
+    const { data: user } = await supabase.auth.getUser();
+    const userId = user?.user?.id;
+    
+    if (!userId) return [];
+    
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching notifications:', error);
+      return [];
     }
+    
+    return data as Notification[];
   },
   
   // Mark a notification as read
-  async markNotificationAsRead(notificationId: string) {
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ lue: true })
-        .eq('id', notificationId);
-        
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('Erreur lors du marquage de la notification:', error);
+  async markNotificationAsRead(notificationId: string): Promise<void> {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ lue: true })
+      .eq('id', notificationId);
+    
+    if (error) {
+      console.error('Error marking notification as read:', error);
       throw error;
     }
   },
   
-  // Mark all notifications as read
-  async markAllNotificationsAsRead() {
-    try {
-      const { data: userData } = await supabase.auth.getUser();
-      const userId = userData.user?.id;
-      
-      if (!userId) throw new Error("Utilisateur non authentifié");
-      
-      const { error } = await supabase
-        .from('notifications')
-        .update({ lue: true })
-        .eq('user_id', userId);
-        
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('Erreur lors du marquage de toutes les notifications:', error);
+  // Mark all notifications as read for the current user
+  async markAllNotificationsAsRead(): Promise<void> {
+    const { data: user } = await supabase.auth.getUser();
+    const userId = user?.user?.id;
+    
+    if (!userId) return;
+    
+    const { error } = await supabase
+      .from('notifications')
+      .update({ lue: true })
+      .eq('user_id', userId);
+    
+    if (error) {
+      console.error('Error marking all notifications as read:', error);
       throw error;
     }
   },
   
-  // Delete a notification
-  async deleteNotification(notificationId: string) {
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('id', notificationId);
-        
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('Erreur lors de la suppression de la notification:', error);
+  // Delete a specific notification
+  async deleteNotification(notificationId: string): Promise<void> {
+    const { error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('id', notificationId);
+    
+    if (error) {
+      console.error('Error deleting notification:', error);
       throw error;
     }
   },
   
-  // Delete all notifications
-  async deleteAllNotifications() {
-    try {
-      const { data: userData } = await supabase.auth.getUser();
-      const userId = userData.user?.id;
-      
-      if (!userId) throw new Error("Utilisateur non authentifié");
-      
-      const { error } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('user_id', userId);
-        
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('Erreur lors de la suppression de toutes les notifications:', error);
+  // Delete all notifications for the current user
+  async deleteAllNotifications(): Promise<void> {
+    const { data: user } = await supabase.auth.getUser();
+    const userId = user?.user?.id;
+    
+    if (!userId) return;
+    
+    const { error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('user_id', userId);
+    
+    if (error) {
+      console.error('Error deleting all notifications:', error);
       throw error;
     }
   }
 };
-
-// Export the notification type
-export type { Notification };

@@ -12,18 +12,9 @@ export interface UserDroit {
   };
 }
 
-export interface Notification {
-  id: string;
-  user_id: string;
-  titre: string;
-  message: string;
-  type: 'info' | 'success' | 'warning' | 'error';
-  lue: boolean;
-  objet_type: string;
-  objet_id: string;
-  marche_id: string;
-  created_at: string;
-}
+// Instead of defining Notification here, import it if needed
+// import type { Notification } from './types/notifications';
+// export type { Notification };
 
 export interface Alerte {
   id: string;
