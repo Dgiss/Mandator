@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useVisaManagement } from './useVisaManagement';
 import { VisasHeader } from './VisasHeader';
 import { VisaFilters } from './VisaFilters';
@@ -7,6 +7,10 @@ import { VisasTable } from './VisasTable';
 import { VisasLoading } from './VisasLoading';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import DiffusionDialog from './DiffusionDialog';
+import VisaDialog from './VisaDialog';
+import { Document, Version } from './types';
+import { useUserRole } from '@/hooks/userRole';
 
 export interface MarcheVisasProps {
   marcheId: string;
@@ -41,16 +45,38 @@ const MarcheVisas: React.FC<MarcheVisasProps> = ({ marcheId }) => {
     setVisaComment,
     setVisaSelectedDestinaire,
     setVisaEcheance,
-    handleFilter
+    handleFilter,
+    retryLoading
   } = useVisaManagement(marcheId);
+
+  // Use our role hooks to check permissions
+  const { canDiffuse, canVisa } = useUserRole();
+
+  // Function to determine if diffuse button should be shown
+  const canShowDiffuseButton = (document: Document, version: Version | null) => {
+    if (!version) return false;
+    return canDiffuse(marcheId) && version.statut === 'En attente de diffusion';
+  };
+
+  // Function to determine if visa button should be shown
+  const canShowVisaButton = (document: Document, version: Version | null) => {
+    if (!version) return false;
+    return canVisa(marcheId) && version.statut === 'En attente de visa';
+  };
 
   if (error) {
     return (
       <Alert variant="destructive" className="mb-6">
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Erreur</AlertTitle>
-        <AlertDescription>
-          Une erreur s'est produite lors du chargement des documents. Veuillez réessayer plus tard.
+        <AlertDescription className="flex flex-col gap-2">
+          <p>Une erreur s'est produite lors du chargement des documents. Veuillez réessayer plus tard.</p>
+          <button 
+            onClick={retryLoading} 
+            className="underline text-sm self-start hover:text-blue-600"
+          >
+            Réessayer
+          </button>
         </AlertDescription>
       </Alert>
     );
@@ -72,10 +98,45 @@ const MarcheVisas: React.FC<MarcheVisasProps> = ({ marcheId }) => {
           onDocumentSelect={handleDocumentSelect}
           onVisaOpen={handleVisaDialogOpen}
           loadingStates={loadingStates}
+          canShowDiffuseButton={canShowDiffuseButton}
+          canShowVisaButton={canShowVisaButton}
+          openDiffusionDialog={handleDiffusionDialogOpen}
+          openVisaDialog={handleVisaDialogOpen}
         />
       )}
       
-      {/* Dialog components are imported in the visas/index.ts */}
+      {/* Dialog components */}
+      {selectedDocument && (
+        <>
+          <DiffusionDialog
+            open={diffusionDialogOpen}
+            onClose={handleDiffusionDialogClose}
+            onConfirm={handleDiffusionSubmit}
+            document={selectedDocument}
+            comment={diffusionComment}
+            setComment={setDiffusionComment}
+            attachmentName={attachmentName}
+            onFileChange={handleFileChange}
+            isLoading={loadingStates[selectedDocument.id] || false}
+          />
+          
+          <VisaDialog
+            open={visaDialogOpen}
+            onClose={handleVisaDialogClose}
+            onConfirm={handleVisaSubmit}
+            document={selectedDocument}
+            comment={visaComment}
+            setComment={setVisaComment}
+            selectedDestinataire={visaSelectedDestinaire}
+            setSelectedDestinataire={setVisaSelectedDestinaire}
+            echeance={visaEcheance}
+            setEcheance={setVisaEcheance}
+            attachmentName={attachmentName}
+            onFileChange={handleFileChange}
+            isLoading={loadingStates[selectedDocument.id] || false}
+          />
+        </>
+      )}
     </div>
   );
 };

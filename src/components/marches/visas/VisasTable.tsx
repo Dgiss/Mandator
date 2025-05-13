@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Send, FileText } from 'lucide-react';
+import { Eye, Send, FileText, CheckCircle } from 'lucide-react';
 import { Document, Version } from './types';
 import { useUserRole } from '@/hooks/userRole';
 
@@ -19,10 +19,10 @@ export interface VisasTableProps {
   onDocumentSelect: (document: Document) => void;
   onVisaOpen: (document: Document) => void;
   loadingStates: Record<string, boolean>;
-  canShowDiffuseButton?: (document: Document, version: Version) => boolean;
-  canShowVisaButton?: (document: Document, version: Version) => boolean;
-  openDiffusionDialog?: (document: Document, version: Version) => void;
-  openVisaDialog?: (document: Document, version: Version) => void;
+  canShowDiffuseButton?: (document: Document, version: Version | null) => boolean;
+  canShowVisaButton?: (document: Document, version: Version | null) => boolean;
+  openDiffusionDialog?: (document: Document) => void;
+  openVisaDialog?: (document: Document) => void;
 }
 
 export const VisasTable: React.FC<VisasTableProps> = ({
@@ -39,9 +39,11 @@ export const VisasTable: React.FC<VisasTableProps> = ({
 
   const getStatusBadge = (statut: string) => {
     const statusConfig: Record<string, { color: string; label: string }> = {
-      'En attente de diffusion': { color: 'bg-yellow-100 text-yellow-800', label: 'En attente' },
-      'En attente de validation': { color: 'bg-blue-100 text-blue-800', label: 'En attente' },
+      'En attente de diffusion': { color: 'bg-yellow-100 text-yellow-800', label: 'En attente de diffusion' },
+      'En attente de visa': { color: 'bg-blue-100 text-blue-800', label: 'En attente de visa' },
+      'En attente de validation': { color: 'bg-blue-100 text-blue-800', label: 'En attente de validation' },
       'Validé': { color: 'bg-green-100 text-green-800', label: 'Validé' },
+      'Approuvé': { color: 'bg-green-100 text-green-800', label: 'Approuvé' },
       'Refusé': { color: 'bg-red-100 text-red-800', label: 'Refusé' }
     };
 
@@ -110,18 +112,35 @@ export const VisasTable: React.FC<VisasTableProps> = ({
                     <span className="sr-only">Voir</span>
                   </Button>
 
-                  {canDiffuse() && doc.latestVersion && doc.statut === 'En attente de diffusion' && (
+                  {/* Bouton de diffusion pour les MANDATAIRE si statut est "En attente de diffusion" */}
+                  {canShowDiffuseButton && openDiffusionDialog && canShowDiffuseButton(doc, doc.latestVersion) && (
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onVisaOpen(doc);
+                        openDiffusionDialog(doc);
                       }}
                       disabled={loadingStates[doc.id]}
                     >
                       <Send className="h-4 w-4" />
                       <span className="sr-only">Diffuser</span>
+                    </Button>
+                  )}
+
+                  {/* Bouton de visa pour les MOE si statut est "En attente de visa" */}
+                  {canShowVisaButton && openVisaDialog && canShowVisaButton(doc, doc.latestVersion) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openVisaDialog(doc);
+                      }}
+                      disabled={loadingStates[doc.id]}
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      <span className="sr-only">Viser</span>
                     </Button>
                   )}
                 </div>

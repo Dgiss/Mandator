@@ -19,6 +19,7 @@ export const useVisaManagement = (marcheId: string) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
+  const [loadAttempts, setLoadAttempts] = useState(0);
   
   // Dialog states
   const [diffusionDialogOpen, setDiffusionDialogOpen] = useState(false);
@@ -32,12 +33,14 @@ export const useVisaManagement = (marcheId: string) => {
   
   const { toast } = useToast();
 
-  // Load documents
+  // Load documents with retry mechanism and error handling
   const loadDocuments = useCallback(async () => {
     setLoading(true);
     setError(null);
     
     try {
+      console.log(`Chargement des documents pour le marché ${marcheId}...`);
+      
       // Get documents for the specified marche
       const { data: documentsData, error: documentsError } = await supabase
         .from('documents')
@@ -45,15 +48,19 @@ export const useVisaManagement = (marcheId: string) => {
         .eq('marche_id', marcheId);
       
       if (documentsError) {
+        console.error("Erreur lors du chargement des documents:", documentsError);
         throw documentsError;
       }
       
       if (!documentsData || documentsData.length === 0) {
+        console.log("Aucun document trouvé pour ce marché");
         setDocuments([]);
         setFilteredDocuments([]);
         setLoading(false);
         return;
       }
+      
+      console.log(`${documentsData.length} documents trouvés, chargement des versions...`);
 
       // Get versions for each document
       const { data: versionsData, error: versionsError } = await supabase
@@ -62,8 +69,11 @@ export const useVisaManagement = (marcheId: string) => {
         .eq('marche_id', marcheId);
         
       if (versionsError) {
+        console.error("Erreur lors du chargement des versions:", versionsError);
         throw versionsError;
       }
+
+      console.log(`${versionsData?.length || 0} versions trouvées, construction des données...`);
 
       // Map versions to documents, ensuring we follow our Document interface
       const documentsWithVersions: Document[] = documentsData.map(doc => {
@@ -93,6 +103,7 @@ export const useVisaManagement = (marcheId: string) => {
         };
       });
 
+      console.log("Traitement des documents terminé");
       setDocuments(documentsWithVersions);
       setFilteredDocuments(documentsWithVersions);
     } catch (error) {
@@ -108,9 +119,14 @@ export const useVisaManagement = (marcheId: string) => {
     }
   }, [marcheId, toast]);
 
+  // Retry loading function
+  const retryLoading = useCallback(() => {
+    setLoadAttempts(prev => prev + 1);
+  }, []);
+
   useEffect(() => {
     loadDocuments();
-  }, [loadDocuments]);
+  }, [loadDocuments, loadAttempts]);
 
   // Filter documents based on selected options
   useEffect(() => {
@@ -294,6 +310,7 @@ export const useVisaManagement = (marcheId: string) => {
     setVisaComment,
     setVisaSelectedDestinaire,
     setVisaEcheance,
-    handleFilter
+    handleFilter,
+    retryLoading
   };
 };
