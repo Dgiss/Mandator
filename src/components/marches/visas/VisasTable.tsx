@@ -11,24 +11,28 @@ import {
 import { Button } from '@/components/ui/button';
 import { Loader } from 'lucide-react';
 import { VisaStatusBadge } from './VisaStatusBadge';
-import { Document, Version } from './types';
-
-interface VisasTableProps {
-  documents: Document[];
-  canShowDiffuseButton: (document: Document, version: Version) => boolean;
-  canShowVisaButton: (document: Document, version: Version) => boolean;
-  openDiffusionDialog: (document: Document, version: Version) => void;
-  openVisaDialog: (document: Document, version: Version) => void;
-}
+import { Document, Version, VisasTableProps } from './types';
 
 export const VisasTable: React.FC<VisasTableProps> = ({
   documents,
+  onDocumentSelect,
+  onVisaOpen,
+  loadingStates,
   canShowDiffuseButton,
   canShowVisaButton,
   openDiffusionDialog,
   openVisaDialog
 }) => {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Default handlers if props not provided
+  const handleDiffusion = openDiffusionDialog || ((doc: Document, version: Version) => {
+    onDocumentSelect(doc);
+  });
+
+  const handleVisa = openVisaDialog || ((doc: Document, version: Version) => {
+    onVisaOpen(doc);
+  });
 
   // Wrapper to track loading states for buttons
   const handleAction = async (
@@ -48,6 +52,13 @@ export const VisasTable: React.FC<VisasTableProps> = ({
       setActionLoading(null);
     }
   };
+
+  // Default checks for buttons if props not provided
+  const checkShowDiffuseButton = canShowDiffuseButton || 
+    ((doc: Document, version: Version) => doc.statut === 'En attente de diffusion');
+  
+  const checkShowVisaButton = canShowVisaButton || 
+    ((doc: Document, version: Version) => doc.statut === 'En attente de validation');
 
   if (documents.length === 0) {
     return (
@@ -72,8 +83,8 @@ export const VisasTable: React.FC<VisasTableProps> = ({
           document.versions.map(version => {
             const diffuseLoadingKey = `diffuse-${document.id}-${version.id}`;
             const visaLoadingKey = `visa-${document.id}-${version.id}`;
-            const showDiffuseButton = canShowDiffuseButton(document, version);
-            const showVisaButton = canShowVisaButton(document, version);
+            const showDiffuseButton = checkShowDiffuseButton(document, version);
+            const showVisaButton = checkShowVisaButton(document, version);
             
             return (
               <TableRow key={`${document.id}-${version.id}`}>
@@ -94,7 +105,7 @@ export const VisasTable: React.FC<VisasTableProps> = ({
                           document.id, 
                           version.id,
                           'diffuse', 
-                          () => openDiffusionDialog(document, version)
+                          () => handleDiffusion(document, version)
                         )}
                       >
                         {actionLoading === diffuseLoadingKey ? (
@@ -116,7 +127,7 @@ export const VisasTable: React.FC<VisasTableProps> = ({
                           document.id, 
                           version.id,
                           'visa', 
-                          () => openVisaDialog(document, version)
+                          () => handleVisa(document, version)
                         )}
                       >
                         {actionLoading === visaLoadingKey ? (

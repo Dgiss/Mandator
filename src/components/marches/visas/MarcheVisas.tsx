@@ -1,7 +1,8 @@
+
 import React from 'react';
 import { useVisaManagement } from './useVisaManagement';
 import { VisasHeader } from './VisasHeader';
-import { VisasFilters } from './VisaFilters';
+import { VisaFilters } from './VisaFilters';  // Fixed import name to match actual export
 import { VisasTable } from './VisasTable';
 import { VisasLoading } from './VisasLoading';
 import { AlertCircle } from 'lucide-react';
@@ -58,7 +59,7 @@ const MarcheVisas: React.FC<MarcheVisasProps> = ({ marcheId }) => {
   return (
     <div className="space-y-6">
       <VisasHeader onDiffusionOpen={handleDiffusionDialogOpen} />
-      <VisasFilters 
+      <VisaFilters 
         options={filterOptions} 
         onFilterChange={handleFilter} 
       />

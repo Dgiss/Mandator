@@ -1,27 +1,26 @@
 
 import React from 'react';
-import MarcheVisaForm from '../MarcheVisaForm';
+import { Button } from '@/components/ui/button';
+import { FilePlus } from 'lucide-react';
+import { VisasHeaderProps } from './types';
 
-interface VisasHeaderProps {
-  showNewVisaButton: boolean;
-  marcheId: string;
-  onVisaCreated: () => void;
-}
-
-export const VisasHeader = ({ 
-  showNewVisaButton,
-  marcheId,
-  onVisaCreated
-}: VisasHeaderProps) => {
+export const VisasHeader: React.FC<VisasHeaderProps> = ({ onDiffusionOpen }) => {
   return (
-    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-      <h2 className="text-2xl font-semibold">Visas</h2>
-      <div className="flex items-center space-x-2">
-        {/* Afficher le bouton Nouveau Visa uniquement pour les MOE ou Admin */}
-        {showNewVisaButton && (
-          <MarcheVisaForm marcheId={marcheId} onVisaCreated={onVisaCreated} />
-        )}
-      </div>
+    <div className="flex justify-between items-center mb-6">
+      <h2 className="text-2xl font-bold">Gestion des visas</h2>
+      <Button 
+        className="flex items-center gap-2"
+        onClick={() => onDiffusionOpen({
+          id: '',
+          nom: 'Nouveau document',
+          currentVersionId: '',
+          statut: 'En attente de diffusion',
+          versions: []
+        })}
+      >
+        <FilePlus className="h-5 w-5" />
+        <span>Ajouter un document</span>
+      </Button>
     </div>
   );
 };

@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Document } from './types';
+import { Document, Version } from './types';
 import { useToast } from '@/hooks/use-toast';
 
 export const useVisaManagement = (marcheId: string) => {
@@ -65,15 +65,31 @@ export const useVisaManagement = (marcheId: string) => {
         throw versionsError;
       }
 
-      // Map versions to documents
-      const documentsWithVersions = documentsData.map(doc => {
+      // Map versions to documents, ensuring we follow our Document interface
+      const documentsWithVersions: Document[] = documentsData.map(doc => {
         const docVersions = versionsData?.filter(v => v.document_id === doc.id) || [];
+        const sortedVersions = docVersions.sort((a, b) => 
+          new Date(b.date_creation).getTime() - new Date(a.date_creation).getTime()
+        );
+        
+        // Map the versions to our Version interface
+        const mappedVersions: Version[] = sortedVersions.map(v => ({
+          id: v.id,
+          version: v.version,
+          statut: v.statut as any
+        }));
+        
+        const latestVersion = mappedVersions.length > 0 ? mappedVersions[0] : null;
+
+        // Map the document to our Document interface
         return {
-          ...doc,
-          versions: docVersions,
-          latestVersion: docVersions.length > 0 
-            ? docVersions.sort((a, b) => new Date(b.date_creation).getTime() - new Date(a.date_creation).getTime())[0]
-            : null
+          id: doc.id,
+          nom: doc.nom,
+          type: doc.type,
+          currentVersionId: latestVersion ? latestVersion.id : '',
+          statut: doc.statut as any,
+          versions: mappedVersions,
+          latestVersion
         };
       });
 
@@ -106,7 +122,7 @@ export const useVisaManagement = (marcheId: string) => {
       filtered = filtered.filter(doc => doc.statut === filterOptions.statut);
     }
     
-    if (filterOptions.type !== 'Tous') {
+    if (filterOptions.type !== 'Tous' && filtered.some(doc => doc.type)) {
       filtered = filtered.filter(doc => doc.type === filterOptions.type);
     }
     
