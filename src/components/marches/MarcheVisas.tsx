@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,7 +21,8 @@ import {
   Send,
   Check,
   X,
-  ClipboardCheck
+  ClipboardCheck,
+  Eye
 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
@@ -48,6 +48,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserRole } from '@/hooks/userRole';
 
 // Import du formulaire de visa
 import MarcheVisaForm from './MarcheVisaForm';
@@ -81,9 +82,6 @@ interface Document {
   versions: Version[];
 }
 
-// Rôle de l'utilisateur actuel (simulé - dans une application réelle, viendrait de l'authentification)
-type UserRole = 'Mandataire' | 'MOE' | 'MOA';
-
 export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('tous');
@@ -92,8 +90,16 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   
-  // État pour gérer le rôle de l'utilisateur
-  const [userRole, setUserRole] = useState<UserRole>('Mandataire');
+  // Use our useUserRole hook for role-based permissions
+  const { 
+    role, 
+    loading, 
+    isAdmin,
+    isMOE,
+    isMandataire,
+    canDiffuse,
+    canVisa
+  } = useUserRole(marcheId);
   
   // États pour les modales
   const [diffusionDialogOpen, setDiffusionDialogOpen] = useState(false);
@@ -107,27 +113,6 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
   const [visaComment, setVisaComment] = useState('');
   const [attachmentName, setAttachmentName] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  
-  // Chargement du rôle de l'utilisateur depuis Supabase
-  useEffect(() => {
-    if (user) {
-      const fetchUserRole = async () => {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-        
-        if (data && data.role) {
-          setUserRole(data.role as UserRole);
-        } else {
-          console.error('Error fetching user role:', error);
-        }
-      };
-      
-      fetchUserRole();
-    }
-  }, [user]);
 
   // Chargement des documents et visas depuis Supabase
   useEffect(() => {
@@ -289,9 +274,9 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
     }
   };
 
-  // Fonction pour déterminer si le bouton "Diffuser" est visible (Mandataire)
+  // Fonction pour déterminer si on peut diffuser une version (pour les MOE)
   const canShowDiffuseButton = (document: Document, version: Version) => {
-    if (userRole !== 'Mandataire') return false;
+    if (!isMOE && !isAdmin) return false;
     
     // Vérifie si le document est en attente de diffusion
     if (document.statut !== 'En attente de diffusion') return false;
@@ -299,23 +284,12 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
     // Vérifie si la version est en attente de diffusion
     if (version.statut !== 'En attente de diffusion') return false;
     
-    // Si c'est la première version et qu'elle n'a jamais été diffusée, autoriser la diffusion
-    if (document.versions.length === 1 && version.id === document.versions[0].id) {
-      return true;
-    }
-    
-    // Pour les versions ultérieures, vérifier qu'il y a au moins un visa sur une version précédente
-    const hasPreviousVisa = visas.some(v => 
-      v.document === document.nom && 
-      v.version !== version.version
-    );
-    
-    return hasPreviousVisa;
+    return true;
   };
 
-  // Fonction pour déterminer si le bouton "Viser" est visible (MOE)
+  // Fonction pour déterminer si on peut voir le bouton "Viser" (pour les Mandataires)
   const canShowVisaButton = (document: Document, version: Version) => {
-    if (userRole !== 'MOE') return false;
+    if (!isMandataire && !isAdmin) return false;
     
     // Vérifie si le document est en attente de validation
     if (document.statut !== 'En attente de validation') return false;
@@ -666,25 +640,15 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
     }
   };
 
-  // Basculer entre les rôles pour tester la visibilité des boutons
-  const toggleRole = () => {
-    setUserRole(role => role === 'Mandataire' ? 'MOE' : 'Mandataire');
-    toast({
-      title: "Rôle changé",
-      description: `Vous êtes maintenant en mode ${userRole === 'Mandataire' ? 'MOE' : 'Mandataire'}`,
-      variant: "default",
-    });
-  };
-
   return (
     <div className="pt-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h2 className="text-2xl font-semibold">Visas</h2>
         <div className="flex items-center space-x-2">
-          <Button onClick={toggleRole} variant="outline" size="sm">
-            Mode: {userRole}
-          </Button>
-          <MarcheVisaForm marcheId={marcheId} onVisaCreated={handleVisaCreated} />
+          {/* Afficher le bouton Nouveau Visa uniquement pour les MOE ou Admin */}
+          {(isMOE || isAdmin) && (
+            <MarcheVisaForm marcheId={marcheId} onVisaCreated={handleVisaCreated} />
+          )}
         </div>
       </div>
 
@@ -782,6 +746,7 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
+                        {/* Bouton pour diffuser (MOE uniquement) */}
                         {canShowDiffuseButton(document, version) && (
                           <Button
                             variant="outline"
@@ -794,6 +759,7 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
                           </Button>
                         )}
                         
+                        {/* Bouton pour viser (Mandataire uniquement) */}
                         {canShowVisaButton(document, version) && (
                           <Button
                             variant="outline"
@@ -801,7 +767,7 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
                             className="text-green-600 border-green-200 hover:bg-green-50"
                             onClick={() => openVisaDialog(document, version)}
                           >
-                            <ClipboardCheck className="h-4 w-4 mr-1.5" />
+                            <Eye className="h-4 w-4 mr-1.5" />
                             Viser
                           </Button>
                         )}
@@ -823,7 +789,7 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
         </Table>
       </Card>
 
-      {/* Modal de diffusion pour le Mandataire */}
+      {/* Modal de diffusion pour le MOE */}
       <Dialog open={diffusionDialogOpen} onOpenChange={setDiffusionDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -892,119 +858,5 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de visa pour le MOE */}
-      <AlertDialog open={visaDialogOpen} onOpenChange={setVisaDialogOpen}>
-        <AlertDialogContent className="max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Visa du document</AlertDialogTitle>
-            <AlertDialogDescription>
-              Vous pouvez émettre un visa pour {selectedDocument?.nom} version {selectedVersion?.version}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          
-          <div className="space-y-4 py-4">
-            {/* Type de visa */}
-            <div className="space-y-2">
-              <Label>Type de visa</Label>
-              <RadioGroup 
-                value={visaType} 
-                onValueChange={(value) => setVisaType(value as 'VSO' | 'VAO' | 'Refusé')}
-                className="flex flex-col space-y-2"
-              >
-                <div className="flex items-center space-x-2 p-2 border rounded-md hover:bg-gray-50">
-                  <RadioGroupItem value="VSO" id="vso" />
-                  <Label htmlFor="vso" className="flex items-center cursor-pointer">
-                    <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                    <div>
-                      <span className="font-medium">VSO (Visa Sans Observation)</span>
-                      <p className="text-xs text-gray-500">Document approuvé, devient Bon Pour Exécution</p>
-                    </div>
-                  </Label>
-                </div>
-                
-                <div className="flex items-center space-x-2 p-2 border rounded-md hover:bg-gray-50">
-                  <RadioGroupItem value="VAO" id="vao" />
-                  <Label htmlFor="vao" className="flex items-center cursor-pointer">
-                    <FilePen className="h-4 w-4 text-amber-600 mr-2" />
-                    <div>
-                      <span className="font-medium">VAO (Visa Avec Observation)</span>
-                      <p className="text-xs text-gray-500">Nouvelle version requise avec modification</p>
-                    </div>
-                  </Label>
-                </div>
-                
-                <div className="flex items-center space-x-2 p-2 border rounded-md hover:bg-gray-50">
-                  <RadioGroupItem value="Refusé" id="refuse" />
-                  <Label htmlFor="refuse" className="flex items-center cursor-pointer">
-                    <XCircle className="h-4 w-4 text-red-600 mr-2" />
-                    <div>
-                      <span className="font-medium">Refusé</span>
-                      <p className="text-xs text-gray-500">Document rejeté, sans création de nouvelle version</p>
-                    </div>
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
-            
-            {/* Zone de dépôt de fichiers */}
-            <div className="space-y-2">
-              <Label>Pièces jointes</Label>
-              <div className="border border-dashed border-gray-300 rounded-md p-4">
-                <label htmlFor="visa-files" className="flex flex-col items-center justify-center h-24 cursor-pointer">
-                  <Upload className="h-8 w-8 text-gray-400 mb-2" />
-                  <span className="text-sm text-gray-500">
-                    {attachmentName ? attachmentName : "Cliquez ou glissez-déposez des fichiers ici"}
-                  </span>
-                  <span className="text-xs text-gray-400 mt-1">PDF, DOCX, max 10MB</span>
-                  <input
-                    id="visa-files"
-                    type="file"
-                    accept=".pdf,.docx,.doc"
-                    className="hidden"
-                    onChange={handleFileChange}
-                  />
-                </label>
-              </div>
-            </div>
-            
-            {/* Commentaire */}
-            <div className="space-y-2">
-              <Label htmlFor="visa-comment">Commentaire {visaType === 'VAO' && "(obligatoire)"}</Label>
-              <Textarea
-                id="visa-comment"
-                placeholder={
-                  visaType === 'VAO' 
-                    ? "Précisez les modifications requises pour la nouvelle version..."
-                    : "Commentaire ou observation sur le visa..."
-                }
-                value={visaComment}
-                onChange={(e) => setVisaComment(e.target.value)}
-                required={visaType === 'VAO'}
-              />
-              {visaType === 'VAO' && (
-                <p className="text-xs text-amber-600">
-                  * Obligatoire pour les visas avec observations (VAO).
-                </p>
-              )}
-            </div>
-          </div>
-          
-          <AlertDialogFooter className="sm:justify-end">
-            <AlertDialogCancel className="flex items-center">
-              <X className="mr-2 h-4 w-4" />
-              Annuler
-            </AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleVisaSubmit} 
-              className="flex items-center"
-              disabled={visaType === 'VAO' && !visaComment.trim()}
-            >
-              <Check className="mr-2 h-4 w-4" />
-              Valider
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
-  );
-}
+      {/* Modal de visa pour le Mandataire */}
+      <AlertDialog open={visaDialogOpen} onOpenChange
