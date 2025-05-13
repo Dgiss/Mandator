@@ -45,33 +45,38 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
       return true;
     }
     
-    // Try direct query first
-    const { data: droitData, error: droitError } = await supabase
-      .from('droits_marche')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('marche_id', marcheId)
-      .maybeSingle(); // Use maybeSingle to avoid error if no record
-      
-    if (!droitError && droitData) {
-      console.log(`User ${user.id} has explicit rights for market ${marcheId} - access granted`);
-      return true;
-    }
-    
-    // Fall back to RPC if direct query approach fails
-    const { data, error } = await supabase
+    // Check specific market rights (using RPC to avoid infinite recursion)
+    const { data: hasAccess, error: accessError } = await supabase
       .rpc('user_has_access_to_marche', {
         user_id: user.id,
         marche_id: marcheId
       });
     
-    if (error) {
-      console.error('Error checking access rights:', error);
-      return false;
+    if (accessError) {
+      console.error('Error checking access rights:', accessError);
+      // Don't immediately return false on error - try direct query as fallback
+    } else if (hasAccess) {
+      console.log(`Access check via RPC successful - access granted to market ${marcheId}`);
+      return true;
     }
     
-    console.log(`Access check result:`, data);
-    return !!data;
+    // Fallback: Direct query as a last resort
+    console.log("Falling back to direct query for access check...");
+    const { data: droitData, error: droitError } = await supabase
+      .from('droits_marche')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('marche_id', marcheId)
+      .maybeSingle();
+      
+    if (!droitError && droitData) {
+      console.log(`User ${user.id} has explicit rights for market ${marcheId} via direct query - access granted`);
+      return true;
+    }
+    
+    // If we get here, no access was found through any method
+    console.log(`No access rights found for user ${user.id} to market ${marcheId} - access denied`);
+    return false;
   } catch (error) {
     console.error('Exception checking access rights:', error);
     return false;

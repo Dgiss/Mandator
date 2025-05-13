@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,7 +17,7 @@ export function useRoleFetcher(marcheId?: string) {
   
   // Fetch the user's global role and market-specific roles
   useEffect(() => {
-    // Skip if we've already fetched roles
+    // Skip if we've already fetched roles and have data for the requested marcheId
     if (rolesFetched && marcheId && marcheRoles[marcheId] !== undefined) {
       return;
     }
@@ -68,16 +69,18 @@ export function useRoleFetcher(marcheId?: string) {
         // If a marcheId is provided, fetch the specific role for that market
         if (marcheId) {
           const specificRole = await fetchMarcheRole(user.id, marcheId);
+          console.log(`Fetched specific role for market ${marcheId}:`, specificRole);
           setMarcheRoles(prev => ({...prev, [marcheId]: specificRole}));
         } else {
           // Otherwise, fetch all market roles for the user
           const userMarcheRoles = await fetchMarcheRoles(user.id);
+          console.log("Fetched all market roles:", userMarcheRoles);
           setMarcheRoles(userMarcheRoles);
         }
         
         setRolesFetched(true);
       } catch (error) {
-        console.error('Error:', error);
+        console.error('Error fetching roles:', error);
         setGlobalRole('STANDARD');
       } finally {
         setLoading(false);
@@ -93,12 +96,15 @@ export function useRoleFetcher(marcheId?: string) {
     
     // If the role is already cached, return it
     if (marcheRoles[marcheId] !== undefined) {
+      console.log(`Using cached role for market ${marcheId}:`, marcheRoles[marcheId]);
       return marcheRoles[marcheId];
     }
     
     // Otherwise, fetch from the database
     try {
+      console.log(`Fetching role for market ${marcheId}...`);
       const role = await fetchMarcheRole(user.id, marcheId);
+      console.log(`Fetched role for market ${marcheId}:`, role);
       
       // Update the cache
       setMarcheRoles(prev => ({...prev, [marcheId]: role}));
@@ -108,6 +114,11 @@ export function useRoleFetcher(marcheId?: string) {
       return null;
     }
   };
+
+  // Add debugging logs to help identify issues
+  console.log("Current global role:", globalRole);
+  console.log("Current market roles:", marcheRoles);
+  console.log("Role loading state:", loading);
 
   return {
     role: globalRole,
