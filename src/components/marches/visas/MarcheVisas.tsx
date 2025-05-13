@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useVisaManagement } from './useVisaManagement';
 import { VisasHeader } from './VisasHeader';
@@ -124,7 +125,7 @@ const MarcheVisas: React.FC<MarcheVisasProps> = ({ marcheId }) => {
             setOpen={handleVisaDialogClose}
             selectedDocument={selectedDocument}
             selectedVersion={selectedVersion}
-            visaType={visaSelectedDestinaire}
+            visaType={visaSelectedDestinaire as 'VSO' | 'VAO' | 'Refusé'}
             setVisaType={setVisaSelectedDestinaire}
             visaComment={visaComment}
             setVisaComment={setVisaComment}
