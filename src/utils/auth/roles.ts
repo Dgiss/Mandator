@@ -1,4 +1,3 @@
-
 /**
  * Role management utilities
  */
@@ -14,25 +13,36 @@ export const getGlobalUserRole = async (): Promise<UserRole | null> => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
     
-    // Récupérer le profil avec le rôle global en utilisant une fonction sécurisée 
-    // pour éviter les problèmes de récursion RLS
+    // Try direct query first
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('role_global')
+      .eq('id', user.id)
+      .single();
+      
+    if (!profileError && profileData) {
+      return profileData.role_global ? 
+        String(profileData.role_global).toUpperCase() as UserRole : null;
+    }
+    
+    // Fall back to RPC if direct query fails
     const { data, error } = await supabase.rpc('get_user_global_role');
     
     if (error) {
-      console.error('Erreur lors de la récupération du rôle global:', error);
+      console.error('Error retrieving global role:', error);
       return null;
     }
     
-    // Normaliser le rôle
+    // Normalize the role
     return data ? String(data).toUpperCase() as UserRole : null;
   } catch (error) {
-    console.error('Exception lors de la récupération du rôle global:', error);
+    console.error('Exception retrieving global role:', error);
     return null;
   }
 };
 
 /**
- * Récupère le rôle spécifique de l'utilisateur pour un marché donné
+ * Récupère le rôle sp��cifique de l'utilisateur pour un marché donné
  * @param {string} marcheId L'identifiant du marché
  * @returns {Promise<MarcheSpecificRole|null>} Le rôle spécifique ou null si pas de rôle ou pas connecté
  */
@@ -40,25 +50,13 @@ export const getMarcheSpecificRole = async (marcheId: string): Promise<MarcheSpe
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      console.log('Utilisateur non connecté, impossible de récupérer le rôle spécifique');
+      console.log('User not logged in, cannot retrieve specific role');
       return null;
     }
     
-    console.log(`Récupération du rôle pour l'utilisateur ${user.id} sur le marché ${marcheId}...`);
+    console.log(`Getting role for user ${user.id} on market ${marcheId}...`);
     
-    // Récupérer le rôle spécifique pour ce marché via la fonction RPC
-    const { data, error } = await supabase
-      .rpc('get_user_role_for_marche', {
-        user_id: user.id,
-        marche_id: marcheId
-      });
-    
-    if (error) {
-      console.error('Erreur lors de la récupération du rôle spécifique:', error);
-      return null;
-    }
-    
-    // Vérifier également si l'utilisateur est le créateur du marché
+    // First check if user is creator (most important)
     const { data: marcheData, error: marcheError } = await supabase
       .from('marches')
       .select('user_id')
@@ -66,15 +64,39 @@ export const getMarcheSpecificRole = async (marcheId: string): Promise<MarcheSpe
       .single();
     
     if (!marcheError && marcheData && marcheData.user_id === user.id) {
-      console.log(`L'utilisateur ${user.id} est le créateur du marché ${marcheId}`);
-      return 'MOE'; // Le créateur est considéré comme MOE par défaut
+      console.log(`User ${user.id} is creator of market ${marcheId}`);
+      return 'MOE'; // Creator is considered MOE by default
     }
     
-    // Retourner le rôle spécifique
-    console.log(`Rôle récupéré pour l'utilisateur ${user.id} sur le marché ${marcheId}: ${data || 'aucun'}`);
+    // Try direct query first
+    const { data: roleData, error: roleError } = await supabase
+      .from('droits_marche')
+      .select('role_specifique')
+      .eq('user_id', user.id)
+      .eq('marche_id', marcheId)
+      .single();
+      
+    if (!roleError && roleData) {
+      return roleData.role_specifique as MarcheSpecificRole;
+    }
+    
+    // Fall back to RPC if direct query fails
+    const { data, error } = await supabase
+      .rpc('get_user_role_for_marche', {
+        user_id: user.id,
+        marche_id: marcheId
+      });
+    
+    if (error) {
+      console.error('Error retrieving specific role:', error);
+      return null;
+    }
+    
+    // Return the specific role
+    console.log(`Role retrieved for user ${user.id} on market ${marcheId}: ${data || 'none'}`);
     return data as MarcheSpecificRole || null;
   } catch (error) {
-    console.error('Exception lors de la récupération du rôle spécifique:', error);
+    console.error('Exception retrieving specific role:', error);
     return null;
   }
 };
@@ -140,7 +162,10 @@ export const isAdmin = async (): Promise<boolean> => {
  * @returns {Promise<boolean>} True si l'utilisateur est un MOE pour ce marché
  */
 export const isMOEForMarche = async (marcheId: string): Promise<boolean> => {
-  // Vérifier d'abord si l'utilisateur est le créateur du marché
+  // Check first if the user is ADMIN (admins can do everything)
+  if (await isAdmin()) return true;
+  
+  // Check if user is creator of the market
   const { data: { user } } = await supabase.auth.getUser();
   if (user) {
     const { data: marcheData, error: marcheError } = await supabase
@@ -150,10 +175,11 @@ export const isMOEForMarche = async (marcheId: string): Promise<boolean> => {
       .single();
     
     if (!marcheError && marcheData && marcheData.user_id === user.id) {
-      return true; // Le créateur est considéré comme MOE
+      return true; // Creator is considered MOE
     }
   }
   
+  // Finally, check for explicit role assignment
   return await hasMarcheRole(marcheId, 'MOE');
 };
 

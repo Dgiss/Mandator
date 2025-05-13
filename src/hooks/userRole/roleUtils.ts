@@ -9,41 +9,45 @@ export const fetchMarcheRoles = async (userId: string | undefined): Promise<Reco
   if (!userId) return {};
   
   try {
-    // Use RPC function to avoid recursion with RLS policies
+    // First check if user is creator of any markets (they should have MOE role)
+    const { data: createdMarches, error: marchesError } = await supabase
+      .from('marches')
+      .select('id')
+      .eq('user_id', userId);
+    
+    let rolesMap: Record<string, MarcheSpecificRole> = {};
+    
+    if (!marchesError && createdMarches) {
+      createdMarches.forEach(marche => {
+        // If the user is the creator of the market, assign them the MOE role
+        console.log(`User ${userId} is creator of market ${marche.id}, setting MOE role`);
+        rolesMap[marche.id] = 'MOE';
+      });
+    }
+    
+    // Then get explicitly assigned roles
     const { data, error } = await supabase
       .rpc('get_droits_for_user', {
         user_id_param: userId
       });
     
     if (error) {
-      console.error('Erreur lors de la récupération des rôles par marché:', error);
-      return {};
+      console.error('Error retrieving market roles:', error);
+      return rolesMap; // Return creator roles if we have them
     }
     
-    const rolesMap: Record<string, MarcheSpecificRole> = {};
     if (data && Array.isArray(data)) {
       data.forEach((item: any) => {
-        rolesMap[item.marche_id] = item.role_specifique as MarcheSpecificRole;
-      });
-    }
-    
-    // Récupérer également les marchés dont l'utilisateur est le créateur
-    const { data: createdMarches, error: marchesError } = await supabase
-      .from('marches')
-      .select('id')
-      .eq('user_id', userId);
-    
-    if (!marchesError && createdMarches) {
-      createdMarches.forEach(marche => {
-        // Si l'utilisateur est le créateur du marché, lui attribuer le rôle MOE par défaut
-        // que ce soit ou non il a déjà un rôle explicite
-        rolesMap[marche.id] = 'MOE';
+        // Don't override MOE role for creators with lesser roles
+        if (rolesMap[item.marche_id] !== 'MOE') {
+          rolesMap[item.marche_id] = item.role_specifique as MarcheSpecificRole;
+        }
       });
     }
     
     return rolesMap;
   } catch (error) {
-    console.error('Erreur lors de la récupération des rôles par marché:', error);
+    console.error('Error retrieving market roles:', error);
     return {};
   }
 };
@@ -55,12 +59,11 @@ export const fetchMarcheRole = async (
   userId: string | undefined, 
   marcheId: string
 ): Promise<MarcheSpecificRole> => {
-  if (!userId) return null;
+  if (!userId || !marcheId) return null;
   
   try {
-    console.log(`Vérification si l'utilisateur ${userId} est le créateur du marché ${marcheId}...`);
-    
-    // Vérifier d'abord si l'utilisateur est le créateur du marché
+    // IMPORTANT: Check if user is creator first (highest priority)
+    console.log(`Checking if user ${userId} is creator of market ${marcheId}...`);
     const { data: marcheData, error: marcheError } = await supabase
       .from('marches')
       .select('user_id')
@@ -68,14 +71,28 @@ export const fetchMarcheRole = async (
       .single();
     
     if (!marcheError && marcheData && marcheData.user_id === userId) {
-      console.log(`L'utilisateur ${userId} est le créateur du marché ${marcheId} - attribué rôle MOE`);
-      return 'MOE'; // Le créateur est toujours MOE
+      console.log(`User ${userId} is creator of market ${marcheId} - assigning MOE role`);
+      return 'MOE';
     }
     
-    // Sinon, récupérer le rôle spécifique pour ce marché
-    console.log(`Récupération du rôle spécifique pour l'utilisateur ${userId} sur le marché ${marcheId}...`);
+    // Then check for explicit role assignment
+    console.log(`Getting specific role for user ${userId} on market ${marcheId}...`);
     
-    // Use security definer function through RPC to avoid recursion
+    // Try direct query first to avoid RPC issues
+    const { data: directRoleData, error: directRoleError } = await supabase
+      .from('droits_marche')
+      .select('role_specifique')
+      .eq('user_id', userId)
+      .eq('marche_id', marcheId)
+      .single();
+    
+    if (!directRoleError && directRoleData) {
+      console.log(`Role retrieved via direct query for user ${userId} on market ${marcheId}: ${directRoleData.role_specifique}`);
+      return directRoleData.role_specifique as MarcheSpecificRole;
+    }
+    
+    // Fall back to RPC if needed
+    console.log(`Trying RPC for user ${userId} on market ${marcheId}...`);
     const { data, error } = await supabase
       .rpc('get_user_role_for_marche', {
         user_id: userId,
@@ -83,14 +100,14 @@ export const fetchMarcheRole = async (
       });
     
     if (error) {
-      console.error(`Pas de rôle spécifique trouvé pour le marché ${marcheId}:`, error);
+      console.error(`Failed to find specific role for market ${marcheId}:`, error);
       return null;
     }
     
-    console.log(`Rôle récupéré pour l'utilisateur ${userId} sur le marché ${marcheId}:`, data);
+    console.log(`Role retrieved for user ${userId} on market ${marcheId}:`, data);
     return data as MarcheSpecificRole;
   } catch (error) {
-    console.error('Erreur lors de la récupération du rôle spécifique:', error);
+    console.error('Error retrieving specific role:', error);
     return null;
   }
 };

@@ -26,16 +26,35 @@ export function useRoleFetcher(marcheId?: string) {
           return;
         }
         
-        // Fetch global role via RPC
-        const { data, error } = await supabase.rpc('get_user_global_role');
-        
-        if (error) {
-          console.error('Error fetching global role:', error);
-          setGlobalRole('STANDARD');
-        } else {
-          // Normalize the role
-          const userGlobalRole = data ? String(data).toUpperCase() : 'STANDARD';
+        // First check if user is ADMIN (this overrides everything else)
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('role_global')
+          .eq('id', user.id)
+          .single();
+          
+        if (!profileError && profileData) {
+          const userGlobalRole = profileData.role_global ? 
+            String(profileData.role_global).toUpperCase() : 'STANDARD';
           setGlobalRole(userGlobalRole as UserRole);
+          
+          // If user is ADMIN, they might not need specific market roles
+          if (userGlobalRole === 'ADMIN' && !marcheId) {
+            setLoading(false);
+            return;
+          }
+        } else {
+          // Fallback to RPC if direct query fails
+          const { data, error } = await supabase.rpc('get_user_global_role');
+          
+          if (error) {
+            console.error('Error fetching global role:', error);
+            setGlobalRole('STANDARD');
+          } else {
+            // Normalize the role
+            const userGlobalRole = data ? String(data).toUpperCase() : 'STANDARD';
+            setGlobalRole(userGlobalRole as UserRole);
+          }
         }
         
         // If a marcheId is provided, fetch the specific role for that market
@@ -60,29 +79,15 @@ export function useRoleFetcher(marcheId?: string) {
 
   // Function to fetch a specific market role (with caching)
   const getMarcheRole = async (marcheId: string): Promise<MarcheSpecificRole> => {
+    if (!user) return null;
+    
     // If the role is already cached, return it
     if (marcheRoles[marcheId]) {
       return marcheRoles[marcheId];
     }
     
-    // Check if user is creator first (most important case)
-    if (user) {
-      const { data: marcheData, error: marcheError } = await supabase
-        .from('marches')
-        .select('user_id')
-        .eq('id', marcheId)
-        .single();
-      
-      if (!marcheError && marcheData && marcheData.user_id === user.id) {
-        console.log(`User ${user.id} is creator of market ${marcheId}, assigning MOE role`);
-        // Update the cache
-        setMarcheRoles(prev => ({...prev, [marcheId]: 'MOE'}));
-        return 'MOE';
-      }
-    }
-    
     // Otherwise, fetch from the database
-    const role = await fetchMarcheRole(user?.id, marcheId);
+    const role = await fetchMarcheRole(user.id, marcheId);
     
     // Update the cache
     setMarcheRoles(prev => ({...prev, [marcheId]: role}));
