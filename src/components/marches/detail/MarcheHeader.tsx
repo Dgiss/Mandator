@@ -3,6 +3,9 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Marche } from '@/services/types';
 import { ArrowLeft, Download, Calendar, MapPin, User, Building, BarChart } from 'lucide-react';
+import { useUserRole } from '@/hooks/userRole';
+import { Badge } from '@/components/ui/badge';
+import { MarcheSpecificRole } from '@/hooks/userRole/types';
 
 interface MarcheHeaderProps {
   marche: Marche;
@@ -11,6 +14,35 @@ interface MarcheHeaderProps {
 }
 
 const MarcheHeader: React.FC<MarcheHeaderProps> = ({ marche, getStatusColor, formatDate }) => {
+  const { role, getMarcheRole } = useUserRole(marche.id);
+  const [marcheRole, setMarcheRole] = React.useState<MarcheSpecificRole>(null);
+  
+  React.useEffect(() => {
+    const fetchMarcheRole = async () => {
+      if (marche.id) {
+        const specificRole = await getMarcheRole(marche.id);
+        setMarcheRole(specificRole);
+      }
+    };
+    fetchMarcheRole();
+  }, [marche.id, getMarcheRole]);
+
+  const getRoleBadgeVariant = (roleType: string | null) => {
+    switch(roleType) {
+      case 'MOE': return 'default';
+      case 'MANDATAIRE': return 'secondary';
+      case 'CONSULTANT': return 'outline';
+      default: return role === 'ADMIN' ? 'destructive' : 'outline';
+    }
+  };
+
+  const getRoleBadgeText = () => {
+    if (marcheRole) {
+      return marcheRole;
+    }
+    return role === 'ADMIN' ? 'ADMIN' : 'VISITEUR';
+  };
+
   return (
     <div className="mb-6">
       {marche.image && (
@@ -46,7 +78,12 @@ const MarcheHeader: React.FC<MarcheHeaderProps> = ({ marche, getStatusColor, for
             </div>
           )}
           <div>
-            <h1 className="text-2xl font-bold text-gray-800 mb-1">{marche.titre}</h1>
+            <div className="flex items-center gap-2 mb-1">
+              <h1 className="text-2xl font-bold text-gray-800">{marche.titre}</h1>
+              <Badge variant={getRoleBadgeVariant(marcheRole)} className="text-xs">
+                {getRoleBadgeText()}
+              </Badge>
+            </div>
             <div className="flex flex-wrap items-center gap-2 mt-1">
               <span className={`px-2 py-0.5 text-xs rounded-full ${getStatusColor(marche.statut)}`}>
                 {marche.statut}
