@@ -62,15 +62,12 @@ export const canManageRolesMarche = (
   // Les administrateurs peuvent gérer les rôles sur tous les marchés
   if (globalRole === 'ADMIN') return true;
   
-  // Les MOE peuvent gérer les rôles uniquement pour les marchés où ils sont MOE
-  if (globalRole === 'MOE') {
-    if (!marcheId) return false; // Un MOE ne peut pas gérer les rôles globaux
-    
-    // Vérifier si l'utilisateur est MOE sur ce marché spécifique
-    const roleForMarche = marcheRoles[marcheId];
-    return roleForMarche === 'MOE';
-  }
+  // Si aucun marché n'est spécifié et que l'utilisateur n'est pas admin, il ne peut pas gérer les rôles globaux
+  if (!marcheId) return false;
   
-  // Les mandataires ne peuvent pas gérer les rôles
+  // Les MOE peuvent gérer les rôles uniquement pour les marchés où ils sont MOE
+  if (marcheRoles[marcheId] === 'MOE') return true;
+  
+  // Les autres rôles (MANDATAIRE, CONSULTANT) ne peuvent pas gérer les rôles
   return false;
 };
