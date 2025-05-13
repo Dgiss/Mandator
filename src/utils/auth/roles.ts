@@ -42,7 +42,7 @@ export const getGlobalUserRole = async (): Promise<UserRole | null> => {
 };
 
 /**
- * Récupère le rôle sp��cifique de l'utilisateur pour un marché donné
+ * Récupère le rôle spécifique de l'utilisateur pour un marché donné
  * @param {string} marcheId L'identifiant du marché
  * @returns {Promise<MarcheSpecificRole|null>} Le rôle spécifique ou null si pas de rôle ou pas connecté
  */
@@ -68,19 +68,7 @@ export const getMarcheSpecificRole = async (marcheId: string): Promise<MarcheSpe
       return 'MOE'; // Creator is considered MOE by default
     }
     
-    // Try direct query first
-    const { data: roleData, error: roleError } = await supabase
-      .from('droits_marche')
-      .select('role_specifique')
-      .eq('user_id', user.id)
-      .eq('marche_id', marcheId)
-      .single();
-      
-    if (!roleError && roleData) {
-      return roleData.role_specifique as MarcheSpecificRole;
-    }
-    
-    // Fall back to RPC if direct query fails
+    // Use RPC to avoid recursive RLS issues
     const { data, error } = await supabase
       .rpc('get_user_role_for_marche', {
         user_id: user.id,

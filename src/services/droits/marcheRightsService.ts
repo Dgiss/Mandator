@@ -7,7 +7,7 @@ export const marcheRightsService = {
   // Get all rights for a specific market
   async getDroitsByMarcheId(marcheId: string): Promise<UserDroit[]> {
     try {
-      // Use direct query instead of chained query to avoid recursion
+      // IMPORTANT: Use RPC call to avoid recursive RLS issues
       const { data: droitsData, error } = await supabase.rpc(
         'get_droits_for_marche', 
         { marche_id_param: marcheId }
@@ -81,23 +81,6 @@ export const marcheRightsService = {
     }
   },
 
-  // Assign creator as MOE for a new market
-  async assignCreatorAsMOE(userId: string, marcheId: string): Promise<void> {
-    try {
-      const { error } = await supabase
-        .rpc('assign_role_to_user', {
-          user_id: userId,
-          marche_id: marcheId,
-          role_specifique: 'MOE'
-        });
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Erreur lors de l\'attribution du rôle de MOE au créateur:', error);
-      throw error;
-    }
-  },
-
   // Remove role assignment for a user on a market
   async removeRole(userId: string, marcheId: string): Promise<void> {
     try {
@@ -112,6 +95,23 @@ export const marcheRightsService = {
     } catch (error) {
       console.error('Erreur lors de la suppression du rôle:', error);
       throw error;
+    }
+  },
+
+  // Check if a user is a MOE for a given market
+  async isUserMOE(marcheId: string): Promise<boolean> {
+    try {
+      const { data, error } = await supabase
+        .rpc('is_moe_for_marche', {
+          marche_id: marcheId
+        });
+
+      if (error) throw error;
+
+      return data as boolean;
+    } catch (error) {
+      console.error('Erreur lors de la vérification du rôle MOE:', error);
+      return false;
     }
   }
 };

@@ -25,7 +25,7 @@ export const fetchMarcheRoles = async (userId: string | undefined): Promise<Reco
       });
     }
     
-    // Then get explicitly assigned roles
+    // IMPORTANT: Use RPC function to avoid RLS recursion issues
     const { data, error } = await supabase
       .rpc('get_droits_for_user', {
         user_id_param: userId
@@ -75,23 +75,10 @@ export const fetchMarcheRole = async (
       return 'MOE';
     }
     
-    // Then check for explicit role assignment
+    // IMPORTANT: DO NOT query droits_marche directly - use the RPC function
     console.log(`Getting specific role for user ${userId} on market ${marcheId}...`);
     
-    // Try direct query first to avoid RPC issues
-    const { data: directRoleData, error: directRoleError } = await supabase
-      .from('droits_marche')
-      .select('role_specifique')
-      .eq('user_id', userId)
-      .eq('marche_id', marcheId)
-      .single();
-    
-    if (!directRoleError && directRoleData) {
-      console.log(`Role retrieved via direct query for user ${userId} on market ${marcheId}: ${directRoleData.role_specifique}`);
-      return directRoleData.role_specifique as MarcheSpecificRole;
-    }
-    
-    // Fall back to RPC if needed
+    // CRITICAL: Use RPC function to avoid RLS recursion
     console.log(`Trying RPC for user ${userId} on market ${marcheId}...`);
     const { data, error } = await supabase
       .rpc('get_user_role_for_marche', {
