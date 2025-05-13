@@ -1,6 +1,8 @@
 
-// Re-export everything from the new modular structure
+// Re-export the droits service
 export * from './droits';
-export * from './notificationsService';
-export * from './types';
+
+// Re-export notification types separately to avoid naming conflicts
+export { notificationsService } from './notificationsService';
+export type { Notification, Alerte } from './types';
 
