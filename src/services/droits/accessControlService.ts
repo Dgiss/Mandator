@@ -1,38 +1,31 @@
 
 import { supabase } from '@/lib/supabase';
-import { UserRole } from '@/hooks/userRole/types';
+import { MarcheSpecificRole } from '@/hooks/userRole/types';
 
 export const accessControlService = {
-  // Check if a user has access to a specific market
-  async checkUserAccessToMarche(marcheId: string): Promise<boolean> {
+  // Check if a user has permission for a specific action
+  async userHasPermission(userId: string, permission: string): Promise<boolean> {
+    // Example implementation - can be expanded based on your permission model
     try {
-      const { data, error } = await supabase
-        .rpc('user_has_access_to_marche', {
-          user_id: (await supabase.auth.getUser()).data.user?.id,
-          marche_id: marcheId
-        });
+      const { data: userRoles, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId);
 
       if (error) throw error;
       
-      return data || false;
-    } catch (error) {
-      console.error('Erreur lors de la vérification des droits:', error);
+      // Simple permission check example
+      const roles = userRoles.map(ur => ur.role);
+      
+      // Admin has all permissions
+      if (roles.includes('ADMIN')) return true;
+      
+      // For specific permissions, implement custom logic
+      // This is a placeholder implementation
       return false;
-    }
-  },
-
-  // Update a user's global role
-  async updateGlobalRole(userId: string, newRole: UserRole): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ role_global: newRole })
-        .eq('id', userId);
-
-      if (error) throw error;
     } catch (error) {
-      console.error('Erreur lors de la mise à jour du rôle global:', error);
-      throw error;
+      console.error('Erreur lors de la vérification des permissions:', error);
+      return false;
     }
   }
 };
