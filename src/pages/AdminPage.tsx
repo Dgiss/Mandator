@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { usersService } from '@/services/droits';
 import { useUserRole } from '@/hooks/userRole';
+import { UserRole } from '@/hooks/userRole/types';
 import { Shield, RefreshCw } from 'lucide-react';
 
 export default function AdminPage() {
@@ -57,7 +58,8 @@ export default function AdminPage() {
   // Function to update user's global role
   const handleRoleChange = async (userId: string, newRole: string) => {
     try {
-      await usersService.updateGlobalRole(userId, newRole);
+      // Cast the string value to UserRole type since we know the values are constrained by our Select component
+      await usersService.updateGlobalRole(userId, newRole as UserRole);
       toast({
         title: "Succès",
         description: "Le rôle global a été mis à jour avec succès.",
