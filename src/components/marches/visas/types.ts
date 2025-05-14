@@ -7,6 +7,7 @@ export interface Visa {
   dateDemande: string;
   echeance: string;
   statut: 'En attente' | 'VSO' | 'VAO' | 'Refusé';
+  commentaire?: string;
 }
 
 export interface Version {
@@ -46,8 +47,10 @@ export interface VisasTableProps {
   loadingStates: Record<string, boolean>;
   canShowDiffuseButton?: (document: Document, version: Version) => boolean;
   canShowVisaButton?: (document: Document, version: Version) => boolean;
+  canShowProcessVisaButton?: (document: Document, version: Version) => boolean;
   openDiffusionDialog?: (document: Document, version: Version) => void;
   openVisaDialog?: (document: Document, version: Version) => void;
+  openProcessVisaDialog?: (document: Document, version: Version) => void;
 }
 
 export interface VisasLoadingProps {}

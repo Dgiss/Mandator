@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Document, Version } from './types';
+import { Document, Version, Visa } from './types';
 import { useToast } from '@/hooks/use-toast';
+import { visasService } from '@/services/visasService';
 
 export const useVisaManagement = (marcheId: string) => {
   // Data states
@@ -23,6 +24,8 @@ export const useVisaManagement = (marcheId: string) => {
   // Dialog states
   const [diffusionDialogOpen, setDiffusionDialogOpen] = useState(false);
   const [visaDialogOpen, setVisaDialogOpen] = useState(false);
+  const [processVisaDialogOpen, setProcessVisaDialogOpen] = useState(false);
+  const [selectedVisa, setSelectedVisa] = useState<Visa | null>(null);
   const [diffusionComment, setDiffusionComment] = useState('');
   const [visaComment, setVisaComment] = useState('');
   const [attachmentName, setAttachmentName] = useState<string | null>(null);
@@ -253,6 +256,19 @@ export const useVisaManagement = (marcheId: string) => {
     setAttachmentFile(null);
   }, []);
 
+  // Handle process visa dialog
+  const handleProcessVisaDialogOpen = useCallback((document: Document, visa: Visa) => {
+    setSelectedDocument(document);
+    setSelectedVersion(document.latestVersion);
+    setSelectedVisa(visa);
+    setProcessVisaDialogOpen(true);
+  }, []);
+
+  const handleProcessVisaDialogClose = useCallback(() => {
+    setProcessVisaDialogOpen(false);
+    setSelectedVisa(null);
+  }, []);
+
   // Handle file selection
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -357,6 +373,54 @@ export const useVisaManagement = (marcheId: string) => {
     }
   }, [selectedDocument, selectedVersion, visaSelectedDestinaire, toast, handleVisaDialogClose, loadDocuments]);
 
+  // Handle process visa submission
+  const handleProcessVisaSubmit = useCallback(async (visaType: 'VSO' | 'VAO' | 'Refusé', comment: string) => {
+    if (!selectedDocument || !selectedVersion || !selectedVisa) {
+      toast({
+        title: "Erreur",
+        description: "Informations manquantes pour traiter le visa",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      // Set loading state for this document
+      setLoadingStates(prev => ({ ...prev, [selectedDocument.id]: true }));
+      
+      // Call the visaService to process the visa
+      await visasService.processVisa(
+        selectedVisa.id, 
+        selectedDocument.id, 
+        visaType === 'Refusé' ? 'rejete' : 'approuve', 
+        comment
+      );
+      
+      toast({
+        title: "Succès",
+        description: `Visa traité avec succès: ${visaType}`,
+        variant: "success",
+      });
+      
+      handleProcessVisaDialogClose();
+      
+      // Reset fetching and data flags before reloading documents
+      isFetchingRef.current = false;
+      dataLoadedRef.current = false;
+      loadDocuments(); // Reload the documents to reflect changes
+    } catch (error) {
+      console.error('Error processing visa:', error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors du traitement du visa",
+        variant: "destructive",
+      });
+    } finally {
+      // Reset loading state
+      setLoadingStates(prev => ({ ...prev, [selectedDocument.id]: false }));
+    }
+  }, [selectedDocument, selectedVersion, selectedVisa, toast, handleProcessVisaDialogClose, loadDocuments]);
+
   // Handle filter changes
   const handleFilter = useCallback((name: string, value: string) => {
     setFilterOptions(prev => ({ ...prev, [name]: value }));
@@ -368,6 +432,7 @@ export const useVisaManagement = (marcheId: string) => {
     filterOptions,
     selectedDocument,
     selectedVersion,
+    selectedVisa,
     loading,
     error,
     loadingStates,
@@ -376,6 +441,7 @@ export const useVisaManagement = (marcheId: string) => {
     visaComment,
     visaDialogOpen,
     diffusionDialogOpen,
+    processVisaDialogOpen,
     visaSelectedDestinaire,
     visaEcheance,
     handleDocumentSelect,
@@ -385,6 +451,9 @@ export const useVisaManagement = (marcheId: string) => {
     handleVisaDialogOpen,
     handleVisaDialogClose,
     handleVisaSubmit,
+    handleProcessVisaDialogOpen,
+    handleProcessVisaDialogClose,
+    handleProcessVisaSubmit,
     handleFileChange,
     setDiffusionComment,
     setVisaComment,

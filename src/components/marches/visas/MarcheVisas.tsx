@@ -10,8 +10,9 @@ import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { DiffusionDialog } from './DiffusionDialog';
 import { VisaDialog } from './VisaDialog';
+import { ProcessVisaDialog } from './ProcessVisaDialog';
 import { Document, Version } from './types';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useUserRole } from '@/hooks/userRole';
 
 export interface MarcheVisasProps {
   marcheId: string;
@@ -69,6 +70,7 @@ const MarcheVisas: React.FC<MarcheVisasProps> = ({ marcheId }) => {
     filterOptions,
     selectedDocument,
     selectedVersion,
+    selectedVisa,
     loading,
     error,
     loadingStates,
@@ -77,6 +79,7 @@ const MarcheVisas: React.FC<MarcheVisasProps> = ({ marcheId }) => {
     visaComment,
     visaDialogOpen,
     diffusionDialogOpen,
+    processVisaDialogOpen,
     visaSelectedDestinaire,
     visaEcheance,
     handleDocumentSelect,
@@ -86,6 +89,9 @@ const MarcheVisas: React.FC<MarcheVisasProps> = ({ marcheId }) => {
     handleVisaDialogOpen,
     handleVisaDialogClose,
     handleVisaSubmit,
+    handleProcessVisaDialogOpen,
+    handleProcessVisaDialogClose,
+    handleProcessVisaSubmit,
     handleFileChange,
     setDiffusionComment,
     setVisaComment,
@@ -107,6 +113,15 @@ const MarcheVisas: React.FC<MarcheVisasProps> = ({ marcheId }) => {
     return (document: Document, version: Version | null) => {
       if (!version) return false;
       return canVisa(marcheId) && version.statut === 'En attente de visa';
+    };
+  }, [canVisa, marcheId]);
+  
+  // New function to determine when to show the Process Visa button
+  const canShowProcessVisaButton = useMemo(() => {
+    return (document: Document, version: Version | null) => {
+      if (!version) return false;
+      // Show process visa button for documents with visas en attente
+      return canVisa(marcheId) && document.statut === 'En attente de validation';
     };
   }, [canVisa, marcheId]);
 
@@ -142,12 +157,13 @@ const MarcheVisas: React.FC<MarcheVisasProps> = ({ marcheId }) => {
         <VisasTable 
           documents={filteredDocuments}
           onDocumentSelect={handleDocumentSelect}
-          onVisaOpen={handleVisaDialogOpen}
           loadingStates={loadingStates}
           canShowDiffuseButton={canShowDiffuseButton}
           canShowVisaButton={canShowVisaButton}
+          canShowProcessVisaButton={canShowProcessVisaButton}
           openDiffusionDialog={handleDiffusionDialogOpen}
           openVisaDialog={handleVisaDialogOpen}
+          openProcessVisaDialog={handleProcessVisaDialogOpen}
         />
       )}
       
@@ -178,6 +194,15 @@ const MarcheVisas: React.FC<MarcheVisasProps> = ({ marcheId }) => {
             attachmentName={attachmentName}
             handleFileChange={handleFileChange}
             handleVisaSubmit={handleVisaSubmit}
+          />
+          
+          <ProcessVisaDialog
+            open={processVisaDialogOpen}
+            setOpen={handleProcessVisaDialogClose}
+            selectedDocument={selectedDocument}
+            selectedVersion={selectedVersion}
+            selectedVisa={selectedVisa}
+            onProcessVisa={handleProcessVisaSubmit}
           />
         </>
       )}
