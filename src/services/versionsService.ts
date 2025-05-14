@@ -45,14 +45,24 @@ export const versionsService = {
       if (uploadError) throw uploadError;
     }
 
+    // Vérifier que les champs requis sont présents
+    if (!version.document_id || !version.marche_id || !version.version || !version.cree_par) {
+      throw new Error('Champs requis manquants pour la création de version');
+    }
+
     // Insérer la version dans la base de données
     const { data, error } = await supabase
       .from('versions')
       .insert([{
-        ...version,
+        document_id: version.document_id,
+        marche_id: version.marche_id,
+        version: version.version,
+        cree_par: version.cree_par,
         file_path: filePath,
         taille: file ? (file.size / 1024 / 1024).toFixed(2) + ' MB' : null,
-        date_creation: new Date().toISOString()
+        date_creation: new Date().toISOString(),
+        commentaire: version.commentaire || null,
+        statut: version.statut || 'En attente de diffusion'
       }])
       .select();
 
