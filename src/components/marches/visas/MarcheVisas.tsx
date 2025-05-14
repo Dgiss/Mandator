@@ -112,12 +112,8 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
               documents={filteredDocuments}
               onDocumentSelect={handleDocumentSelect}
               loadingStates={loadingStates}
-              canShowDiffuseButton={canShowDiffuseButton}
-              canShowVisaButton={canShowVisaButton}
-              canShowProcessVisaButton={canShowProcessVisaButton}
               openDiffusionDialog={handleDiffusionDialogOpen}
               openVisaDialog={handleVisaDialogOpen}
-              openProcessVisaDialog={handleProcessVisaDialogOpen}
             />
           </div>
         </CardContent>

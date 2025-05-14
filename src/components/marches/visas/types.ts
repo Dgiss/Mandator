@@ -47,12 +47,8 @@ export interface VisasTableProps {
   documents: Document[];
   onDocumentSelect: (document: Document) => void;
   loadingStates: Record<string, boolean>;
-  canShowDiffuseButton?: (document: Document, version: Version) => boolean;
-  canShowVisaButton?: (document: Document, version: Version) => boolean;
-  canShowProcessVisaButton?: (document: Document, version: Version) => boolean;
   openDiffusionDialog?: (document: Document, version: Version) => void;
   openVisaDialog?: (document: Document, version: Version) => void;
-  openProcessVisaDialog?: (document: Document, version: Version) => void;
 }
 
 export interface VisasLoadingProps {}

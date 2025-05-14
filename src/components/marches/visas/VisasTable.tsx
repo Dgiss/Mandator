@@ -8,12 +8,18 @@ import {
   TableBody, 
   TableCell 
 } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Send, CheckCircle } from 'lucide-react';
 import { Document, Version } from './types';
 import { useUserRole } from '@/hooks/userRole';
 
-export const VisasTable = ({ 
+interface VisasTableProps {
+  documents: Document[];
+  onDocumentSelect: (document: Document) => void;
+  loadingStates: Record<string, boolean>;
+  openDiffusionDialog?: (document: Document, version: Version) => void;
+  openVisaDialog?: (document: Document, version: Version) => void;
+}
+
+export const VisasTable: React.FC<VisasTableProps> = ({ 
   documents, 
   onDocumentSelect,
   loadingStates,
@@ -40,28 +46,6 @@ export const VisasTable = ({
       default:
         return 'bg-gray-100 text-gray-800';
     }
-  };
-
-  // Fonction pour déterminer si le bouton Diffuser doit être activé selon les règles
-  const shouldEnableDiffuseButton = (doc: Document) => {
-    // Pour MOE, activer uniquement si statut "En attente de diffusion"
-    if (isMOE()) {
-      return doc.statut === 'En attente de diffusion';
-    }
-    
-    // Pour MANDATAIRE, toujours désactivé
-    return false;
-  };
-
-  // Fonction pour déterminer si le bouton Viser doit être activé selon les règles
-  const shouldEnableVisaButton = (doc: Document) => {
-    // Pour MANDATAIRE, activer uniquement si statut "En attente de visa"
-    if (isMandataire()) {
-      return doc.statut === 'En attente de visa';
-    }
-    
-    // Pour MOE, toujours désactivé
-    return false;
   };
 
   return (
