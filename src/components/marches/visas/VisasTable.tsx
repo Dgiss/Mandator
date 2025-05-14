@@ -83,6 +83,7 @@ export const VisasTable = ({
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end space-x-1">
+                      {/* Bouton Diffuser pour MOE quand version pas encore diffusée */}
                       {canShowDiffuseButton && latestVersion && canShowDiffuseButton(doc, latestVersion) && (
                         <Button 
                           variant="outline"
@@ -98,6 +99,23 @@ export const VisasTable = ({
                         </Button>
                       )}
                       
+                      {/* Bouton Viser pour MANDATAIRE quand version déjà diffusée */}
+                      {canShowVisaButton && latestVersion && canShowVisaButton(doc, latestVersion) && (
+                        <Button 
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openVisaDialog && openVisaDialog(doc, latestVersion);
+                          }}
+                          disabled={loadingStates[doc.id]}
+                        >
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          <span className="hidden sm:inline">Viser</span>
+                        </Button>
+                      )}
+                      
+                      {/* Bouton de traitement de visa (existant) */}
                       {canShowProcessVisaButton && latestVersion && canShowProcessVisaButton(doc) && (
                         <Button 
                           variant="btpPrimary"

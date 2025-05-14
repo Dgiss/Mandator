@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Search, Download, Eye, FileText, Paperclip } from 'lucide-react';
+import { Search, Download, Eye, FileText, Paperclip, Send, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { versionsService } from '@/services/versionsService';
@@ -15,22 +15,26 @@ import { fr } from 'date-fns/locale';
 import MarcheDiffusionDialog from './MarcheDiffusionDialog';
 import MarcheVisaDialog from './MarcheVisaDialog';
 import { useUserRole } from '@/hooks/useUserRole';
+
 interface MarcheVersionsProps {
   marcheId: string;
 }
+
 export default function MarcheVersions({
   marcheId
 }: MarcheVersionsProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
 
-  // Utiliser notre nouveau hook pour la gestion des rôles
+  // Utiliser notre hook pour la gestion des rôles
   const {
     role,
-    loading: roleLoading
-  } = useUserRole();
+    loading: roleLoading,
+    canDiffuse,
+    canVisa,
+    isMOE,
+    isMandataire
+  } = useUserRole(marcheId);
 
   // Fetch versions using React Query
   const {
@@ -127,6 +131,20 @@ export default function MarcheVersions({
     }
     return "Document sans nom";
   };
+
+  // Vérifier si la version peut être diffusée (pour MOE)
+  const canDiffuseVersion = (version: Version): boolean => {
+    return isMOE() && 
+      (version.statut === 'En attente de diffusion' || 
+       !version.statut || 
+       version.statut === 'Version créée');
+  };
+
+  // Vérifier si la version peut être visée (pour MANDATAIRE)
+  const canVisaVersion = (version: Version): boolean => {
+    return isMandataire() && version.statut === 'En attente de visa';
+  };
+
   return <div className="pt-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-semibold">Versions des documents</h2>
@@ -151,21 +169,27 @@ export default function MarcheVersions({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading || roleLoading ? <TableRow>
+            {isLoading || roleLoading ? (
+              <TableRow>
                 <TableCell colSpan={6} className="text-center py-8">
                   <div className="flex justify-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
                   </div>
                 </TableCell>
-              </TableRow> : filteredVersions.length > 0 ? filteredVersions.map((version: Version) => <TableRow key={version.id}>
+              </TableRow>
+            ) : filteredVersions.length > 0 ? (
+              filteredVersions.map((version: Version) => (
+                <TableRow key={version.id}>
                   <TableCell>
                     <div className="flex items-center">
                       <FileText className="h-5 w-5 text-gray-500 mr-2" />
                       <span className="font-medium">{getDocumentName(version)}</span>
                     </div>
-                    {version.commentaire && <div className="text-sm text-gray-500 mt-1 line-clamp-1">
+                    {version.commentaire && (
+                      <div className="text-sm text-gray-500 mt-1 line-clamp-1">
                         {version.commentaire}
-                      </div>}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell>
                     <span className="text-lg font-semibold">{version.version}</span>
@@ -179,36 +203,85 @@ export default function MarcheVersions({
                   <TableCell className="hidden md:table-cell">{formatDate(version.date_creation)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end space-x-1">
-                      {/* View attachments button (only show if has attachments) */}
-                      {version.attachments && version.attachments.length > 0 && <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      {/* Affichage conditionnel des boutons d'actions en fonction du rôle */}
+                      
+                      {/* Bouton pour voir les pièces jointes */}
+                      {version.attachments && version.attachments.length > 0 && (
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                           <Paperclip className="h-4 w-4" />
                           <span className="sr-only">Pièces jointes</span>
-                        </Button>}
+                        </Button>
+                      )}
                       
-                      {/* View button */}
+                      {/* Bouton pour voir le document */}
                       <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                         <Eye className="h-4 w-4" />
                         <span className="sr-only">Voir</span>
                       </Button>
                       
-                      {/* Download button */}
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleDownloadVersion(version)} disabled={!version.file_path}>
+                      {/* Bouton pour télécharger le document */}
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 w-8 p-0" 
+                        onClick={() => handleDownloadVersion(version)} 
+                        disabled={!version.file_path}
+                      >
                         <Download className="h-4 w-4" />
                         <span className="sr-only">Télécharger</span>
                       </Button>
                       
-                      {/* Diffusion dialog - only for MANDATAIRE and appropriate status */}
+                      {/* Bouton Diffuser - uniquement pour MOE et versions non diffusées */}
+                      {canDiffuseVersion(version) && (
+                        <Button 
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const element = document.createElement('dialog');
+                            element.setAttribute('open', 'true');
+                            element.innerText = 'Dialog for diffusion';
+                            document.body.appendChild(element);
+                          }}
+                        >
+                          <Send className="h-4 w-4 mr-1" />
+                          <span className="hidden sm:inline">Diffuser</span>
+                        </Button>
+                      )}
+                      
+                      {/* Bouton Viser - uniquement pour MANDATAIRE et versions en attente de visa */}
+                      {canVisaVersion(version) && (
+                        <Button 
+                          variant="btpPrimary"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const element = document.createElement('dialog');
+                            element.setAttribute('open', 'true');
+                            element.innerText = 'Dialog for visa';
+                            document.body.appendChild(element);
+                          }}
+                        >
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          <span className="hidden sm:inline">Viser</span>
+                        </Button>
+                      )}
+                      
+                      {/* Intégration des composants de dialogue existants */}
                       {version.statut === 'En attente de diffusion' && <MarcheDiffusionDialog version={version} onDiffusionComplete={refetch} />}
                       
-                      {/* Visa dialog - only for MOE and appropriate status */}
                       {version.statut === 'En attente de visa' && <MarcheVisaDialog version={version} onVisaComplete={refetch} />}
                     </div>
                   </TableCell>
-                </TableRow>) : <TableRow>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
                 <TableCell colSpan={6} className="text-center py-8">
                   <div className="text-gray-500">Aucune version trouvée</div>
                 </TableCell>
-              </TableRow>}
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </Card>

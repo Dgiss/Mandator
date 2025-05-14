@@ -21,8 +21,8 @@ export const useUserRole = (marcheId?: string) => {
     marcheRoles: fetchedRoles,
     getMarcheRole,
     isAdmin,
-    isMOE,
-    isMandataire 
+    isMOE: fetcherIsMOE,
+    isMandataire: fetcherIsMandataire
   } = useRoleFetcher(marcheId);
   
   const { 
@@ -39,6 +39,44 @@ export const useUserRole = (marcheId?: string) => {
   const canEdit = useCallback((marcheId?: string) => {
     return canDiffuse(marcheId);
   }, [canDiffuse]);
+
+  // Helper method to check if user is MOE (either globally or for specified market)
+  const isMOE = useCallback((specificMarcheId?: string) => {
+    // Use the provided marcheId parameter, fallback to the hook's marcheId
+    const targetMarcheId = specificMarcheId || marcheId;
+    
+    // Check if user is admin (admins can do everything)
+    if (fetchedRole === 'ADMIN') return true;
+    
+    // Check global role
+    if (fetchedRole === 'MOE') return true;
+    
+    // Check market-specific role if we have a marcheId
+    if (targetMarcheId && fetchedRoles[targetMarcheId] === 'MOE') {
+      return true;
+    }
+    
+    return false;
+  }, [fetchedRole, fetchedRoles, marcheId]);
+
+  // Helper method to check if user is MANDATAIRE
+  const isMandataire = useCallback((specificMarcheId?: string) => {
+    // Use the provided marcheId parameter, fallback to the hook's marcheId
+    const targetMarcheId = specificMarcheId || marcheId;
+    
+    // Check if user is admin (admins can do everything)
+    if (fetchedRole === 'ADMIN') return true;
+    
+    // Check global role
+    if (fetchedRole === 'MANDATAIRE') return true;
+    
+    // Check market-specific role if we have a marcheId
+    if (targetMarcheId && fetchedRoles[targetMarcheId] === 'MANDATAIRE') {
+      return true;
+    }
+    
+    return false;
+  }, [fetchedRole, fetchedRoles, marcheId]);
 
   // Update local state when fetched data changes
   useEffect(() => {
