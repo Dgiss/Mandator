@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
 import { RefreshCw } from 'lucide-react';
 import { useVisaManagement } from './useVisaManagement';
 import { VisasHeader } from './VisasHeader';
@@ -72,25 +71,9 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
     );
   }
 
-  // Helper functions to determine which buttons to show based on status and user role
-  const canShowDiffuseButton = (doc: any, version: any) => {
-    return canDiffuse(marcheId) && doc.statut === 'En attente de diffusion';
-  };
-
-  const canShowVisaButton = (doc: any) => {
-    // This button is for adding visas, not for processing them
-    return false; // Disabling this button as per workflow
-  };
-
-  const canShowProcessVisaButton = (doc: any) => {
-    // Modifié pour permettre aux mandataires de viser les documents en attente de validation
-    return canVisa(marcheId) && 
-           (doc.statut === 'En attente de validation' || doc.statut === 'En attente de visa');
-  };
-
   const handleDiffusionOpenWrapper = () => {
-    // This is a dummy function to satisfy the VisasHeader prop requirement
-    // In actual implementation, we'll use document-specific diffusion functions
+    // Cette fonction est un wrapper pour satisfaire les props de VisasHeader
+    // Dans l'implémentation réelle, nous utilisons des fonctions spécifiques aux documents
   };
 
   return (
