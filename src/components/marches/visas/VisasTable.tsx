@@ -29,6 +29,7 @@ export const VisasTable = ({
       case 'BPE':
         return 'bg-green-100 text-green-800';
       case 'En attente de validation':
+      case 'En attente de visa':  // Ajout de ce statut
         return 'bg-amber-100 text-amber-800';
       case 'En attente de diffusion':
         return 'bg-blue-100 text-blue-800';

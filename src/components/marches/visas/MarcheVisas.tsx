@@ -83,7 +83,9 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
   };
 
   const canShowProcessVisaButton = (doc: any) => {
-    return canVisa(marcheId) && doc.statut === 'En attente de validation';
+    // Modifié pour permettre aux mandataires de viser les documents en attente de validation
+    return canVisa(marcheId) && 
+           (doc.statut === 'En attente de validation' || doc.statut === 'En attente de visa');
   };
 
   const handleDiffusionOpenWrapper = () => {
