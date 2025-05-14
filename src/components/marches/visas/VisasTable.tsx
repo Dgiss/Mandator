@@ -9,7 +9,7 @@ import {
   TableCell 
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Send, CheckCircle, AlertTriangle, FileCheck } from 'lucide-react';
+import { Send, CheckCircle } from 'lucide-react';
 import { Document, Version } from './types';
 import { useUserRole } from '@/hooks/userRole';
 
@@ -17,12 +17,8 @@ export const VisasTable = ({
   documents, 
   onDocumentSelect,
   loadingStates,
-  canShowDiffuseButton,
-  canShowVisaButton,
-  canShowProcessVisaButton,
   openDiffusionDialog,
-  openVisaDialog,
-  openProcessVisaDialog
+  openVisaDialog
 }) => {
   // Get user roles information
   const { isMOE, isMandataire } = useUserRole();
@@ -68,17 +64,6 @@ export const VisasTable = ({
     return false;
   };
 
-  // Fonction pour déterminer si les boutons doivent être affichés (selon rôle et statut)
-  const shouldShowDiffuseButton = (doc: Document) => {
-    // Pour MOE, montrer le bouton mais il sera activé/désactivé selon la fonction shouldEnableDiffuseButton
-    return isMOE();
-  };
-
-  const shouldShowVisaButton = (doc: Document) => {
-    // Pour MANDATAIRE, montrer le bouton mais il sera activé/désactivé selon la fonction shouldEnableVisaButton
-    return isMandataire();
-  };
-
   return (
     <div className="rounded-md border">
       <Table>
@@ -119,41 +104,7 @@ export const VisasTable = ({
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end space-x-1">
-                      {/* Bouton Diffuser - uniquement pour MOE */}
-                      {shouldShowDiffuseButton(doc) && (
-                        <Button 
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openDiffusionDialog && openDiffusionDialog(doc, latestVersion);
-                          }}
-                          disabled={!shouldEnableDiffuseButton(doc) || loadingStates[doc.id]}
-                        >
-                          <Send className="h-4 w-4 mr-1" />
-                          <span className="hidden sm:inline">Diffuser</span>
-                        </Button>
-                      )}
-                      
-                      {/* Bouton Viser - uniquement pour MANDATAIRE */}
-                      {shouldShowVisaButton(doc) && (
-                        <Button 
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openVisaDialog && openVisaDialog(doc, latestVersion);
-                          }}
-                          disabled={!shouldEnableVisaButton(doc) || loadingStates[doc.id]}
-                        >
-                          <CheckCircle className="h-4 w-4 mr-1" />
-                          <span className="hidden sm:inline">Viser</span>
-                        </Button>
-                      )}
-                      
-                      {/* Suppression du bouton traiter le visa en doublon - nous n'utiliserons que le bouton de visa standard */}
-                    </div>
+                    {/* Aucun bouton d'action n'est affiché à la demande de l'utilisateur */}
                   </TableCell>
                 </TableRow>
               );

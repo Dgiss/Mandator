@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Dialog, 
@@ -20,7 +19,7 @@ import { Check, X } from 'lucide-react';
 import { versionsService } from '@/services/versionsService';
 import { Version } from '@/services/types';
 import { useQueryClient } from '@tanstack/react-query';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useUserRole } from '@/hooks/userRole';
 
 interface MarcheVisaDialogProps {
   version: Version;
