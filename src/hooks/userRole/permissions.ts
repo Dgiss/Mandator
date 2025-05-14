@@ -17,12 +17,13 @@ export const canDiffuseMarche = (
   
   // Si aucun marché n'est spécifié, vérifier le rôle global
   if (!marcheId) {
-    return globalRole === 'MANDATAIRE';
+    // Seul le MOE peut diffuser les documents
+    return globalRole === 'MOE';
   }
   
   // Sinon, vérifier le rôle spécifique pour ce marché
   const roleForMarche = marcheRoles[marcheId];
-  return roleForMarche === 'MANDATAIRE';
+  return roleForMarche === 'MOE';
 };
 
 /**
@@ -41,12 +42,13 @@ export const canVisaMarche = (
   
   // Si aucun marché n'est spécifié, vérifier le rôle global
   if (!marcheId) {
-    return globalRole === 'MOE';
+    // Seul le MANDATAIRE peut viser les documents
+    return globalRole === 'MANDATAIRE';
   }
   
   // Sinon, vérifier le rôle spécifique pour ce marché
   const roleForMarche = marcheRoles[marcheId];
-  return roleForMarche === 'MOE';
+  return roleForMarche === 'MANDATAIRE';
 };
 
 /**

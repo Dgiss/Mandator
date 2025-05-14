@@ -1,3 +1,4 @@
+
 import { supabase } from '@/lib/supabase';
 import { Version, DocumentAttachment } from './types';
 import { Database } from '@/types/supabase';
@@ -130,6 +131,13 @@ export const versionsService = {
         console.error('Error inserting version:', error);
         throw error;
       }
+      
+      // Mettre à jour le document parent avec la même version
+      // pour assurer la synchronisation entre le document et sa version active
+      await supabase
+        .from('documents')
+        .update({ version: version.version })
+        .eq('id', version.document_id);
       
       // Si cette version a des pièces jointes, les traiter
       if (attachments && attachments.length > 0 && data && data[0] && data[0].id) {
@@ -296,7 +304,7 @@ export const versionsService = {
     return true;
   },
 
-  // Diffuser une version (MANDATAIRE uniquement) - Mise à jour selon le workflow
+  // Diffuser une version (MOE uniquement) - Mise à jour selon le workflow
   async diffuseVersion(versionId: string, commentaire: string, file?: File) {
     try {
       // Récupérer les données de la version
@@ -358,9 +366,13 @@ export const versionsService = {
       if (updateError) throw updateError;
 
       // Mettre à jour également le statut du document
+      // et s'assurer que la version du document est synchronisée
       const { error: docUpdateError } = await supabase
         .from('documents')
-        .update({ statut: 'En attente de visa' })
+        .update({ 
+          statut: 'En attente de visa',
+          version: versionData.version
+        })
         .eq('id', versionData.document_id);
 
       if (docUpdateError) throw docUpdateError;
@@ -372,7 +384,7 @@ export const versionsService = {
     }
   },
 
-  // Procédure de visa (MOE uniquement) - Mise à jour selon le workflow
+  // Procédure de visa (Mandataire uniquement) - Mise à jour selon le workflow
   async processVisa(versionId: string, decision: 'approuve' | 'rejete', commentaire: string) {
     try {
       // Récupérer les données de la version
@@ -421,19 +433,22 @@ export const versionsService = {
 
       if (updateError) throw updateError;
 
-      // Mettre à jour également le statut du document
+      // Mettre à jour également le statut du document et synchroniser la version
       const documentStatusUpdate = decision === 'approuve' 
         ? { statut: 'Approuvé' }
         : { statut: 'En attente de diffusion' };
       
       const { error: docUpdateError } = await supabase
         .from('documents')
-        .update(documentStatusUpdate)
+        .update({
+          ...documentStatusUpdate,
+          version: versionData.version // Garder la synchronisation avec la version actuelle
+        })
         .eq('id', versionData.document_id);
 
       if (docUpdateError) throw docUpdateError;
 
-      // Si rejeté, créer automatiquement une nouvelle version (lettre suivante)
+      // Si rejeté (VAO), créer automatiquement une nouvelle version (lettre suivante)
       if (decision === 'rejete') {
         // Obtenir la prochaine lettre de version
         const nextLetter = await this.getNextVersionLetter(versionData.document_id);

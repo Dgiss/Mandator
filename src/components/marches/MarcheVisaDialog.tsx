@@ -38,17 +38,17 @@ const MarcheVisaDialog: React.FC<MarcheVisaDialogProps> = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // Utiliser notre nouveau hook pour la gestion des rôles
+  // Utiliser notre hook pour la gestion des rôles
   const { canVisa } = useUserRole();
 
-  // Role check - only MOE or ADMIN can process visa for this marché
+  // Role check - only MANDATAIRE or ADMIN can process visa for this marché
   const canProcessVisa = canVisa(version.marche_id) && version.statut === 'En attente de visa';
 
   const handleVisa = async () => {
     if (!canProcessVisa) {
       toast({
         title: "Accès non autorisé",
-        description: "Seul le MOE peut traiter les visas.",
+        description: "Seul le Mandataire peut traiter les visas.",
         variant: "destructive",
       });
       return;
@@ -72,8 +72,9 @@ const MarcheVisaDialog: React.FC<MarcheVisaDialogProps> = ({
       );
 
       if (result.success) {
+        const decisionType = decision === 'approuve' ? "VSO" : "VAO";
         toast({
-          title: decision === 'approuve' ? "Document approuvé" : "Document rejeté",
+          title: decision === 'approuve' ? `Document approuvé (${decisionType})` : `Document rejeté (${decisionType})`,
           description: decision === 'approuve' 
             ? "Le document a été approuvé avec succès." 
             : "Le document a été rejeté. Une nouvelle version a été créée automatiquement.",
@@ -134,12 +135,12 @@ const MarcheVisaDialog: React.FC<MarcheVisaDialogProps> = ({
           >
             <div className="flex items-center space-x-2 border p-3 rounded-md bg-green-50 border-green-200">
               <RadioGroupItem value="approuve" id="approuve" />
-              <Label htmlFor="approuve" className="font-medium text-green-700">Approuver le document</Label>
+              <Label htmlFor="approuve" className="font-medium text-green-700">VSO - Visa Sans Observation</Label>
             </div>
 
             <div className="flex items-center space-x-2 border p-3 rounded-md bg-red-50 border-red-200">
               <RadioGroupItem value="rejete" id="rejete" />
-              <Label htmlFor="rejete" className="font-medium text-red-700">Rejeter le document</Label>
+              <Label htmlFor="rejete" className="font-medium text-red-700">VAO - Visa Avec Observation</Label>
             </div>
           </RadioGroup>
           
@@ -149,7 +150,9 @@ const MarcheVisaDialog: React.FC<MarcheVisaDialogProps> = ({
             </label>
             <Textarea
               id="commentaire"
-              placeholder="Veuillez justifier votre décision..."
+              placeholder={decision === 'approuve' ? 
+                "Veuillez justifier votre approbation..." : 
+                "Veuillez détailler les observations à prendre en compte..."}
               value={commentaire}
               onChange={(e) => setCommentaire(e.target.value)}
               rows={4}
@@ -166,8 +169,8 @@ const MarcheVisaDialog: React.FC<MarcheVisaDialogProps> = ({
           <div className="rounded-md bg-blue-50 p-3">
             <p className="text-sm text-blue-700">
               {decision === 'approuve' 
-                ? "En approuvant ce document, vous confirmez qu'il répond à toutes les exigences et qu'il peut être utilisé dans le cadre du projet."
-                : "En rejetant ce document, une nouvelle version sera automatiquement créée avec la lettre suivante pour permettre les corrections nécessaires."}
+                ? "En validant ce document avec un VSO (Visa Sans Observation), vous confirmez qu'il répond à toutes les exigences et qu'il peut être utilisé dans le cadre du projet."
+                : "En validant ce document avec un VAO (Visa Avec Observation), une nouvelle version sera automatiquement créée avec la lettre suivante pour permettre les corrections nécessaires."}
             </p>
           </div>
         </div>
@@ -182,13 +185,13 @@ const MarcheVisaDialog: React.FC<MarcheVisaDialogProps> = ({
           <Button 
             onClick={handleVisa} 
             disabled={isSubmitting || commentaire.trim() === ''}
-            className={decision === 'approuve' ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}
+            className={decision === 'approuve' ? "bg-green-600 hover:bg-green-700" : "bg-amber-600 hover:bg-amber-700"}
           >
             {isSubmitting 
               ? "Traitement en cours..." 
               : decision === 'approuve' 
-                ? "Approuver" 
-                : "Rejeter"}
+                ? "VSO - Approuver" 
+                : "VAO - Avec observations"}
           </Button>
         </DialogFooter>
       </DialogContent>

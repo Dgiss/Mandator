@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { useParams } from 'react-router-dom';
 import { useVisaManagement } from './useVisaManagement';
 import { VisasHeader } from './VisasHeader';
 import { VisaFilters } from './VisaFilters';
@@ -10,7 +11,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { DiffusionDialog } from './DiffusionDialog';
 import { VisaDialog } from './VisaDialog';
 import { Document, Version } from './types';
-import { useUserRole } from '@/hooks/userRole';
+import { useUserRole } from '@/hooks/useUserRole';
 
 export interface MarcheVisasProps {
   marcheId: string;
@@ -49,19 +50,20 @@ const MarcheVisas: React.FC<MarcheVisasProps> = ({ marcheId }) => {
     retryLoading
   } = useVisaManagement(marcheId);
 
-  // Use our role hooks to check permissions
-  // Using the specific marcheId to avoid unnecessary permission checks
+  // Utilise notre hook de rôles pour vérifier les permissions
   const { canDiffuse, canVisa } = useUserRole(marcheId);
 
-  // Function to determine if diffuse button should be shown - memoize permission check results
+  // Fonction pour déterminer si le bouton de diffusion doit être affiché
   const canShowDiffuseButton = React.useCallback((document: Document, version: Version | null) => {
     if (!version) return false;
+    // MOE voit "Diffuser" uniquement pour documents "En attente de diffusion"
     return canDiffuse(marcheId) && version.statut === 'En attente de diffusion';
   }, [canDiffuse, marcheId]);
 
-  // Function to determine if visa button should be shown - memoize permission check results
+  // Fonction pour déterminer si le bouton de visa doit être affiché
   const canShowVisaButton = React.useCallback((document: Document, version: Version | null) => {
     if (!version) return false;
+    // Mandataire voit "Viser" uniquement pour documents "En attente de validation"
     return canVisa(marcheId) && version.statut === 'En attente de visa';
   }, [canVisa, marcheId]);
 

@@ -105,35 +105,90 @@ export const visasService = {
     return data[0];
   },
 
-  // Traiter un visa (approuver ou refuser)
+  // Traiter un visa (approuver ou refuser) avec la logique de synchronisation du document et version
   async processVisa(visaId: string, documentId: string, decision: 'approuve' | 'rejete', commentaire: string) {
-    // Mettre à jour le visa
-    const { data: updatedVisa, error: visaError } = await supabase
-      .from('visas')
-      .update({
-        statut: decision === 'approuve' ? 'Approuvé' : 'Rejeté',
-        commentaire: commentaire
-      })
-      .eq('id', visaId)
-      .select();
-
-    if (visaError) throw visaError;
-
-    // Mettre à jour le document
-    const { error: docError } = await supabase
-      .from('documents')
-      .update({
-        statut: decision === 'approuve' ? 'Approuvé' : 'En attente de diffusion'
-      })
-      .eq('id', documentId);
-
-    if (docError) throw docError;
-
-    return {
-      success: true,
-      visa: updatedVisa[0],
-      decision
-    };
+    let documentStatus = 'En attente de diffusion';
+    let visaStatus = decision === 'approuve' ? 'Approuvé' : 'Rejeté';
+    
+    try {
+      // 1. Récupérer d'abord les informations sur le visa pour connaître sa version
+      const { data: visaData, error: visaError } = await supabase
+        .from('visas')
+        .select('version, marche_id, document_id')
+        .eq('id', visaId)
+        .single();
+      
+      if (visaError) throw visaError;
+      
+      // 2. Mettre à jour le visa
+      const { data: updatedVisa, error: visaUpdateError } = await supabase
+        .from('visas')
+        .update({
+          statut: visaStatus,
+          commentaire: commentaire
+        })
+        .eq('id', visaId)
+        .select();
+      
+      if (visaUpdateError) throw visaUpdateError;
+      
+      // 3. Déterminer le statut du document selon le type de décision
+      if (decision === 'approuve') {
+        documentStatus = 'Approuvé'; // Document approuvé
+      } else {
+        documentStatus = 'En attente de diffusion'; // Document à modifier
+      }
+      
+      // 4. Mettre à jour le document - TOUJOURS mettre à jour le document avec la version actuelle
+      const { error: docUpdateError } = await supabase
+        .from('documents')
+        .update({
+          statut: documentStatus,
+          version: visaData.version // Synchronise l'indice du document parent avec celui de la version
+        })
+        .eq('id', visaData.document_id);
+      
+      if (docUpdateError) throw docUpdateError;
+      
+      // 5. Pour les VAO, créer une nouvelle version avec la lettre suivante
+      if (decision === 'rejete') {
+        // Obtenir la prochaine lettre de version
+        const nextVersionLetter = this.getNextVersionLetter(visaData.version);
+        
+        // Récupérer les données de la version actuelle pour créer la nouvelle
+        const { data: versionData, error: versionFetchError } = await supabase
+          .from('versions')
+          .select('*')
+          .eq('document_id', visaData.document_id)
+          .eq('version', visaData.version)
+          .single();
+          
+        if (versionFetchError) throw versionFetchError;
+        
+        // Créer une nouvelle version incrémentée
+        const { error: newVersionError } = await supabase
+          .from('versions')
+          .insert({
+            document_id: visaData.document_id,
+            marche_id: visaData.marche_id,
+            version: nextVersionLetter,
+            cree_par: "Système (suite à VAO)",
+            commentaire: `Nouvelle version suite au rejet de la version ${visaData.version} - ${commentaire}`,
+            statut: "En attente de diffusion"
+          });
+          
+        if (newVersionError) throw newVersionError;
+      }
+      
+      return {
+        success: true,
+        visa: updatedVisa[0],
+        decision
+      };
+    } catch (error) {
+      console.error('Erreur lors du traitement du visa:', error);
+      throw error;
+    }
   },
 
   // Supprimer un visa
@@ -217,12 +272,22 @@ export const visasService = {
   // Vérifier si l'utilisateur peut diffuser un document pour un marché spécifique
   async canUserDiffuseForMarche(marcheId: string) {
     const role = await this.getUserRoleForMarche(marcheId);
-    return role === 'ADMIN' || role === 'MANDATAIRE';
+    return role === 'ADMIN' || role === 'MOE';
   },
   
   // Vérifier si l'utilisateur peut viser un document pour un marché spécifique
   async canUserVisaForMarche(marcheId: string) {
     const role = await this.getUserRoleForMarche(marcheId);
-    return role === 'ADMIN' || role === 'MOE';
+    return role === 'ADMIN' || role === 'MANDATAIRE';
+  },
+  
+  // Obtenir la lettre de version suivante (A→B→C...)
+  getNextVersionLetter(currentVersion: string) {
+    // Extraire la première lettre de la version actuelle
+    const currentLetter = currentVersion.charAt(0);
+    // Convertir en code ASCII et incrémenter
+    const nextLetterCode = currentLetter.charCodeAt(0) + 1;
+    // Reconvertir en lettre
+    return String.fromCharCode(nextLetterCode);
   }
 };
