@@ -12,7 +12,7 @@ export * from './accessControl';
 // Un export direct pour les fonctions essentielles
 import { checkAuth } from './checkAuth';
 import { logout } from './logout';
-import { hasRequiredRole } from './roles';
-import { checkAccess } from './accessControl';
+import { hasGlobalRole } from './roles';  // Changed from hasRequiredRole to hasGlobalRole
+import { hasAccessToMarche } from './accessControl';  // Changed from checkAccess to hasAccessToMarche
 
-export { checkAuth, logout, hasRequiredRole, checkAccess };
+export { checkAuth, logout, hasGlobalRole, hasAccessToMarche };
