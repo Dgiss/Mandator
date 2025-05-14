@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Document, Version } from './types';
 import { useToast } from '@/hooks/use-toast';
@@ -31,20 +31,24 @@ export const useVisaManagement = (marcheId: string) => {
   const [visaSelectedDestinaire, setVisaSelectedDestinaire] = useState('');
   const [visaEcheance, setVisaEcheance] = useState<Date | null>(null);
   
+  // Prevent infinite loop - track if we're already fetching data
+  const isFetchingRef = useRef(false);
+  // Track if component is mounted
+  const isMountedRef = useRef(true);
+  
   const { toast } = useToast();
 
   // Load documents with retry mechanism and error handling
   const loadDocuments = useCallback(async () => {
-    // Skip if no marcheId is provided
-    if (!marcheId) {
-      console.log("No marcheId provided, skipping document load");
-      setLoading(false);
+    // Skip if no marcheId is provided or if already fetching
+    if (!marcheId || isFetchingRef.current) {
       return;
     }
 
     console.log(`Chargement des documents pour le marché ${marcheId}...`);
     
     try {
+      isFetchingRef.current = true;
       setLoading(true);
       setError(null);
       
@@ -61,9 +65,12 @@ export const useVisaManagement = (marcheId: string) => {
       
       if (!documentsData || documentsData.length === 0) {
         console.log("Aucun document trouvé pour ce marché");
-        setDocuments([]);
-        setFilteredDocuments([]);
-        setLoading(false);
+        if (isMountedRef.current) {
+          setDocuments([]);
+          setFilteredDocuments([]);
+          setLoading(false);
+        }
+        isFetchingRef.current = false;
         return;
       }
       
@@ -111,24 +118,40 @@ export const useVisaManagement = (marcheId: string) => {
       });
 
       console.log("Traitement des documents terminé");
-      setDocuments(documentsWithVersions);
-      setFilteredDocuments(documentsWithVersions);
+      
+      if (isMountedRef.current) {
+        setDocuments(documentsWithVersions);
+        setFilteredDocuments(documentsWithVersions);
+        setLoading(false);
+      }
     } catch (error) {
       console.error('Error loading data:', error);
-      setError(error as Error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les données",
-        variant: "destructive",
-      });
+      if (isMountedRef.current) {
+        setError(error as Error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les données",
+          variant: "destructive",
+        });
+        setLoading(false);
+      }
     } finally {
-      setLoading(false);
+      isFetchingRef.current = false;
     }
   }, [marcheId, toast]);
 
   // Retry loading function
   const retryLoading = useCallback(() => {
+    isFetchingRef.current = false;
     setLoadAttempts(prev => prev + 1);
+  }, []);
+
+  // Track component mount status to prevent state updates on unmounted component
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
   // Load documents only when marcheId changes or loadAttempts changes
@@ -136,6 +159,12 @@ export const useVisaManagement = (marcheId: string) => {
     if (marcheId) {
       loadDocuments();
     }
+    
+    // Cleanup function
+    return () => {
+      // Ensure we don't update state after unmount
+      isFetchingRef.current = false;
+    };
   }, [loadDocuments, loadAttempts, marcheId]);
 
   // Filter documents based on selected options - use useMemo for performance
@@ -230,6 +259,9 @@ export const useVisaManagement = (marcheId: string) => {
       });
       
       handleDiffusionDialogClose();
+      
+      // Reset fetching flag before reloading documents
+      isFetchingRef.current = false;
       loadDocuments(); // Reload the documents to reflect changes
     } catch (error) {
       console.error('Error during diffusion:', error);
@@ -278,6 +310,9 @@ export const useVisaManagement = (marcheId: string) => {
       });
       
       handleVisaDialogClose();
+      
+      // Reset fetching flag before reloading documents
+      isFetchingRef.current = false;
       loadDocuments(); // Reload the documents to reflect changes
     } catch (error) {
       console.error('Error during visa request:', error);

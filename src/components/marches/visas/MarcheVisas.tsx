@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useVisaManagement } from './useVisaManagement';
 import { VisasHeader } from './VisasHeader';
@@ -18,6 +18,9 @@ export interface MarcheVisasProps {
 }
 
 const MarcheVisas: React.FC<MarcheVisasProps> = ({ marcheId }) => {
+  // Utilize our role hook to check permissions - use stable reference
+  const { canDiffuse, canVisa } = useUserRole(marcheId);
+
   const {
     documents,
     filteredDocuments,
@@ -50,22 +53,23 @@ const MarcheVisas: React.FC<MarcheVisasProps> = ({ marcheId }) => {
     retryLoading
   } = useVisaManagement(marcheId);
 
-  // Utilise notre hook de rôles pour vérifier les permissions
-  const { canDiffuse, canVisa } = useUserRole(marcheId);
+  // Memoize button display functions to prevent unnecessary rerenders
+  const canShowDiffuseButton = useMemo(() => {
+    return (document: Document, version: Version | null) => {
+      if (!version) return false;
+      // MOE sees "Diffuser" only for documents waiting for diffusion
+      return canDiffuse && version.statut === 'En attente de diffusion';
+    };
+  }, [canDiffuse]);
 
-  // Fonction pour déterminer si le bouton de diffusion doit être affiché
-  const canShowDiffuseButton = React.useCallback((document: Document, version: Version | null) => {
-    if (!version) return false;
-    // MOE voit "Diffuser" uniquement pour documents "En attente de diffusion"
-    return canDiffuse(marcheId) && version.statut === 'En attente de diffusion';
-  }, [canDiffuse, marcheId]);
-
-  // Fonction pour déterminer si le bouton de visa doit être affiché
-  const canShowVisaButton = React.useCallback((document: Document, version: Version | null) => {
-    if (!version) return false;
-    // Mandataire voit "Viser" uniquement pour documents "En attente de validation"
-    return canVisa(marcheId) && version.statut === 'En attente de visa';
-  }, [canVisa, marcheId]);
+  // Memoize visa button display function
+  const canShowVisaButton = useMemo(() => {
+    return (document: Document, version: Version | null) => {
+      if (!version) return false;
+      // Mandataire sees "Viser" only for documents waiting for validation
+      return canVisa && version.statut === 'En attente de visa';
+    };
+  }, [canVisa]);
 
   if (error) {
     return (

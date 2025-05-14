@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useRoleFetcher } from './useRoleFetcher';
 import { useAccessChecker } from './useAccessChecker';
@@ -11,6 +12,7 @@ export function useUserRole(marcheId?: string): UserRoleInfo {
   // Keep track of role fetch attempts to prevent infinite loops
   const fetchAttemptsRef = useRef(0);
   const isMountedRef = useRef(true);
+  const processingRef = useRef(false);
   
   // Get role information
   const { 
@@ -33,6 +35,7 @@ export function useUserRole(marcheId?: string): UserRoleInfo {
   
   // Handle component cleanup
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
     };
@@ -40,8 +43,15 @@ export function useUserRole(marcheId?: string): UserRoleInfo {
   
   // Log access checking only once per mount to avoid excessive logging
   useEffect(() => {
+    if (processingRef.current) return;
+    
     if (marcheId && role) {
+      processingRef.current = true;
       console.log(`Role checking initialized for market ${marcheId} with role: ${role}`);
+      // Reset the processing flag after a short delay
+      setTimeout(() => {
+        processingRef.current = false;
+      }, 500);
     }
   }, [marcheId, role]);
   
