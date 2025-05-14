@@ -1,5 +1,5 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useVisaManagement } from './useVisaManagement';
 import { VisasHeader } from './VisasHeader';
@@ -18,8 +18,28 @@ export interface MarcheVisasProps {
 }
 
 const MarcheVisas: React.FC<MarcheVisasProps> = ({ marcheId }) => {
-  // Utilize our role hook to check permissions - use stable reference
-  const { canDiffuse, canVisa } = useUserRole(marcheId);
+  // Référence pour éviter les rendus en cascade
+  const componentMountedRef = useRef(true);
+  const previousMarcheIdRef = useRef<string | null>(null);
+  
+  // Reset state when switching between markets
+  useEffect(() => {
+    // Si le marcheId change, nous devons réinitialiser l'état
+    if (previousMarcheIdRef.current && previousMarcheIdRef.current !== marcheId) {
+      console.log(`Market ID changed from ${previousMarcheIdRef.current} to ${marcheId}`);
+    }
+    
+    previousMarcheIdRef.current = marcheId;
+    
+    return () => {
+      // Ce nettoyage est important pour éviter les fuites mémoire
+      componentMountedRef.current = false;
+    };
+  }, [marcheId]);
+
+  // Utiliser notre hook de rôle avec un paramètre stable 
+  const stableMarcheId = useMemo(() => marcheId, [marcheId]);
+  const { canDiffuse, canVisa } = useUserRole(stableMarcheId);
 
   const {
     documents,
@@ -51,25 +71,22 @@ const MarcheVisas: React.FC<MarcheVisasProps> = ({ marcheId }) => {
     setVisaEcheance,
     handleFilter,
     retryLoading
-  } = useVisaManagement(marcheId);
+  } = useVisaManagement(stableMarcheId);
 
-  // Memoize button display functions to prevent unnecessary rerenders
+  // Mémoriser les fonctions de vérification des boutons pour éviter des recalculs inutiles
   const canShowDiffuseButton = useMemo(() => {
     return (document: Document, version: Version | null) => {
       if (!version) return false;
-      // MOE sees "Diffuser" only for documents waiting for diffusion
-      return canDiffuse && version.statut === 'En attente de diffusion';
+      return canDiffuse(marcheId) && version.statut === 'En attente de diffusion';
     };
-  }, [canDiffuse]);
+  }, [canDiffuse, marcheId]);
 
-  // Memoize visa button display function
   const canShowVisaButton = useMemo(() => {
     return (document: Document, version: Version | null) => {
       if (!version) return false;
-      // Mandataire sees "Viser" only for documents waiting for validation
-      return canVisa && version.statut === 'En attente de visa';
+      return canVisa(marcheId) && version.statut === 'En attente de visa';
     };
-  }, [canVisa]);
+  }, [canVisa, marcheId]);
 
   if (error) {
     return (

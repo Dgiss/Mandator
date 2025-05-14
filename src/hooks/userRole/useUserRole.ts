@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRoleFetcher } from './useRoleFetcher';
 import { useAccessChecker } from './useAccessChecker';
 import { UserRole, MarcheSpecificRole, UserRoleInfo } from './types';
@@ -13,8 +13,11 @@ export function useUserRole(marcheId?: string): UserRoleInfo {
   const fetchAttemptsRef = useRef(0);
   const isMountedRef = useRef(true);
   const processingRef = useRef(false);
+  const previousMarcheIdRef = useRef<string | undefined>(marcheId);
   
-  // Get role information
+  // Get role information - using memoized stable dependency
+  const stableMarcheId = useMemo(() => marcheId, [marcheId]);
+  
   const { 
     role, 
     loading, 
@@ -23,9 +26,9 @@ export function useUserRole(marcheId?: string): UserRoleInfo {
     isAdmin,
     isMOE,
     isMandataire
-  } = useRoleFetcher(marcheId);
+  } = useRoleFetcher(stableMarcheId);
   
-  // Get access checking functions
+  // Get access checking functions with memoized dependencies
   const { 
     canDiffuse, 
     canVisa, 
@@ -36,35 +39,48 @@ export function useUserRole(marcheId?: string): UserRoleInfo {
   // Handle component cleanup
   useEffect(() => {
     isMountedRef.current = true;
+    
+    // Si le marcheId a changé, nous devons réinitialiser l'état
+    if (previousMarcheIdRef.current !== marcheId) {
+      fetchAttemptsRef.current = 0;
+      processingRef.current = false;
+      previousMarcheIdRef.current = marcheId;
+    }
+    
     return () => {
       isMountedRef.current = false;
     };
-  }, []);
+  }, [marcheId]);
   
   // Log access checking only once per mount to avoid excessive logging
   useEffect(() => {
-    if (processingRef.current) return;
+    if (processingRef.current || !marcheId || !role) return;
     
-    if (marcheId && role) {
-      processingRef.current = true;
-      console.log(`Role checking initialized for market ${marcheId} with role: ${role}`);
-      // Reset the processing flag after a short delay
-      setTimeout(() => {
+    processingRef.current = true;
+    console.log(`Role checking initialized for market ${marcheId} with role: ${role}`);
+    
+    // Reset the processing flag after a delay
+    const timeoutId = setTimeout(() => {
+      if (isMountedRef.current) {
         processingRef.current = false;
-      }, 500);
-    }
+      }
+    }, 1000);
+    
+    return () => clearTimeout(timeoutId);
   }, [marcheId, role]);
   
   // Add error boundary for role checking
   useEffect(() => {
     if (fetchAttemptsRef.current > 5) {
       console.warn('Too many role fetch attempts, potential infinite loop detected');
-    } else {
-      fetchAttemptsRef.current += 1;
+      return;
     }
+    
+    fetchAttemptsRef.current += 1;
   }, [marcheId]);
 
-  return {
+  // Return memoized user role info to prevent unnecessary re-renders
+  return useMemo(() => ({
     role,
     loading,
     isAdmin,
@@ -75,5 +91,16 @@ export function useUserRole(marcheId?: string): UserRoleInfo {
     canVisa,
     canManageRoles,
     getMarcheRole
-  };
+  }), [
+    role, 
+    loading, 
+    isAdmin, 
+    isMOE, 
+    isMandataire, 
+    canCreateMarche, 
+    canDiffuse, 
+    canVisa, 
+    canManageRoles, 
+    getMarcheRole
+  ]);
 }
