@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { Document, Version, Visa } from './types';
 import { useToast } from '@/hooks/use-toast';
 import { visasService } from '@/services/visasService';
+import { versionsService } from '@/services/versionsService';
 
 export const useVisaManagement = (marcheId: string) => {
   // Data states
@@ -265,7 +266,7 @@ export const useVisaManagement = (marcheId: string) => {
   const handleProcessVisaDialogClose = useCallback(() => {
     setProcessVisaDialogOpen(false);
     setSelectedVisa(null);
-  }, []);
+  });
 
   // Handle file selection
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
