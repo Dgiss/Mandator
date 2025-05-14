@@ -8,54 +8,46 @@ import { useAccessChecker } from './useAccessChecker';
 // Create a simple cache to limit API calls
 const roleCache = new Map<string, UserRoleInfo>();
 
-export const useUserRole = () => {
+export const useUserRole = (marcheId?: string) => {
   const [role, setRole] = useState<UserRole | null>(null);
   const [marcheRoles, setMarcheRoles] = useState<Record<string, MarcheSpecificRole>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   // Use our specialized hooks
-  const { fetchGlobalRole, fetchMarcheRoles } = useRoleFetcher();
-  const { canEdit, canDiffuse, canVisa } = useAccessChecker(role, marcheRoles);
+  const { 
+    role: fetchedRole, 
+    loading: roleLoading, 
+    marcheRoles: fetchedRoles,
+    getMarcheRole,
+    isAdmin,
+    isMOE,
+    isMandataire 
+  } = useRoleFetcher(marcheId);
+  
+  const { 
+    canDiffuse,
+    canVisa,
+    canManageRoles,
+    canCreateMarche 
+  } = useAccessChecker(
+    fetchedRole as UserRole,
+    fetchedRoles
+  );
 
-  // Fetch the user's global role
-  const fetchUserRole = useCallback(async () => {
-    // Check if we have this info in cache
-    const cachedUserInfo = roleCache.get('userInfo');
-    if (cachedUserInfo) {
-      setRole(cachedUserInfo.globalRole);
-      setMarcheRoles(cachedUserInfo.marcheSpecificRoles || {});
-      setLoading(false);
-      return;
-    }
+  // Add a canEdit function for backwards compatibility
+  const canEdit = useCallback((marcheId?: string) => {
+    return canDiffuse(marcheId);
+  }, [canDiffuse]);
 
-    try {
-      // Get the global role
-      const globalRole = await fetchGlobalRole();
-      setRole(globalRole);
-
-      // Get all marché-specific roles
-      const specificRoles = await fetchMarcheRoles();
-      setMarcheRoles(specificRoles);
-
-      // Store in cache
-      roleCache.set('userInfo', {
-        globalRole,
-        marcheSpecificRoles: specificRoles
-      });
-
-      setLoading(false);
-    } catch (err) {
-      console.error('Error fetching user role:', err);
-      setError(err instanceof Error ? err : new Error('Unknown error fetching role'));
-      setLoading(false);
-    }
-  }, [fetchGlobalRole, fetchMarcheRoles]);
-
-  // Fetch role on mount
+  // Update local state when fetched data changes
   useEffect(() => {
-    fetchUserRole();
-  }, [fetchUserRole]);
+    if (!roleLoading) {
+      setRole(fetchedRole as UserRole);
+      setMarcheRoles(fetchedRoles);
+      setLoading(false);
+    }
+  }, [fetchedRole, fetchedRoles, roleLoading]);
 
   // Function to clear role cache (useful when role changes)
   const refreshRoles = useCallback(() => {
@@ -63,8 +55,7 @@ export const useUserRole = () => {
     roleCache.delete('userInfo');
     // Re-fetch roles
     setLoading(true);
-    fetchUserRole();
-  }, [fetchUserRole]);
+  }, []);
 
   return {
     role,
@@ -74,6 +65,12 @@ export const useUserRole = () => {
     refreshRoles,
     canEdit,
     canDiffuse,
-    canVisa
+    canVisa,
+    canManageRoles,
+    canCreateMarche,
+    getMarcheRole,
+    isAdmin,
+    isMOE,
+    isMandataire
   };
 };

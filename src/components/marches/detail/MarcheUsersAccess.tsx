@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import MarcheRolesDialog from '@/components/marches/MarcheRolesDialog';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useUserRole } from '@/hooks/userRole';
 
 interface MarcheUsersAccessProps {
   marcheId: string;
@@ -10,7 +10,7 @@ interface MarcheUsersAccessProps {
 }
 
 const MarcheUsersAccess: React.FC<MarcheUsersAccessProps> = ({ marcheId, marcheTitle }) => {
-  const { canManageRoles } = useUserRole();
+  const { canManageRoles } = useUserRole(marcheId);
   const userCanManageRoles = canManageRoles(marcheId);
   
   return (

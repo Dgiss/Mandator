@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Users, Shield } from 'lucide-react';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useUserRole } from '@/hooks/userRole';
 import RolesDialogContent from './RolesDialogContent';
 
 interface MarcheRolesDialogProps {

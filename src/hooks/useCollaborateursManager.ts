@@ -16,7 +16,7 @@ export function useCollaborateursManager(marcheId: string) {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const { toast } = useToast();
-  const { role, getMarcheRole } = useUserRole(marcheId);
+  const { role, marcheRoles, getMarcheRole } = useUserRole(marcheId);
   const [userMarcheRole, setUserMarcheRole] = useState<MarcheSpecificRole>(null);
 
   // Get current user ID on component mount
@@ -31,8 +31,10 @@ export function useCollaborateursManager(marcheId: string) {
   // Load user's specific role for this market
   useEffect(() => {
     const loadUserRole = async () => {
-      const specificRole = await getMarcheRole(marcheId);
-      setUserMarcheRole(specificRole);
+      if (marcheId) {
+        const specificRole = await getMarcheRole(marcheId);
+        setUserMarcheRole(specificRole);
+      }
     };
     loadUserRole();
   }, [marcheId, getMarcheRole]);

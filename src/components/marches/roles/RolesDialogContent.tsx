@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useUserRole } from '@/hooks/userRole';
 import UserRoleInfo from './UserRoleInfo';
 import AccessRestrictedAlert from './AccessRestrictedAlert';
 import RolesInfoCard from './RolesInfoCard';
@@ -38,8 +38,10 @@ const RolesDialogContent: React.FC<RolesDialogContentProps> = ({ marcheId }) => 
   // Load user's specific role for this market
   useEffect(() => {
     const loadUserRole = async () => {
-      const specificRole = await getMarcheRole(marcheId);
-      setUserMarcheRole(specificRole);
+      if (marcheId) {
+        const specificRole = await getMarcheRole(marcheId);
+        setUserMarcheRole(specificRole);
+      }
     };
     loadUserRole();
   }, [marcheId, getMarcheRole]);

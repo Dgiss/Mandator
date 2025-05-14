@@ -1,11 +1,11 @@
 
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Alert, AlertDescription, AlertCircle } from '@/components/ui/alert';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Refresh } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { useVisaManagement } from './useVisaManagement';
 import { VisasHeader } from './VisasHeader';
 import { VisaFilters } from './VisaFilters';
@@ -21,7 +21,7 @@ interface MarcheVisasProps {
 }
 
 export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
-  const { role, loading: roleLoading, canDiffuse, canVisa } = useUserRole();
+  const { role, loading: roleLoading, canDiffuse, canVisa } = useUserRole(marcheId);
   const {
     documents,
     filteredDocuments,
@@ -62,11 +62,10 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
   if (error) {
     return (
       <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
         <AlertDescription>
           Une erreur est survenue lors du chargement des documents. Veuillez réessayer.
           <Button onClick={retryLoading} variant="outline" className="ml-2">
-            <Refresh className="h-4 w-4 mr-2" />
+            <RefreshCw className="h-4 w-4 mr-2" />
             Réessayer
           </Button>
         </AlertDescription>
@@ -75,27 +74,30 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
   }
 
   // Helper functions to determine which buttons to show based on status and user role
-  const canShowDiffuseButton = (doc, version) => {
+  const canShowDiffuseButton = (doc: any, version: any) => {
     return canDiffuse(marcheId) && doc.statut === 'En attente de diffusion';
   };
 
-  const canShowVisaButton = (doc, version) => {
+  const canShowVisaButton = (doc: any, version: any) => {
     return canDiffuse(marcheId) && doc.statut === 'En attente de visa';
   };
 
-  const canShowProcessVisaButton = (doc, version) => {
+  const canShowProcessVisaButton = (doc: any, version: any) => {
     return canVisa(marcheId) && doc.statut === 'En attente de visa';
   };
 
   return (
     <div className="space-y-6">
-      <VisasHeader />
+      <VisasHeader 
+        onDiffusionOpen={() => {}}
+      />
 
       <Card>
         <CardContent className="p-5">
           <VisaFilters 
-            filterOptions={filterOptions}
-            handleFilter={handleFilter}
+            statusFilter={filterOptions.statut}
+            typeFilter={filterOptions.type}
+            onFilterChange={handleFilter}
           />
 
           <div className="mt-6">
@@ -123,6 +125,8 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
         diffusionComment={diffusionComment}
         setDiffusionComment={setDiffusionComment}
         handleDiffusionSubmit={handleDiffusionSubmit}
+        attachmentName={attachmentName}
+        handleFileChange={handleFileChange}
       />
 
       <VisaDialog 

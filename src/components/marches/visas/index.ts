@@ -1,21 +1,12 @@
 
-import MarcheVisas from './MarcheVisas';
-import { DiffusionDialog } from './DiffusionDialog';
-import { VisaDialog } from './VisaDialog';
-import { VisasTable } from './VisasTable';
-import { VisaFilters } from './VisaFilters';
-import { VisasHeader } from './VisasHeader';
-import { VisasLoading } from './VisasLoading';
-import { MarcheVisasProps } from './MarcheVisas';
-
-export {
-  DiffusionDialog,
-  VisaDialog,
-  VisasTable,
-  VisaFilters,
-  VisasHeader,
-  VisasLoading
-};
-
-export default MarcheVisas;
-export type { MarcheVisasProps };
+export { default as MarcheVisas } from './MarcheVisas';
+export { VisasHeader } from './VisasHeader';
+export { VisaFilters } from './VisaFilters';
+export { VisasTable } from './VisasTable';
+export { DiffusionDialog } from './DiffusionDialog';
+export { VisaDialog } from './VisaDialog';
+export { ProcessVisaDialog } from './ProcessVisaDialog';
+export { VisaStatusBadge } from './VisaStatusBadge';
+export { VisasLoading } from './VisasLoading';
+export type { VisasHeaderProps } from './VisasHeader';
+export type { VisaFiltersProps } from './VisaFilters';
