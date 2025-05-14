@@ -1,6 +1,6 @@
 
 import { supabase } from '@/lib/supabase';
-import { Version } from './types';
+import { Version, DocumentAttachment } from './types';
 import { visasService } from './visasService';
 
 export const versionsService = {
@@ -54,6 +54,32 @@ export const versionsService = {
         taille: file ? (file.size / 1024 / 1024).toFixed(2) + ' MB' : null,
         date_creation: new Date().toISOString()
       }])
+      .select();
+
+    if (error) throw error;
+    return data[0];
+  },
+
+  // Créer une version initiale pour un document
+  async createInitialVersion(document: any, filePath: string | null, fileSize: string | null) {
+    if (!document || !document.id) {
+      throw new Error('Document invalide pour la création de version initiale');
+    }
+
+    const versionData = {
+      document_id: document.id,
+      marche_id: document.marche_id,
+      version: 'A', // Version initiale A
+      cree_par: document.emetteur || 'Système',
+      commentaire: 'Version initiale',
+      statut: 'En attente de diffusion',
+      file_path: filePath,
+      taille: fileSize
+    };
+
+    const { data, error } = await supabase
+      .from('versions')
+      .insert([versionData])
       .select();
 
     if (error) throw error;
