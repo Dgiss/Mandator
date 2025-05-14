@@ -21,10 +21,12 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
     }
     
     // IMPORTANT: Fast path for admin users - check this first for performance
-    let globalRole;
+    let isAdmin = false;
     try {
-      globalRole = await getGlobalUserRole();
-      if (globalRole === 'ADMIN') {
+      const globalRole = await getGlobalUserRole();
+      isAdmin = globalRole === 'ADMIN';
+      
+      if (isAdmin) {
         console.log(`Utilisateur ${user.id} est ADMIN - accès direct au marché ${id}`);
         const { data, error } = await supabase
           .from('marches')
@@ -34,18 +36,36 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
         
         if (error) {
           console.error(`Erreur lors de la récupération du marché ${id} (admin path):`, error);
-          throw error;
+          // Don't throw here, try alternative method
+        } else if (data) {
+          console.log(`Marché ${id} récupéré avec succès par admin`);
+          return data as Marche;
         }
-        
-        console.log(`Marché ${id} récupéré avec succès par admin`);
-        return data as Marche;
       }
     } catch (roleError) {
       console.error("Erreur lors de la vérification du rôle global:", roleError);
       // Continue avec la vérification standard
     }
     
-    // Standard access check for non-admin users
+    // If admin check failed but user is admin, try direct query again with a different approach
+    if (isAdmin) {
+      try {
+        const { data, error } = await supabase
+          .rpc('get_accessible_marches_for_user');
+        
+        if (!error && data) {
+          const marche = data.find((m: any) => m.id === id);
+          if (marche) {
+            console.log(`Marché ${id} récupéré avec succès via RPC admin`);
+            return marche as Marche;
+          }
+        }
+      } catch (rpcError) {
+        console.error("Erreur RPC admin:", rpcError);
+      }
+    }
+    
+    // Standard access check for non-admin users or as fallback
     const hasAccess = await hasAccessToMarche(id);
     if (!hasAccess) {
       console.error(`Accès refusé au marché ${id} pour l'utilisateur ${user.id}`);
@@ -73,18 +93,26 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
 
     // Dernier recours: vérifier encore une fois si l'utilisateur est admin
     try {
-      const globalRole = await getGlobalUserRole();
-      if (globalRole === 'ADMIN') {
-        console.log(`Dernier recours: utilisateur est ADMIN - tentative directe de récupération du marché ${id}`);
-        const { data, error } = await supabase
-          .from('marches')
-          .select('*')
-          .eq('id', id)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role_global')
+          .eq('id', user.id)
           .single();
-        
-        if (!error && data) {
-          console.log(`Marché ${id} récupéré avec succès via le chemin de récupération d'urgence admin`);
-          return data as Marche;
+          
+        if (!profileError && profile && profile.role_global === 'ADMIN') {
+          console.log(`Dernier recours: utilisateur est ADMIN - tentative directe de récupération du marché ${id}`);
+          const { data, error } = await supabase
+            .from('marches')
+            .select('*')
+            .eq('id', id)
+            .single();
+          
+          if (!error && data) {
+            console.log(`Marché ${id} récupéré avec succès via le chemin de récupération d'urgence admin`);
+            return data as Marche;
+          }
         }
       }
     } catch (finalError) {

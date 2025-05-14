@@ -12,6 +12,16 @@ import { getGlobalUserRole } from '@/utils/auth/roles';
 export const useMarcheDataQueries = (id: string | undefined) => {
   const { toast } = useToast();
 
+  // First check the user's global role before other checks (optimization)
+  const roleQuery = useQuery({
+    queryKey: ['user-global-role'],
+    queryFn: async () => {
+      return await getGlobalUserRole();
+    },
+    staleTime: 5 * 60 * 1000,
+    retry: 2
+  });
+
   // Check if the user has access to the marché
   const accessCheckQuery = useQuery({
     queryKey: ['marche-access', id],
@@ -20,24 +30,16 @@ export const useMarcheDataQueries = (id: string | undefined) => {
       
       console.log(`Vérification de l'accès au marché ${id}...`);
       
-      // First directly check the global role for the fast path
-      try {
-        const globalRole = await getGlobalUserRole();
-        
-        // Short circuit for admin users to reduce database queries
-        if (globalRole === 'ADMIN') {
-          console.log(`User is ADMIN, automatic access granted to market ${id}`);
-          return true;
-        }
-      } catch (roleError) {
-        console.error("Error checking global role:", roleError);
-        // Continue with regular access check if role check fails
+      // Short circuit for admin users immediately
+      if (roleQuery.data === 'ADMIN') {
+        console.log('User is ADMIN, bypassing standard access checks');
+        return true;
       }
       
       // Otherwise perform the full access check
       return await hasAccessToMarche(id);
     },
-    enabled: !!id,
+    enabled: !!id && roleQuery.isSuccess, // Wait for role check to complete
     staleTime: 5 * 60 * 1000,
     retry: 3, // Increased retries for access check
     meta: {
@@ -56,6 +58,10 @@ export const useMarcheDataQueries = (id: string | undefined) => {
     }
   });
 
+  // Should proceed with fetching if: ADMIN user OR has access
+  const shouldProceed = (roleQuery.data === 'ADMIN') || 
+                       (accessCheckQuery.isSuccess && accessCheckQuery.data === true);
+
   // Fetch marché details
   const marcheQuery = useQuery({
     queryKey: ['marche', id],
@@ -64,35 +70,28 @@ export const useMarcheDataQueries = (id: string | undefined) => {
       console.log("Chargement des données du marché:", id);
       
       // Special handling for admin users
-      try {
-        const globalRole = await getGlobalUserRole();
+      if (roleQuery.data === 'ADMIN') {
+        console.log("Admin user detected, proceeding with direct marché fetch");
         
-        if (globalRole === 'ADMIN') {
-          console.log("Admin user detected, proceeding with direct marché fetch");
+        // Direct fetch for admin users to bypass RLS
+        const { data, error } = await supabase
+          .from('marches')
+          .select('*')
+          .eq('id', id)
+          .single();
           
-          // Direct fetch for admin users to bypass RLS
-          const { data, error } = await supabase
-            .from('marches')
-            .select('*')
-            .eq('id', id)
-            .single();
-            
-          if (error) {
-            console.error("Admin fetch failed:", error);
-            throw error;
-          }
-          
-          return data;
+        if (error) {
+          console.error("Admin fetch failed:", error);
+          throw error;
         }
-      } catch (roleError) {
-        console.error("Error checking admin status:", roleError);
-        // Continue with standard fetch if role check fails
+        
+        return data;
       }
       
       // Standard fetch method that respects RLS policies
       return await fetchMarcheById(id);
     },
-    enabled: !!id && accessCheckQuery.isSuccess && accessCheckQuery.data === true,
+    enabled: !!id && shouldProceed,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 2, // Increased retries for marche query
     meta: {
@@ -110,7 +109,9 @@ export const useMarcheDataQueries = (id: string | undefined) => {
   });
 
   // Determine if subsequent queries should run
-  const shouldContinue = !!marcheQuery.data && !marcheQuery.isError && !accessCheckQuery.isError && accessCheckQuery.data === true;
+  const shouldContinue = (roleQuery.data === 'ADMIN') || 
+                        (!!marcheQuery.data && !marcheQuery.isError && 
+                         !accessCheckQuery.isError && accessCheckQuery.data === true);
 
   // Fetch visas
   const visasQuery = useQuery({
@@ -173,6 +174,7 @@ export const useMarcheDataQueries = (id: string | undefined) => {
 
   // Return all the queries for processing
   return {
+    roleQuery,
     accessCheckQuery,
     marcheQuery,
     visasQuery,
