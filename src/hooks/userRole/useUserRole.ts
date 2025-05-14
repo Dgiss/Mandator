@@ -4,11 +4,13 @@ import { supabase } from '@/lib/supabase';
 import { UserRoleInfo, MarcheSpecificRole, UserRole } from './types';
 import { useRoleFetcher } from './useRoleFetcher';
 import { useAccessChecker } from './useAccessChecker';
+import { useToast } from '@/hooks/use-toast';
 
 // Create a simple cache to limit API calls
 const roleCache = new Map<string, UserRoleInfo>();
 
 export const useUserRole = (marcheId?: string) => {
+  const { toast } = useToast();
   const [role, setRole] = useState<UserRole | null>(null);
   const [marcheRoles, setMarcheRoles] = useState<Record<string, MarcheSpecificRole>>({});
   const [loading, setLoading] = useState(true);
@@ -90,10 +92,31 @@ export const useUserRole = (marcheId?: string) => {
   // Function to clear role cache (useful when role changes)
   const refreshRoles = useCallback(() => {
     // Clear the cache
-    roleCache.delete('userInfo');
+    roleCache.clear();
     // Re-fetch roles
     setLoading(true);
-  }, []);
+    
+    // Force a role check for the specific marché
+    if (marcheId) {
+      getMarcheRole(marcheId)
+        .then(specificRole => {
+          console.log(`Refreshed role for market ${marcheId}: ${specificRole}`);
+          // Update the local state with the fetched role
+          setMarcheRoles(prev => ({
+            ...prev,
+            [marcheId]: specificRole
+          }));
+        })
+        .catch(err => {
+          console.error(`Error refreshing role for market ${marcheId}:`, err);
+          toast({
+            title: "Erreur",
+            description: "Impossible de rafraîchir vos droits",
+            variant: "destructive",
+          });
+        });
+    }
+  }, [marcheId, getMarcheRole, toast]);
 
   return {
     role,

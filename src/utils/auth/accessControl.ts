@@ -21,7 +21,7 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
     
     console.log(`Checking access to market ${marcheId} for user ${user.id}...`);
     
-    // HIGHEST PRIORITY: Check if user has ADMIN role first
+    // HIGHEST PRIORITY: Check if user has ADMIN role first (simplest check)
     try {
       const globalRole = await getGlobalUserRole();
       if (globalRole === 'ADMIN') {
@@ -39,7 +39,7 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
         .from('marches')
         .select('user_id')
         .eq('id', marcheId)
-        .single();
+        .maybeSingle(); // Use maybeSingle instead of single to prevent errors
       
       if (!marcheError && marcheData && marcheData.user_id === user.id) {
         console.log(`User ${user.id} is creator of market ${marcheId} - access granted`);
@@ -78,7 +78,7 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
         .select('id')
         .eq('user_id', user.id)
         .eq('marche_id', marcheId)
-        .maybeSingle();
+        .maybeSingle(); // Use maybeSingle instead of single
         
       if (!droitError && droitData) {
         console.log(`User ${user.id} has explicit rights for market ${marcheId} via direct query - access granted`);
@@ -88,42 +88,11 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
       console.error('Exception in direct query access check:', directQueryError);
     }
     
-    // LAST RESORT: Double-check ADMIN status one more time
-    try {
-      const role = await getGlobalUserRole();
-      if (role === 'ADMIN') {
-        console.log(`Final check: User is ADMIN - granting access to market ${marcheId}`);
-        return true;
-      }
-    } catch (finalRoleError) {
-      console.error('Final error checking admin status:', finalRoleError);
-    }
-    
     // If we get here, no access was found through any method
     console.log(`No access rights found for user ${user.id} to market ${marcheId} - access denied`);
     return false;
   } catch (error) {
     console.error('Major exception checking access rights:', error);
-    
-    // Last desperate check for ADMIN, outside all other error handling
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('role_global')
-          .eq('id', user.id)
-          .maybeSingle();
-          
-        if (!profileError && profile && profile.role_global === 'ADMIN') {
-          console.log(`Emergency admin check: User is ADMIN - granting access to market ${marcheId}`);
-          return true;
-        }
-      }
-    } catch (emergencyError) {
-      console.error('Emergency admin check failed:', emergencyError);
-    }
-    
     return false;
   }
 };

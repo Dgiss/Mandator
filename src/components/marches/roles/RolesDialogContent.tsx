@@ -9,15 +9,21 @@ import RolesInfoCard from './RolesInfoCard';
 import CollaboratorsCard from './CollaboratorsCard';
 import AddCollaboratorCard from './AddCollaboratorCard';
 import { useRoleManagement } from '@/hooks/useRoleManagement';
+import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface RolesDialogContentProps {
   marcheId: string;
   marcheTitle: string;
 }
 
-const RolesDialogContent: React.FC<RolesDialogContentProps> = ({ marcheId }) => {
-  const { canManageRoles, role, getMarcheRole } = useUserRole(marcheId);
+const RolesDialogContent: React.FC<RolesDialogContentProps> = ({ marcheId, marcheTitle }) => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { canManageRoles, role, getMarcheRole, refreshRoles } = useUserRole(marcheId);
   const [userMarcheRole, setUserMarcheRole] = useState<string | null>(null);
+  const [isCheckingAccess, setIsCheckingAccess] = useState(true);
+  
   const {
     isLoading,
     droits,
@@ -35,19 +41,77 @@ const RolesDialogContent: React.FC<RolesDialogContentProps> = ({ marcheId }) => 
     loadData
   } = useRoleManagement(marcheId);
 
-  // Load user's specific role for this market
+  // Initial load of user's specific role for this market
   useEffect(() => {
     const loadUserRole = async () => {
-      if (marcheId) {
-        const specificRole = await getMarcheRole(marcheId);
-        setUserMarcheRole(specificRole);
+      try {
+        setIsCheckingAccess(true);
+        
+        if (marcheId) {
+          console.log(`Loading user role for market ${marcheId}...`);
+          const specificRole = await getMarcheRole(marcheId);
+          console.log(`User role for market ${marcheId}: ${specificRole}`);
+          setUserMarcheRole(specificRole);
+          
+          // Verify access permission
+          if (!specificRole && role !== 'ADMIN') {
+            console.warn(`User does not have access to market ${marcheId}`);
+            toast({
+              title: "Accès refusé",
+              description: "Vous n'avez pas les droits nécessaires pour accéder à ce marché",
+              variant: "destructive",
+            });
+            
+            // Optional: Navigate away if no access
+            // navigate('/marches');
+          }
+        }
+      } catch (error) {
+        console.error("Error loading user role:", error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de vérifier vos droits d'accès",
+          variant: "destructive",
+        });
+      } finally {
+        setIsCheckingAccess(false);
       }
     };
+    
     loadUserRole();
-  }, [marcheId, getMarcheRole]);
+  }, [marcheId, getMarcheRole, role, toast]);
+
+  // Force reload roles and data
+  const handleRefresh = async () => {
+    try {
+      refreshRoles();
+      await loadData();
+      toast({
+        title: "Succès",
+        description: "Les données ont été actualisées",
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'actualiser les données",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Check if user can manage rights (is MOE on this market or admin)
   const canManageMarketRoles = role === 'ADMIN' || userMarcheRole === 'MOE';
+
+  if (isCheckingAccess) {
+    return (
+      <div className="flex justify-center py-8">
+        <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
+        <span className="ml-2 text-gray-500">Vérification des droits d'accès...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -56,7 +120,7 @@ const RolesDialogContent: React.FC<RolesDialogContentProps> = ({ marcheId }) => 
         <Button 
           variant="outline" 
           size="sm" 
-          onClick={loadData}
+          onClick={handleRefresh}
           disabled={isLoading}
         >
           <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />

@@ -9,7 +9,7 @@ export function useRoleFetcher(marcheId?: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  // Fonction pour récupérer le rôle global de l'utilisateur
+  // Function to get global role
   const fetchGlobalRole = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -18,11 +18,27 @@ export function useRoleFetcher(marcheId?: string) {
         return null;
       }
 
+      // First try direct function call for global role (safer to avoid RLS issues)
+      try {
+        const { data: globalRoleData, error: rpcError } = await supabase
+          .rpc('get_user_global_role');
+          
+        if (!rpcError && globalRoleData) {
+          const globalRole = globalRoleData as UserRole;
+          setRole(globalRole);
+          return globalRole;
+        }
+      } catch (rpcErr) {
+        console.error("Error using RPC for global role:", rpcErr);
+        // Fall back to direct query
+      }
+      
+      // Direct query as fallback
       const { data, error } = await supabase
         .from('profiles')
         .select('role_global')
         .eq('id', user.id)
-        .maybeSingle();  // Utiliser maybeSingle() au lieu de single()
+        .maybeSingle();  // Use maybeSingle instead of single
 
       if (error) {
         console.error('Error fetching global role:', error);
@@ -39,43 +55,75 @@ export function useRoleFetcher(marcheId?: string) {
     }
   }, []);
 
-  // Fonction pour récupérer un rôle spécifique pour un marché
+  // Function to get specific role for a market
   const getMarcheRole = useCallback(async (specificMarcheId: string): Promise<MarcheSpecificRole> => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      // Utiliser la fonction RPC sécurisée créée dans les migrations SQL
-      const { data, error } = await supabase
-        .rpc('get_user_role_for_marche', { marche_id: specificMarcheId });
+      // First check if we already have this role cached locally
+      if (marcheRoles[specificMarcheId]) {
+        return marcheRoles[specificMarcheId];
+      }
 
+      // Try using the secure RPC function first
+      try {
+        const { data, error } = await supabase
+          .rpc('get_user_role_for_marche', { marche_id: specificMarcheId });
+
+        if (error) {
+          console.error(`Error using RPC for market ${specificMarcheId}:`, error);
+          // Fall back to direct query
+        } else {
+          // Update local role cache
+          setMarcheRoles(prev => ({
+            ...prev,
+            [specificMarcheId]: data as MarcheSpecificRole
+          }));
+          return data as MarcheSpecificRole;
+        }
+      } catch (rpcErr) {
+        console.error(`Error in RPC for market ${specificMarcheId}:`, rpcErr);
+        // Fall back to direct query
+      }
+      
+      // Direct query as fallback
+      const { data, error } = await supabase
+        .from('droits_marche')
+        .select('role_specifique')
+        .eq('user_id', user.id)
+        .eq('marche_id', specificMarcheId)
+        .maybeSingle();
+      
       if (error) {
         console.error(`Error fetching role for market ${specificMarcheId}:`, error);
         return null;
       }
 
-      // Mise à jour du cache local des rôles
+      const specificRole = data?.role_specifique as MarcheSpecificRole;
+      
+      // Update local role cache
       setMarcheRoles(prev => ({
         ...prev,
-        [specificMarcheId]: data as MarcheSpecificRole
+        [specificMarcheId]: specificRole
       }));
 
-      return data as MarcheSpecificRole;
+      return specificRole;
     } catch (err) {
       console.error(`Exception fetching role for market ${specificMarcheId}:`, err);
       return null;
     }
-  }, []);
+  }, [marcheRoles]);
 
-  // Charger les rôles au démarrage
+  // Load roles on startup
   useEffect(() => {
     const loadRoles = async () => {
       setLoading(true);
       
-      // 1. Charger le rôle global
+      // 1. Load global role
       const globalRole = await fetchGlobalRole();
       
-      // 2. Si un marcheId est fourni, charger également le rôle spécifique
+      // 2. If a marcheId is provided, also load the specific role
       if (marcheId) {
         await getMarcheRole(marcheId);
       }
@@ -86,16 +134,16 @@ export function useRoleFetcher(marcheId?: string) {
     loadRoles();
   }, [fetchGlobalRole, getMarcheRole, marcheId]);
 
-  // Helpers pour vérifier les rôles
+  // Helpers for checking roles
   const isAdmin = role === 'ADMIN';
   const isMOE = useCallback((specificMarcheId?: string) => {
-    // Admin peut toujours tout faire
+    // Admin can always do everything
     if (role === 'ADMIN') return true;
     
-    // Vérifier le rôle global
+    // Check global role
     if (role === 'MOE') return true;
     
-    // Vérifier le rôle spécifique pour ce marché
+    // Check specific role for this market
     const targetMarcheId = specificMarcheId || marcheId;
     if (targetMarcheId && marcheRoles[targetMarcheId] === 'MOE') {
       return true;
@@ -105,13 +153,13 @@ export function useRoleFetcher(marcheId?: string) {
   }, [role, marcheId, marcheRoles]);
   
   const isMandataire = useCallback((specificMarcheId?: string) => {
-    // Admin peut toujours tout faire
+    // Admin can always do everything
     if (role === 'ADMIN') return true;
     
-    // Vérifier le rôle global
+    // Check global role
     if (role === 'MANDATAIRE') return true;
     
-    // Vérifier le rôle spécifique pour ce marché
+    // Check specific role for this market
     const targetMarcheId = specificMarcheId || marcheId;
     if (targetMarcheId && marcheRoles[targetMarcheId] === 'MANDATAIRE') {
       return true;
