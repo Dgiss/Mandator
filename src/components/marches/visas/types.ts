@@ -1,3 +1,4 @@
+
 export interface Visa {
   id: string;
   document_id?: string;
@@ -14,7 +15,7 @@ export interface Visa {
 export interface Version {
   id: string;
   version: string;
-  statut: 'En attente de diffusion' | 'En attente de visa' | 'BPE' | 'À remettre à jour' | 'Refusé';
+  statut: 'En attente de diffusion' | 'En attente de validation' | 'BPE' | 'À remettre à jour' | 'Refusé';
 }
 
 export interface Document {
@@ -22,7 +23,7 @@ export interface Document {
   nom: string;
   type?: string;
   currentVersionId: string;
-  statut: 'En attente de diffusion' | 'En attente de validation' | 'Validé' | 'Refusé';
+  statut: 'En attente de diffusion' | 'En attente de validation' | 'BPE' | 'À remettre à jour' | 'Refusé';
   versions: Version[];
   latestVersion?: Version | null;
 }
@@ -36,15 +37,15 @@ export interface VisasHeaderProps {
   onDiffusionOpen: (document: Document) => void;
 }
 
-export interface VisasFiltersProps {
-  options: Record<string, string>;
+export interface VisaFiltersProps {
+  statusFilter: string;
+  typeFilter: string;
   onFilterChange: (name: string, value: string) => void;
 }
 
 export interface VisasTableProps {
   documents: Document[];
   onDocumentSelect: (document: Document) => void;
-  onVisaOpen: (document: Document) => void;
   loadingStates: Record<string, boolean>;
   canShowDiffuseButton?: (document: Document, version: Version) => boolean;
   canShowVisaButton?: (document: Document, version: Version) => boolean;
@@ -55,3 +56,39 @@ export interface VisasTableProps {
 }
 
 export interface VisasLoadingProps {}
+
+// Dialog Props
+export interface DiffusionDialogProps {
+  open: boolean;
+  setOpen: (value: boolean) => void;
+  selectedDocument: Document | null;
+  selectedVersion: Version | null;
+  diffusionComment: string;
+  setDiffusionComment: (value: string) => void;
+  handleDiffusionSubmit: () => Promise<void>;
+  attachmentName: string | null;
+  handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}
+
+export interface VisaDialogProps {
+  open: boolean;
+  setOpen: (value: boolean) => void;
+  selectedDocument: Document | null;
+  selectedVersion: Version | null;
+  visaType: string;
+  setVisaType: (value: string) => void;
+  visaComment: string;
+  setVisaComment: (value: string) => void;
+  attachmentName: string | null;
+  handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleVisaSubmit: () => Promise<void>;
+}
+
+export interface ProcessVisaDialogProps {
+  open: boolean;
+  setOpen: (value: boolean) => void;
+  selectedDocument: Document | null;
+  selectedVersion: Version | null;
+  selectedVisa: Visa | null;
+  onProcessVisa: (type: 'VSO' | 'VAO' | 'Refusé', comment: string) => Promise<void>;
+}

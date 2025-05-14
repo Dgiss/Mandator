@@ -9,7 +9,7 @@ import {
   TableCell 
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Send, Check, AlertCircle, FileCheck } from 'lucide-react';
+import { Send, CheckCircle, AlertTriangle, FileCheck } from 'lucide-react';
 import { Document, Version } from './types';
 
 export const VisasTable = ({ 
@@ -23,6 +23,24 @@ export const VisasTable = ({
   openVisaDialog,
   openProcessVisaDialog
 }) => {
+  // Helper function to get appropriate status badge styling
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case 'BPE':
+        return 'bg-green-100 text-green-800';
+      case 'En attente de validation':
+        return 'bg-amber-100 text-amber-800';
+      case 'En attente de diffusion':
+        return 'bg-blue-100 text-blue-800';
+      case 'À remettre à jour':
+        return 'bg-purple-100 text-purple-800';
+      case 'Refusé':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   return (
     <div className="rounded-md border">
       <Table>
@@ -58,12 +76,7 @@ export const VisasTable = ({
                     {latestVersion ? latestVersion.version : 'N/A'}
                   </TableCell>
                   <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      doc.statut === 'Validé' ? 'bg-green-100 text-green-800' :
-                      doc.statut === 'En attente de validation' ? 'bg-amber-100 text-amber-800' :
-                      doc.statut === 'En attente de diffusion' ? 'bg-blue-100 text-blue-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
+                    <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadgeClass(doc.statut)}`}>
                       {doc.statut}
                     </span>
                   </TableCell>
@@ -84,22 +97,7 @@ export const VisasTable = ({
                         </Button>
                       )}
                       
-                      {canShowVisaButton && latestVersion && canShowVisaButton(doc, latestVersion) && (
-                        <Button 
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openVisaDialog && openVisaDialog(doc, latestVersion);
-                          }}
-                          disabled={loadingStates[doc.id]}
-                        >
-                          <Check className="h-4 w-4 mr-1" />
-                          <span className="hidden sm:inline">Ajouter un visa</span>
-                        </Button>
-                      )}
-                      
-                      {canShowProcessVisaButton && latestVersion && canShowProcessVisaButton(doc, latestVersion) && (
+                      {canShowProcessVisaButton && latestVersion && canShowProcessVisaButton(doc) && (
                         <Button 
                           variant="btpPrimary"
                           size="sm"

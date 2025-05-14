@@ -354,11 +354,12 @@ export const versionsService = {
         user.email || versionData.cree_par
       );
 
-      // Mettre à jour le statut de la version à "En attente de visa"
+      // Mettre à jour le statut de la version à "En attente de validation"
+      // MODIFIÉ: "En attente de visa" -> "En attente de validation" selon le workflow demandé
       const { error: updateError } = await supabase
         .from('versions')
         .update({ 
-          statut: 'En attente de visa',
+          statut: 'En attente de validation',
           commentaire: commentaire || 'Document diffusé'
         })
         .eq('id', versionId);
@@ -370,7 +371,7 @@ export const versionsService = {
       const { error: docUpdateError } = await supabase
         .from('documents')
         .update({ 
-          statut: 'En attente de visa',
+          statut: 'En attente de validation',
           version: versionData.version
         })
         .eq('id', versionData.document_id);
@@ -419,37 +420,54 @@ export const versionsService = {
         );
       }
 
-      // Déterminer le nouveau statut
-      const nouveauStatut = decision === 'approuve' ? 'Approuvé' : 'Rejeté';
+      // Déterminer le nouveau statut selon le workflow mis à jour
+      let nouveauStatut: string;
+      let documentStatut: string;
+      
+      if (decision === 'approuve') {
+        // VSO: Mettre le document en BPE (Bon Pour Exécution)
+        nouveauStatut = 'BPE';
+        documentStatut = 'BPE';
+      } else {
+        // Pour VAO ou Refusé
+        // Extraire le type de décision du commentaire
+        const isVAO = commentaire.includes('VAO:');
+        
+        if (isVAO) {
+          // VAO: Version actuelle "À remettre à jour" et création d'une nouvelle version
+          nouveauStatut = 'À remettre à jour';
+          documentStatut = 'En attente de diffusion';
+        } else {
+          // Refusé: Version actuelle "Refusée", document retourne en "En attente de diffusion"
+          nouveauStatut = 'Refusé';
+          documentStatut = 'En attente de diffusion';
+        }
+      }
 
       // Mettre à jour le statut de la version
       const { error: updateError } = await supabase
         .from('versions')
         .update({ 
           statut: nouveauStatut,
-          commentaire: `${commentaire || ''} (Décision: ${nouveauStatut})`
+          commentaire: commentaire
         })
         .eq('id', versionId);
 
       if (updateError) throw updateError;
 
       // Mettre à jour également le statut du document et synchroniser la version
-      const documentStatusUpdate = decision === 'approuve' 
-        ? { statut: 'Approuvé' }
-        : { statut: 'En attente de diffusion' };
-      
       const { error: docUpdateError } = await supabase
         .from('documents')
         .update({
-          ...documentStatusUpdate,
+          statut: documentStatut,
           version: versionData.version // Garder la synchronisation avec la version actuelle
         })
         .eq('id', versionData.document_id);
 
       if (docUpdateError) throw docUpdateError;
 
-      // Si rejeté (VAO), créer automatiquement une nouvelle version (lettre suivante)
-      if (decision === 'rejete') {
+      // Si c'est un VAO, créer automatiquement une nouvelle version (lettre suivante)
+      if (nouveauStatut === 'À remettre à jour') {
         // Obtenir la prochaine lettre de version
         const nextLetter = await this.getNextVersionLetter(versionData.document_id);
         
@@ -459,9 +477,17 @@ export const versionsService = {
           marche_id: versionData.marche_id,
           version: nextLetter,
           cree_par: "Système", // À remplacer par l'utilisateur réel
-          commentaire: `Nouvelle version suite au rejet de la version ${versionData.version}`,
+          commentaire: `Nouvelle version suite à VAO de la version ${versionData.version}`,
           statut: "En attente de diffusion"
         });
+        
+        // Mettre à jour le document parent avec le nouvel indice
+        await supabase
+          .from('documents')
+          .update({
+            version: nextLetter
+          })
+          .eq('id', versionData.document_id);
       }
 
       return { success: true, nouveauStatut };

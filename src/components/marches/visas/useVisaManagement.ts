@@ -16,22 +16,20 @@ export const useVisaManagement = (marcheId: string) => {
   // UI states
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [selectedVersion, setSelectedVersion] = useState<any | null>(null);
+  const [selectedVisa, setSelectedVisa] = useState<Visa | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
-  const [loadAttempts, setLoadAttempts] = useState(0);
-  
-  // Dialog states
   const [diffusionDialogOpen, setDiffusionDialogOpen] = useState(false);
   const [visaDialogOpen, setVisaDialogOpen] = useState(false);
   const [processVisaDialogOpen, setProcessVisaDialogOpen] = useState(false);
-  const [selectedVisa, setSelectedVisa] = useState<Visa | null>(null);
   const [diffusionComment, setDiffusionComment] = useState('');
   const [visaComment, setVisaComment] = useState('');
   const [attachmentName, setAttachmentName] = useState<string | null>(null);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [visaSelectedDestinaire, setVisaSelectedDestinaire] = useState('');
   const [visaEcheance, setVisaEcheance] = useState<Date | null>(null);
+  const [loadAttempts, setLoadAttempts] = useState(0);
   
   // Prevent infinite loop - track if we're already fetching data
   const isFetchingRef = useRef(false);
@@ -293,8 +291,12 @@ export const useVisaManagement = (marcheId: string) => {
       // Set loading state for this document
       setLoadingStates(prev => ({ ...prev, [selectedDocument.id]: true }));
       
-      // TODO: Implement the actual diffusion logic here
-      // For now, just show a success message and close the dialog
+      // Call the versionsService to diffuse the document
+      await versionsService.diffuseVersion(
+        selectedVersion.id, 
+        diffusionComment,
+        attachmentFile || undefined
+      );
       
       toast({
         title: "Succès",
@@ -319,7 +321,7 @@ export const useVisaManagement = (marcheId: string) => {
       // Reset loading state
       setLoadingStates(prev => ({ ...prev, [selectedDocument.id]: false }));
     }
-  }, [selectedDocument, selectedVersion, toast, handleDiffusionDialogClose, loadDocuments]);
+  }, [selectedDocument, selectedVersion, diffusionComment, attachmentFile, toast, handleDiffusionDialogClose, loadDocuments]);
 
   // Handle visa submission
   const handleVisaSubmit = useCallback(async () => {
@@ -375,7 +377,7 @@ export const useVisaManagement = (marcheId: string) => {
 
   // Handle process visa submission
   const handleProcessVisaSubmit = useCallback(async (visaType: 'VSO' | 'VAO' | 'Refusé', comment: string) => {
-    if (!selectedDocument || !selectedVersion || !selectedVisa) {
+    if (!selectedDocument || !selectedVersion) {
       toast({
         title: "Erreur",
         description: "Informations manquantes pour traiter le visa",
@@ -388,17 +390,48 @@ export const useVisaManagement = (marcheId: string) => {
       // Set loading state for this document
       setLoadingStates(prev => ({ ...prev, [selectedDocument.id]: true }));
       
-      // Call the visaService to process the visa
-      await visasService.processVisa(
-        selectedVisa.id, 
-        selectedDocument.id, 
-        visaType === 'Refusé' ? 'rejete' : 'approuve', 
-        comment
-      );
+      // Determine the action based on visa type
+      let decision: 'approuve' | 'rejete';
+      let newStatus: string;
+      
+      switch (visaType) {
+        case 'VSO':
+          decision = 'approuve';
+          newStatus = 'BPE';
+          break;
+        case 'VAO':
+          decision = 'rejete';
+          newStatus = 'À remettre à jour';
+          break;
+        case 'Refusé':
+          decision = 'rejete';
+          newStatus = 'Refusé';
+          break;
+        default:
+          throw new Error('Type de visa non reconnu');
+      }
+      
+      // Call the appropriate service based on the selected visa
+      if (selectedVisa) {
+        // Use visaService for processing
+        await visasService.processVisa(
+          selectedVisa.id, 
+          selectedDocument.id,
+          decision, 
+          `${visaType}: ${comment}`
+        );
+      } else {
+        // Fallback to versionsService if no visa is selected
+        await versionsService.processVisa(
+          selectedVersion.id,
+          decision,
+          `${visaType}: ${comment}`
+        );
+      }
       
       toast({
         title: "Succès",
-        description: `Visa traité avec succès: ${visaType}`,
+        description: `Document visé avec succès: ${visaType}`,
         variant: "success",
       });
       

@@ -1,16 +1,6 @@
 
 import React, { useState } from 'react';
 import { FileCheck, FileX, CheckCircle, AlertTriangle, X } from 'lucide-react';
-import { 
-  AlertDialog, 
-  AlertDialogAction, 
-  AlertDialogCancel, 
-  AlertDialogContent, 
-  AlertDialogDescription, 
-  AlertDialogFooter, 
-  AlertDialogHeader, 
-  AlertDialogTitle 
-} from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -24,7 +14,7 @@ interface ProcessVisaDialogProps {
   selectedDocument: Document | null;
   selectedVersion: Version | null;
   selectedVisa: Visa | null;
-  onProcessVisa: (type: 'VSO' | 'VAO' | 'Refusé', comment: string) => void;
+  onProcessVisa: (type: 'VSO' | 'VAO' | 'Refusé', comment: string) => Promise<void>;
 }
 
 export const ProcessVisaDialog = ({
@@ -37,9 +27,18 @@ export const ProcessVisaDialog = ({
 }: ProcessVisaDialogProps) => {
   const [visaType, setVisaType] = useState<'VSO' | 'VAO' | 'Refusé'>('VSO');
   const [comment, setComment] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = () => {
-    onProcessVisa(visaType, comment);
+  const handleSubmit = async () => {
+    try {
+      setIsSubmitting(true);
+      await onProcessVisa(visaType, comment);
+      setOpen(false);
+    } catch (error) {
+      console.error('Error processing visa:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Reset form when dialog opens/closes
@@ -54,7 +53,7 @@ export const ProcessVisaDialog = ({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Traiter le visa</DialogTitle>
+          <DialogTitle>Viser le document</DialogTitle>
           <DialogDescription>
             {selectedDocument && selectedVersion && (
               <span>Document: {selectedDocument.nom} - Version {selectedVersion.version}</span>
@@ -101,7 +100,13 @@ export const ProcessVisaDialog = ({
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               className={visaType === 'VSO' ? 'opacity-70' : ''}
+              required={visaType !== 'VSO'}
             />
+            {(visaType === 'VAO' || visaType === 'Refusé') && comment.length < 10 && (
+              <p className="text-sm text-red-500">
+                Un commentaire détaillé est requis pour cette option (minimum 10 caractères).
+              </p>
+            )}
           </div>
         </div>
         
@@ -109,6 +114,7 @@ export const ProcessVisaDialog = ({
           <Button
             variant="outline" 
             onClick={() => setOpen(false)}
+            disabled={isSubmitting}
           >
             <X className="mr-2 h-4 w-4" />
             Annuler
@@ -117,9 +123,10 @@ export const ProcessVisaDialog = ({
             onClick={handleSubmit}
             variant="btpPrimary"
             className="flex items-center"
+            disabled={isSubmitting || ((visaType === 'VAO' || visaType === 'Refusé') && comment.length < 10)}
           >
             <CheckCircle className="mr-2 h-4 w-4" />
-            Soumettre le visa
+            {isSubmitting ? 'Traitement...' : 'Viser le document'}
           </Button>
         </DialogFooter>
       </DialogContent>

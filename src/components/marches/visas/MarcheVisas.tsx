@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { RefreshCw } from 'lucide-react';
@@ -78,18 +77,24 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
     return canDiffuse(marcheId) && doc.statut === 'En attente de diffusion';
   };
 
-  const canShowVisaButton = (doc: any, version: any) => {
-    return canDiffuse(marcheId) && doc.statut === 'En attente de visa';
+  const canShowVisaButton = (doc: any) => {
+    // This button is for adding visas, not for processing them
+    return false; // Disabling this button as per workflow
   };
 
-  const canShowProcessVisaButton = (doc: any, version: any) => {
-    return canVisa(marcheId) && doc.statut === 'En attente de visa';
+  const canShowProcessVisaButton = (doc: any) => {
+    return canVisa(marcheId) && doc.statut === 'En attente de validation';
+  };
+
+  const handleDiffusionOpenWrapper = () => {
+    // This is a dummy function to satisfy the VisasHeader prop requirement
+    // In actual implementation, we'll use document-specific diffusion functions
   };
 
   return (
     <div className="space-y-6">
       <VisasHeader 
-        onDiffusionOpen={() => {}}
+        onDiffusionOpen={handleDiffusionOpenWrapper}
       />
 
       <Card>

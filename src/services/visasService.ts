@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase';
 import { Visa } from './types';
 
@@ -107,7 +106,7 @@ export const visasService = {
 
   // Traiter un visa (approuver ou refuser) avec la logique de synchronisation du document et version
   async processVisa(visaId: string, documentId: string, decision: 'approuve' | 'rejete', commentaire: string) {
-    let documentStatus = 'En attente de diffusion';
+    // Déterminer les statuts selon le workflow mis à jour
     let visaStatus = decision === 'approuve' ? 'Approuvé' : 'Rejeté';
     
     try {
@@ -132,26 +131,51 @@ export const visasService = {
       
       if (visaUpdateError) throw visaUpdateError;
       
-      // 3. Déterminer le statut du document selon le type de décision
-      if (decision === 'approuve') {
-        documentStatus = 'Approuvé'; // Document approuvé
+      // 3. Déterminer le statut du document et de la version selon le type de décision
+      let documentStatus: string;
+      let versionStatus: string;
+      
+      // Extraire le type de visa du commentaire
+      const isVSO = commentaire.includes('VSO:');
+      const isVAO = commentaire.includes('VAO:');
+      
+      if (decision === 'approuve' || isVSO) {
+        // Pour VSO: Document et version marqués comme "BPE"
+        documentStatus = 'BPE';
+        versionStatus = 'BPE';
+      } else if (isVAO) {
+        // Pour VAO: Version marquée comme "À remettre à jour", document en "En attente de diffusion"
+        documentStatus = 'En attente de diffusion';
+        versionStatus = 'À remettre à jour';
       } else {
-        documentStatus = 'En attente de diffusion'; // Document à modifier
+        // Pour Refusé: Version marquée comme "Refusé", document en "En attente de diffusion"
+        documentStatus = 'En attente de diffusion';
+        versionStatus = 'Refusé';
       }
       
-      // 4. Mettre à jour le document - TOUJOURS mettre à jour le document avec la version actuelle
+      // 4. Mettre à jour la version concernée
+      const { error: versionUpdateError } = await supabase
+        .from('versions')
+        .update({
+          statut: versionStatus
+        })
+        .eq('document_id', visaData.document_id)
+        .eq('version', visaData.version);
+      
+      if (versionUpdateError) throw versionUpdateError;
+      
+      // 5. Mettre à jour le document
       const { error: docUpdateError } = await supabase
         .from('documents')
         .update({
-          statut: documentStatus,
-          version: visaData.version // Synchronise l'indice du document parent avec celui de la version
+          statut: documentStatus
         })
         .eq('id', visaData.document_id);
       
       if (docUpdateError) throw docUpdateError;
       
-      // 5. Pour les VAO, créer une nouvelle version avec la lettre suivante
-      if (decision === 'rejete') {
+      // 6. Pour les VAO, créer une nouvelle version avec la lettre suivante
+      if (isVAO) {
         // Obtenir la prochaine lettre de version
         const nextVersionLetter = this.getNextVersionLetter(visaData.version);
         
@@ -173,11 +197,19 @@ export const visasService = {
             marche_id: visaData.marche_id,
             version: nextVersionLetter,
             cree_par: "Système (suite à VAO)",
-            commentaire: `Nouvelle version suite au rejet de la version ${visaData.version} - ${commentaire}`,
+            commentaire: `Nouvelle version suite au VAO de la version ${visaData.version} - ${commentaire}`,
             statut: "En attente de diffusion"
           });
           
         if (newVersionError) throw newVersionError;
+        
+        // Mettre à jour le document parent avec le nouvel indice
+        await supabase
+          .from('documents')
+          .update({
+            version: nextVersionLetter
+          })
+          .eq('id', visaData.document_id);
       }
       
       return {
