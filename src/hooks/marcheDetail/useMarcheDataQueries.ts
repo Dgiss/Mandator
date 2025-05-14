@@ -20,13 +20,18 @@ export const useMarcheDataQueries = (id: string | undefined) => {
       
       console.log(`Vérification de l'accès au marché ${id}...`);
       
-      // Attempt to get the global role first
-      const globalRole = await getGlobalUserRole();
-      
-      // Short circuit for admin users to reduce database queries
-      if (globalRole === 'ADMIN') {
-        console.log(`User is ADMIN, automatic access granted to market ${id}`);
-        return true;
+      // First directly check the global role for the fast path
+      try {
+        const globalRole = await getGlobalUserRole();
+        
+        // Short circuit for admin users to reduce database queries
+        if (globalRole === 'ADMIN') {
+          console.log(`User is ADMIN, automatic access granted to market ${id}`);
+          return true;
+        }
+      } catch (roleError) {
+        console.error("Error checking global role:", roleError);
+        // Continue with regular access check if role check fails
       }
       
       // Otherwise perform the full access check
@@ -34,7 +39,7 @@ export const useMarcheDataQueries = (id: string | undefined) => {
     },
     enabled: !!id,
     staleTime: 5 * 60 * 1000,
-    retry: 2, // Increased retries for access check
+    retry: 3, // Increased retries for access check
     meta: {
       onSettled: (data: boolean | undefined, error: Error | null) => {
         if (error) {
@@ -58,32 +63,38 @@ export const useMarcheDataQueries = (id: string | undefined) => {
       if (!id) return null;
       console.log("Chargement des données du marché:", id);
       
-      // Double-check admin access here as a safety measure
-      const globalRole = await getGlobalUserRole();
-      if (globalRole === 'ADMIN') {
-        console.log("Admin user detected, proceeding with marché fetch");
-        try {
-          // Direct fetch for admin users
+      // Special handling for admin users
+      try {
+        const globalRole = await getGlobalUserRole();
+        
+        if (globalRole === 'ADMIN') {
+          console.log("Admin user detected, proceeding with direct marché fetch");
+          
+          // Direct fetch for admin users to bypass RLS
           const { data, error } = await supabase
             .from('marches')
             .select('*')
             .eq('id', id)
             .single();
             
-          if (error) throw error;
+          if (error) {
+            console.error("Admin fetch failed:", error);
+            throw error;
+          }
+          
           return data;
-        } catch (adminFetchError) {
-          console.error("Admin fetch failed, falling back to standard fetch:", adminFetchError);
-          // Fall back to standard fetch method
-          return await fetchMarcheById(id);
         }
+      } catch (roleError) {
+        console.error("Error checking admin status:", roleError);
+        // Continue with standard fetch if role check fails
       }
       
+      // Standard fetch method that respects RLS policies
       return await fetchMarcheById(id);
     },
     enabled: !!id && accessCheckQuery.isSuccess && accessCheckQuery.data === true,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 1,
+    retry: 2, // Increased retries for marche query
     meta: {
       onSettled: (data: any, error: Error | null) => {
         if (error) {

@@ -20,23 +20,29 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
       throw new Error('Utilisateur non connecté');
     }
     
-    // Fast path for admin users
-    const globalRole = await getGlobalUserRole();
-    if (globalRole === 'ADMIN') {
-      console.log(`Utilisateur ${user.id} est ADMIN - accès direct au marché ${id}`);
-      const { data, error } = await supabase
-        .from('marches')
-        .select('*')
-        .eq('id', id)
-        .single();
-      
-      if (error) {
-        console.error(`Erreur lors de la récupération du marché ${id} (admin path):`, error);
-        throw error;
+    // IMPORTANT: Fast path for admin users - check this first for performance
+    let globalRole;
+    try {
+      globalRole = await getGlobalUserRole();
+      if (globalRole === 'ADMIN') {
+        console.log(`Utilisateur ${user.id} est ADMIN - accès direct au marché ${id}`);
+        const { data, error } = await supabase
+          .from('marches')
+          .select('*')
+          .eq('id', id)
+          .single();
+        
+        if (error) {
+          console.error(`Erreur lors de la récupération du marché ${id} (admin path):`, error);
+          throw error;
+        }
+        
+        console.log(`Marché ${id} récupéré avec succès par admin`);
+        return data as Marche;
       }
-      
-      console.log(`Marché ${id} récupéré avec succès par admin`);
-      return data as Marche;
+    } catch (roleError) {
+      console.error("Erreur lors de la vérification du rôle global:", roleError);
+      // Continue avec la vérification standard
     }
     
     // Standard access check for non-admin users
@@ -64,6 +70,27 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
     return data as Marche;
   } catch (error) {
     console.error('Exception lors de la récupération du marché:', error);
+
+    // Dernier recours: vérifier encore une fois si l'utilisateur est admin
+    try {
+      const globalRole = await getGlobalUserRole();
+      if (globalRole === 'ADMIN') {
+        console.log(`Dernier recours: utilisateur est ADMIN - tentative directe de récupération du marché ${id}`);
+        const { data, error } = await supabase
+          .from('marches')
+          .select('*')
+          .eq('id', id)
+          .single();
+        
+        if (!error && data) {
+          console.log(`Marché ${id} récupéré avec succès via le chemin de récupération d'urgence admin`);
+          return data as Marche;
+        }
+      }
+    } catch (finalError) {
+      console.error('Échec de la tentative de récupération d\'urgence:', finalError);
+    }
+    
     throw error;
   }
 };

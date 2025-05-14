@@ -22,15 +22,11 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
     console.log(`Checking access to market ${marcheId} for user ${user.id}...`);
     
     // CRITICAL: First check if user has ADMIN role (highest priority)
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('role_global')
-      .eq('id', user.id)
-      .single();
-      
-    if (!profileError && profileData && profileData.role_global === 'ADMIN') {
+    // This needs to be done first to avoid unnecessary database queries
+    const globalRole = await getGlobalUserRole();
+    if (globalRole === 'ADMIN') {
       console.log(`User ${user.id} is ADMIN - access granted to market ${marcheId}`);
-      return true; // Admin always has access
+      return true; // Admin always has access - no further checks needed
     }
     
     // Check if user is creator (second highest priority)
