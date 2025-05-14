@@ -15,7 +15,7 @@ export interface Visa {
 export interface Version {
   id: string;
   version: string;
-  statut: 'En attente de diffusion' | 'En attente de validation' | 'BPE' | 'À remettre à jour' | 'Refusé';
+  statut: 'En attente de diffusion' | 'En attente de validation' | 'En attente de visa' | 'BPE' | 'À remettre à jour' | 'Refusé';
 }
 
 export interface Document {
@@ -23,7 +23,7 @@ export interface Document {
   nom: string;
   type?: string;
   currentVersionId: string;
-  statut: 'En attente de diffusion' | 'En attente de validation' | 'BPE' | 'À remettre à jour' | 'Refusé';
+  statut: 'En attente de diffusion' | 'En attente de validation' | 'En attente de visa' | 'BPE' | 'À remettre à jour' | 'Refusé';
   versions: Version[];
   latestVersion?: Version | null;
 }
