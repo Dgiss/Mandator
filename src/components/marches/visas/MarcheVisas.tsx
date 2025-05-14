@@ -18,28 +18,50 @@ export interface MarcheVisasProps {
 }
 
 const MarcheVisas: React.FC<MarcheVisasProps> = ({ marcheId }) => {
-  // Référence pour éviter les rendus en cascade
-  const componentMountedRef = useRef(true);
+  // Référence pour suivre si le composant est monté
+  const isMountedRef = useRef(true);
+  const isInitialRenderRef = useRef(true);
   const previousMarcheIdRef = useRef<string | null>(null);
   
-  // Reset state when switching between markets
+  // S'assurer que nous n'avons pas plusieurs rendus pour le même marcheId
   useEffect(() => {
-    // Si le marcheId change, nous devons réinitialiser l'état
+    // Marquer que le composant est monté
+    isMountedRef.current = true;
+    
+    // Si le marcheId change, nous le notons
     if (previousMarcheIdRef.current && previousMarcheIdRef.current !== marcheId) {
       console.log(`Market ID changed from ${previousMarcheIdRef.current} to ${marcheId}`);
     }
     
     previousMarcheIdRef.current = marcheId;
     
+    // Au démontage du composant
     return () => {
-      // Ce nettoyage est important pour éviter les fuites mémoire
-      componentMountedRef.current = false;
+      isMountedRef.current = false;
     };
   }, [marcheId]);
 
-  // Utiliser notre hook de rôle avec un paramètre stable 
+  // Utiliser un ID stable pour réduire les cycles de rendu
   const stableMarcheId = useMemo(() => marcheId, [marcheId]);
-  const { canDiffuse, canVisa } = useUserRole(stableMarcheId);
+  
+  // Obtenir les rôles utilisateur avec référence stable
+  const userRoleResult = useUserRole(stableMarcheId);
+  const { canDiffuse, canVisa } = userRoleResult;
+
+  // Effet pour empêcher les cycles de rendu multiples
+  useEffect(() => {
+    if (isInitialRenderRef.current) {
+      console.log('Premier rendu du composant MarcheVisas');
+      isInitialRenderRef.current = false;
+      
+      // Stopper la propagation au bout d'un temps donné pour briser les cycles potentiels
+      const timeoutId = setTimeout(() => {
+        isInitialRenderRef.current = true; // Réinitialiser pour les futurs rendus
+      }, 2000);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, []);
 
   const {
     documents,

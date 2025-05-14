@@ -1,9 +1,11 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserRole, MarcheSpecificRole } from './types';
 import { fetchMarcheRoles, fetchMarcheRole } from './roleUtils';
 
+// Cache global pour éviter les appels redondants
 const roleCache: Record<string, MarcheSpecificRole> = {};
 const globalRoleCache: {role?: UserRole} = {};
 
@@ -11,12 +13,43 @@ const globalRoleCache: {role?: UserRole} = {};
  * Hook to fetch and manage user roles with caching to prevent redundant fetching
  */
 export function useRoleFetcher(marcheId?: string) {
+  // États locaux qui peuvent causer des rendus
   const [globalRole, setGlobalRole] = useState<UserRole>(globalRoleCache.role || 'STANDARD');
   const [marcheRoles, setMarcheRoles] = useState<Record<string, MarcheSpecificRole>>({});
   const [loading, setLoading] = useState(!globalRoleCache.role);
   const [rolesFetched, setRolesFetched] = useState(!!globalRoleCache.role);
+  
+  // Accès aux données utilisateur
   const { user } = useAuth();
+  
+  // Références pour éviter des boucles infinies
   const fetchInProgressRef = useRef(false);
+  const fetchRetryCountRef = useRef(0);
+  const isMountedRef = useRef(true);
+  const lastMarcheIdRef = useRef<string | undefined>(marcheId);
+  
+  // Effet pour suivre si le composant est monté
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
+  
+  // Effet pour détecter les changements de marcheId
+  useEffect(() => {
+    if (lastMarcheIdRef.current !== marcheId) {
+      lastMarcheIdRef.current = marcheId;
+    }
+  }, [marcheId]);
+  
+  // Optimisation: limiter le nombre d'appels consécutifs de logs
+  const logCountRef = useRef(0);
+  const throttledConsoleLog = useCallback((message: string) => {
+    if (logCountRef.current % 10 === 0) {
+      console.log(message);
+    }
+    logCountRef.current++;
+    if (logCountRef.current > 1000) logCountRef.current = 0;
+  }, []);
   
   // Fetch the user's global role and market-specific roles
   useEffect(() => {
@@ -25,36 +58,56 @@ export function useRoleFetcher(marcheId?: string) {
       rolesFetched && 
       (marcheId ? marcheRoles[marcheId] !== undefined || roleCache[marcheId] !== undefined : true)
     ) {
-      // If we have cached data for the requested marcheId, use it
+      // Si nous avons déjà les données en cache, pas besoin de refaire un appel
       if (marcheId && roleCache[marcheId] !== undefined) {
-        setMarcheRoles(prev => ({...prev, [marcheId]: roleCache[marcheId]}));
+        setMarcheRoles(prev => {
+          // Vérifier si l'état a changé pour éviter des mises à jour inutiles
+          if (prev[marcheId] === roleCache[marcheId]) return prev;
+          return {...prev, [marcheId]: roleCache[marcheId]};
+        });
       }
       return;
     }
     
-    // Prevent multiple fetches running simultaneously
+    // Stopper si un fetch est déjà en cours pour éviter les appels multiples
     if (fetchInProgressRef.current) return;
     
+    // Limiter le nombre de tentatives pour éviter les boucles infinies
+    if (fetchRetryCountRef.current > 5) {
+      console.warn('Too many role fetch attempts, stopping to prevent infinite loop');
+      return;
+    }
+    
     const fetchUserRole = async () => {
+      // Vérifier à nouveau si un fetch est en cours (protection supplémentaire)
       if (fetchInProgressRef.current) return;
+      
+      // Marquer le début d'une opération de récupération
       fetchInProgressRef.current = true;
+      fetchRetryCountRef.current++;
+      
       setLoading(true);
       
       try {
         if (!user) {
-          setGlobalRole('STANDARD');
-          setMarcheRoles({});
-          setRolesFetched(true);
-          setLoading(false);
+          // Pas d'utilisateur = pas de rôle
+          if (isMountedRef.current) {
+            setGlobalRole('STANDARD');
+            setMarcheRoles({});
+            setRolesFetched(true);
+            setLoading(false);
+          }
           fetchInProgressRef.current = false;
           return;
         }
         
-        // If we already have the global role cached, use it
+        // Si nous avons déjà le rôle global en cache, utilisons-le
         if (globalRoleCache.role) {
-          setGlobalRole(globalRoleCache.role);
+          if (isMountedRef.current) {
+            setGlobalRole(globalRoleCache.role);
+          }
         } else {
-          // First check if user is ADMIN (this overrides everything else)
+          // Vérifier d'abord si l'utilisateur est ADMIN (cela outrepasse tout le reste)
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('role_global')
@@ -64,103 +117,135 @@ export function useRoleFetcher(marcheId?: string) {
           if (!profileError && profileData) {
             const userGlobalRole = profileData.role_global ? 
               String(profileData.role_global).toUpperCase() : 'STANDARD';
-            setGlobalRole(userGlobalRole as UserRole);
+              
+            if (isMountedRef.current) {
+              setGlobalRole(userGlobalRole as UserRole);
+            }
             globalRoleCache.role = userGlobalRole as UserRole;
             
-            // If user is ADMIN, they might not need specific market roles
+            // Si l'utilisateur est ADMIN, il n'a peut-être pas besoin de rôles spécifiques au marché
             if (userGlobalRole === 'ADMIN' && !marcheId) {
-              setRolesFetched(true);
-              setLoading(false);
+              if (isMountedRef.current) {
+                setRolesFetched(true);
+                setLoading(false);
+              }
               fetchInProgressRef.current = false;
               return;
             }
           } else {
-            // Fallback to RPC if direct query fails
+            // Solution de secours si la requête directe échoue
             const { data, error } = await supabase.rpc('get_user_global_role');
             
             if (error) {
               console.error('Error fetching global role:', error);
-              setGlobalRole('STANDARD');
+              if (isMountedRef.current) {
+                setGlobalRole('STANDARD');
+              }
               globalRoleCache.role = 'STANDARD';
             } else {
-              // Normalize the role
+              // Normaliser le rôle
               const userGlobalRole = data ? String(data).toUpperCase() : 'STANDARD';
-              setGlobalRole(userGlobalRole as UserRole);
+              if (isMountedRef.current) {
+                setGlobalRole(userGlobalRole as UserRole);
+              }
               globalRoleCache.role = userGlobalRole as UserRole;
             }
           }
         }
         
-        // If a marcheId is provided, fetch the specific role for that market
+        // Si un marcheId est fourni, récupérer le rôle spécifique pour ce marché
         if (marcheId) {
-          // Check cache first
+          // Vérifier d'abord le cache
           if (roleCache[marcheId] !== undefined) {
-            setMarcheRoles(prev => ({...prev, [marcheId]: roleCache[marcheId]}));
+            if (isMountedRef.current) {
+              setMarcheRoles(prev => ({...prev, [marcheId]: roleCache[marcheId]}));
+            }
           } else {
             const specificRole = await fetchMarcheRole(user.id, marcheId);
-            console.log(`Fetched specific role for market ${marcheId}:`, specificRole);
-            setMarcheRoles(prev => ({...prev, [marcheId]: specificRole}));
+            
+            if (isMountedRef.current) {
+              setMarcheRoles(prev => ({...prev, [marcheId]: specificRole}));
+            }
             roleCache[marcheId] = specificRole;
           }
         } else {
-          // Otherwise, fetch all market roles for the user
+          // Sinon, récupérer tous les rôles de marché pour l'utilisateur
           const userMarcheRoles = await fetchMarcheRoles(user.id);
-          console.log("Fetched all market roles:", userMarcheRoles);
-          setMarcheRoles(userMarcheRoles);
           
-          // Update cache with all fetched roles
+          if (isMountedRef.current) {
+            setMarcheRoles(userMarcheRoles);
+          }
+          
+          // Mettre à jour le cache avec tous les rôles récupérés
           Object.keys(userMarcheRoles).forEach(id => {
             roleCache[id] = userMarcheRoles[id];
           });
         }
         
-        setRolesFetched(true);
+        if (isMountedRef.current) {
+          setRolesFetched(true);
+        }
       } catch (error) {
         console.error('Error fetching roles:', error);
-        setGlobalRole('STANDARD');
+        if (isMountedRef.current) {
+          setGlobalRole('STANDARD');
+        }
       } finally {
-        setLoading(false);
+        if (isMountedRef.current) {
+          setLoading(false);
+        }
+        // Lorsque l'opération est terminée, signaler que nous ne sommes plus en train de fetch
         fetchInProgressRef.current = false;
       }
     };
     
-    fetchUserRole();
-  }, [user, marcheId, rolesFetched]);
+    // Utiliser un timeout pour éviter les appels trop rapprochés
+    const timeoutId = setTimeout(() => {
+      fetchUserRole();
+    }, 100);
+    
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [user, marcheId, rolesFetched, marcheRoles]);
 
   // Function to fetch a specific market role (with caching)
-  const getMarcheRole = useCallback(async (marcheId: string): Promise<MarcheSpecificRole> => {
+  const getMarcheRole = useCallback(async (marketId: string): Promise<MarcheSpecificRole> => {
     if (!user) return null;
     
-    // If the role is already cached, return it
-    if (marcheRoles[marcheId] !== undefined) {
-      console.log(`Using cached role for market ${marcheId}:`, marcheRoles[marcheId]);
-      return marcheRoles[marcheId];
+    // Si le rôle est déjà en cache, le retourner immédiatement
+    if (marcheRoles[marketId] !== undefined) {
+      throttledConsoleLog(`Using cached role for market ${marketId}: ${marcheRoles[marketId]}`);
+      return marcheRoles[marketId];
     }
     
-    if (roleCache[marcheId] !== undefined) {
-      console.log(`Using global cache for market ${marcheId}:`, roleCache[marcheId]);
-      setMarcheRoles(prev => ({...prev, [marcheId]: roleCache[marcheId]}));
-      return roleCache[marcheId];
+    if (roleCache[marketId] !== undefined) {
+      throttledConsoleLog(`Using global cache for market ${marketId}: ${roleCache[marketId]}`);
+      if (isMountedRef.current) {
+        setMarcheRoles(prev => ({...prev, [marketId]: roleCache[marketId]}));
+      }
+      return roleCache[marketId];
     }
     
-    // Otherwise, fetch from the database
+    // Sinon, récupérer depuis la base de données
     try {
-      console.log(`Fetching role for market ${marcheId}...`);
-      const role = await fetchMarcheRole(user.id, marcheId);
-      console.log(`Fetched role for market ${marcheId}:`, role);
+      throttledConsoleLog(`Fetching role for market ${marketId}...`);
+      const role = await fetchMarcheRole(user.id, marketId);
       
-      // Update both local and global cache
-      setMarcheRoles(prev => ({...prev, [marcheId]: role}));
-      roleCache[marcheId] = role;
+      // Mettre à jour à la fois le cache local et global
+      if (isMountedRef.current) {
+        setMarcheRoles(prev => ({...prev, [marketId]: role}));
+      }
+      roleCache[marketId] = role;
       return role;
     } catch (error) {
       console.error('Error fetching market role:', error);
       return null;
     }
-  }, [user, marcheRoles]);
+  }, [user, marcheRoles, throttledConsoleLog]);
 
-  // Simplified and limited logging to avoid log spam
-  console.log("Current global role:", globalRole);
+  // Logging limité pour éviter le spam de logs
+  throttledConsoleLog("Current global role: " + globalRole);
 
   return {
     role: globalRole,

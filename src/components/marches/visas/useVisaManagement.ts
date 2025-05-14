@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Document, Version } from './types';
@@ -35,6 +34,10 @@ export const useVisaManagement = (marcheId: string) => {
   const isFetchingRef = useRef(false);
   // Track if component is mounted
   const isMountedRef = useRef(true);
+  // Track data loading to prevent redundant loading
+  const dataLoadedRef = useRef(false);
+  // Track marcheId changes
+  const lastMarcheIdRef = useRef<string | null>(null);
   
   const { toast } = useToast();
 
@@ -44,11 +47,19 @@ export const useVisaManagement = (marcheId: string) => {
     if (!marcheId || isFetchingRef.current) {
       return;
     }
+    
+    // Skip if we already loaded data for this marcheId and no refresh is needed
+    if (lastMarcheIdRef.current === marcheId && dataLoadedRef.current && documents.length > 0) {
+      console.log(`Skipping document reload for unchanged market ID ${marcheId}`);
+      return;
+    }
 
     console.log(`Chargement des documents pour le marché ${marcheId}...`);
     
     try {
       isFetchingRef.current = true;
+      lastMarcheIdRef.current = marcheId;
+      
       setLoading(true);
       setError(null);
       
@@ -71,6 +82,7 @@ export const useVisaManagement = (marcheId: string) => {
           setLoading(false);
         }
         isFetchingRef.current = false;
+        dataLoadedRef.current = true;
         return;
       }
       
@@ -123,6 +135,7 @@ export const useVisaManagement = (marcheId: string) => {
         setDocuments(documentsWithVersions);
         setFilteredDocuments(documentsWithVersions);
         setLoading(false);
+        dataLoadedRef.current = true;
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -138,34 +151,49 @@ export const useVisaManagement = (marcheId: string) => {
     } finally {
       isFetchingRef.current = false;
     }
-  }, [marcheId, toast]);
+  }, [marcheId, toast, documents.length]);
 
   // Retry loading function
   const retryLoading = useCallback(() => {
     isFetchingRef.current = false;
+    dataLoadedRef.current = false;
     setLoadAttempts(prev => prev + 1);
   }, []);
 
   // Track component mount status to prevent state updates on unmounted component
   useEffect(() => {
     isMountedRef.current = true;
+    
     return () => {
       isMountedRef.current = false;
     };
   }, []);
 
-  // Load documents only when marcheId changes or loadAttempts changes
+  // Detect marcheId changes to trigger reload
   useEffect(() => {
-    if (marcheId) {
-      loadDocuments();
+    if (lastMarcheIdRef.current !== marcheId) {
+      dataLoadedRef.current = false;
+    }
+  }, [marcheId]);
+
+  // Load documents only when needed
+  useEffect(() => {
+    if (!marcheId) return;
+    
+    // Avoid loading on every render
+    if (lastMarcheIdRef.current === marcheId && dataLoadedRef.current && documents.length > 0) {
+      return;
     }
     
-    // Cleanup function
+    // Set a short debounce to prevent multiple concurrent loads
+    const timeoutId = setTimeout(() => {
+      loadDocuments();
+    }, 100);
+    
     return () => {
-      // Ensure we don't update state after unmount
-      isFetchingRef.current = false;
+      clearTimeout(timeoutId);
     };
-  }, [loadDocuments, loadAttempts, marcheId]);
+  }, [loadDocuments, loadAttempts, marcheId, documents.length]);
 
   // Filter documents based on selected options - use useMemo for performance
   const updateFilteredDocuments = useCallback(() => {
@@ -260,8 +288,9 @@ export const useVisaManagement = (marcheId: string) => {
       
       handleDiffusionDialogClose();
       
-      // Reset fetching flag before reloading documents
+      // Reset loading flags before reloading documents
       isFetchingRef.current = false;
+      dataLoadedRef.current = false;
       loadDocuments(); // Reload the documents to reflect changes
     } catch (error) {
       console.error('Error during diffusion:', error);
@@ -311,8 +340,9 @@ export const useVisaManagement = (marcheId: string) => {
       
       handleVisaDialogClose();
       
-      // Reset fetching flag before reloading documents
+      // Reset fetching and data flags before reloading documents
       isFetchingRef.current = false;
+      dataLoadedRef.current = false;
       loadDocuments(); // Reload the documents to reflect changes
     } catch (error) {
       console.error('Error during visa request:', error);
