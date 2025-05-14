@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { droitsService } from '@/services/droits';
+import { usersService } from '@/services/droits';
 import { useUserRole } from '@/hooks/userRole';
 import { Shield, RefreshCw } from 'lucide-react';
 
@@ -40,7 +40,7 @@ export default function AdminPage() {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const usersData = await droitsService.getUsers();
+      const usersData = await usersService.getUsers();
       setUsers(usersData || []);
     } catch (error) {
       console.error('Erreur lors du chargement des utilisateurs:', error);
@@ -57,7 +57,7 @@ export default function AdminPage() {
   // Function to update user's global role
   const handleRoleChange = async (userId: string, newRole: string) => {
     try {
-      await droitsService.updateGlobalRole(userId, newRole);
+      await usersService.updateGlobalRole(userId, newRole);
       toast({
         title: "Succès",
         description: "Le rôle global a été mis à jour avec succès.",
