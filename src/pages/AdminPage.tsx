@@ -6,9 +6,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/components/ui/use-toast';
-import { droitsService } from '@/services/droitsService';
-import { useUserRole, UserRole } from '@/hooks/useUserRole';
+import { useToast } from '@/hooks/use-toast';
+import { droitsService } from '@/services/droits';
+import { useUserRole } from '@/hooks/userRole';
 import { Shield, RefreshCw } from 'lucide-react';
 
 export default function AdminPage() {
@@ -17,11 +17,11 @@ export default function AdminPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { isAdmin, role } = useUserRole();
+  const { role, loading: roleLoading } = useUserRole();
 
+  // Check if user is admin
   useEffect(() => {
-    // Redirect non-admin users
-    if (!isAdmin && role !== 'STANDARD' && !loading) {
+    if (!roleLoading && role !== 'ADMIN') {
       navigate('/home');
       toast({
         title: "Accès refusé",
@@ -29,7 +29,7 @@ export default function AdminPage() {
         variant: "destructive",
       });
     }
-  }, [isAdmin, role, navigate, toast, loading]);
+  }, [role, roleLoading, navigate, toast]);
 
   // Load users when component mounts
   useEffect(() => {
@@ -41,7 +41,7 @@ export default function AdminPage() {
     setLoading(true);
     try {
       const usersData = await droitsService.getUsers();
-      setUsers(usersData);
+      setUsers(usersData || []);
     } catch (error) {
       console.error('Erreur lors du chargement des utilisateurs:', error);
       toast({
@@ -55,7 +55,7 @@ export default function AdminPage() {
   };
 
   // Function to update user's global role
-  const handleRoleChange = async (userId: string, newRole: UserRole) => {
+  const handleRoleChange = async (userId: string, newRole: string) => {
     try {
       await droitsService.updateGlobalRole(userId, newRole);
       toast({
@@ -89,6 +89,25 @@ export default function AdminPage() {
            prenom.includes(searchLower) ||
            role.includes(searchLower);
   });
+
+  // If still loading role, show loading state
+  if (roleLoading) {
+    return (
+      <PageLayout
+        title="Administration"
+        description="Chargement..."
+      >
+        <div className="flex justify-center items-center h-64">
+          <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
+        </div>
+      </PageLayout>
+    );
+  }
+
+  // Only render the page content if user is admin
+  if (role !== 'ADMIN') {
+    return null; // Extra safety check
+  }
 
   return (
     <PageLayout
@@ -156,7 +175,7 @@ export default function AdminPage() {
                       <TableCell>
                         <Select 
                           defaultValue={user.role_global || 'MANDATAIRE'}
-                          onValueChange={(value) => handleRoleChange(user.id, value as UserRole)}
+                          onValueChange={(value) => handleRoleChange(user.id, value)}
                         >
                           <SelectTrigger className="w-[180px]">
                             <SelectValue placeholder="Changer le rôle" />
