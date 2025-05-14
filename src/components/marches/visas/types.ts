@@ -1,13 +1,14 @@
-
 export interface Visa {
   id: string;
-  document: string;
-  version: string;
-  demandePar: string;
-  dateDemande: string;
-  echeance: string;
-  statut: 'En attente' | 'VSO' | 'VAO' | 'Refusé';
+  document_id?: string;
+  marche_id: string;
+  version?: string;
+  demande_par?: string;
   commentaire?: string;
+  statut?: string;
+  date_demande?: string;
+  echeance?: string;
+  attachment_path?: string;
 }
 
 export interface Version {
