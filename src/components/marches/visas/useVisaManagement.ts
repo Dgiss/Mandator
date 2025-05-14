@@ -256,17 +256,10 @@ export const useVisaManagement = (marcheId: string) => {
   }, []);
 
   // Handle process visa dialog
-  const handleProcessVisaDialogOpen = useCallback((document: Document, visa: Visa) => {
-    setSelectedDocument(document);
-    setSelectedVersion(document.latestVersion);
-    setSelectedVisa(visa);
-    setProcessVisaDialogOpen(true);
-  }, []);
-
   const handleProcessVisaDialogClose = useCallback(() => {
     setProcessVisaDialogOpen(false);
     setSelectedVisa(null);
-  });
+  }, []);
 
   // Handle file selection
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
