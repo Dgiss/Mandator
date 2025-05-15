@@ -23,20 +23,20 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
     console.log(`Checking access to market ${marcheId} for user ${user.id}...`);
     
     try {
-      // Utilisation de la fonction RPC security definer pour vérifier l'accès
+      // Utilisation de la nouvelle fonction sécurisée pour vérifier l'accès
       const { data: accessData, error: accessError } = await supabase.rpc(
-        'user_can_access_marche',
-        { marche_id: marcheId }
+        'check_user_marche_access_safe',
+        { user_id: user.id, marche_id: marcheId }
       );
       
       if (!accessError && accessData === true) {
-        console.log(`Access granted through RPC function for user ${user.id} to market ${marcheId}`);
+        console.log(`Access granted through safe RPC function for user ${user.id} to market ${marcheId}`);
         return true;
       } else if (accessError) {
-        console.log(`RPC function error: ${accessError.message}, trying direct verification`);
+        console.log(`Safe RPC function error: ${accessError.message}, trying fallback verification`);
       }
     } catch (rpcError) {
-      console.log(`RPC function not available, trying legacy checks`);
+      console.log(`Safe RPC function not available, trying legacy checks`);
     }
     
     // HIGHEST PRIORITY: Check if user has ADMIN role first

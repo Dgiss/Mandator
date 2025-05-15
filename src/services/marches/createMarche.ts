@@ -36,40 +36,62 @@ export const createMarche = async (marcheData: MarcheCreateData): Promise<Marche
       }
     });
     
-    // Traitement spécial pour les champs pays et région qui montrent des erreurs
-    if (marcheData.pays !== null && typeof marcheData.pays === 'object' && 
-        marcheData.pays && '_type' in (marcheData.pays as any) && (marcheData.pays as any)._type === 'undefined') {
-      marcheData.pays = null;
+    // Traitement pour les champs pays et région qui peuvent causer des erreurs
+    if (marcheData.pays !== null && 
+        typeof marcheData.pays === 'object' && 
+        marcheData.pays !== undefined) {
+      if ('_type' in (marcheData.pays as any) && (marcheData.pays as any)._type === 'undefined') {
+        marcheData.pays = null;
+      }
     }
     
-    if (marcheData.region !== null && typeof marcheData.region === 'object' && 
-        marcheData.region && '_type' in (marcheData.region as any) && (marcheData.region as any)._type === 'undefined') {
-      marcheData.region = null;
+    if (marcheData.region !== null && 
+        typeof marcheData.region === 'object' && 
+        marcheData.region !== undefined) {
+      if ('_type' in (marcheData.region as any) && (marcheData.region as any)._type === 'undefined') {
+        marcheData.region = null;
+      }
     }
     
     console.log("Création d'un nouveau marché avec les données:", marcheData);
     
     // Assurer que les buckets nécessaires existent avant d'insérer le marché
-    if (marcheData.image || marcheData.logo) {
-      await fileStorage.ensureBucketExists('marches', true);
+    try {
+      if (marcheData.image || marcheData.logo) {
+        await fileStorage.ensureBucketExists('marches', true);
+        console.log("Vérification du bucket marches terminée");
+      }
+    } catch (bucketError) {
+      // En cas d'erreur liée au bucket, on continue quand même
+      console.warn("Erreur non bloquante lors de la vérification des buckets:", bucketError);
     }
     
     // Variable pour stocker le résultat final
     let resultData: Marche | null = null;
     
-    // Utiliser la méthode RPC au lieu d'une insertion directe pour contourner les problèmes de RLS
-    const { data, error } = await supabase.rpc("create_new_marche" as any, {
-      marche_data: marcheData
-    });
-    
-    if (error) {
-      console.error('Erreur lors de la création du marché via RPC:', error);
+    // Utiliser la méthode RPC au lieu d'une insertion directe
+    try {
+      const { data, error } = await supabase.rpc("create_new_marche", {
+        marche_data: marcheData
+      });
       
-      // Essayer la méthode d'insertion directe comme fallback
+      if (error) {
+        console.error('Erreur lors de la création du marché via RPC:', error);
+        throw error;
+      }
+      
+      // Conversion du résultat avec typage sécurisé
+      resultData = data as unknown as Marche;
+      console.log("Marché créé avec succès via RPC:", resultData);
+    } catch (rpcError) {
+      console.error('Exception lors de l\'appel RPC:', rpcError);
+      
+      // Fallback: essayer la méthode d'insertion directe
+      console.log("Tentative d'insertion directe dans la table marches...");
       const insertResult = await supabase
         .from('marches')
         .insert(marcheData)
-        .select()
+        .select('*')
         .single();
       
       if (insertResult.error) {
@@ -86,29 +108,34 @@ export const createMarche = async (marcheData: MarcheCreateData): Promise<Marche
         }
       }
       
-      if (!insertResult.data) {
-        throw new Error('Aucune donnée retournée après la création du marché');
-      }
-      
       resultData = insertResult.data as Marche;
-    } else {
-      // Use type assertion with unknown as intermediate step for type safety
-      resultData = data as unknown as Marche;
+      console.log("Marché créé avec succès via insertion directe:", resultData);
     }
     
-    console.log("Marché créé avec succès:", resultData);
-    
-    // Si marché créé avec succès, attribuer automatiquement les droits de MOE au créateur
+    // Si marché créé avec succès, on s'assure qu'il y a bien des droits
     if (resultData && typeof resultData === 'object' && 'id' in resultData && resultData.id && marcheData.user_id) {
       try {
-        await supabase.rpc("assign_role_to_user" as any, {
-          user_id: marcheData.user_id,
-          marche_id: resultData.id,
-          role_specifique: 'MOE'
-        });
-        console.log(`Rôle MOE attribué à ${marcheData.user_id} pour le marché ${resultData.id}`);
+        // Vérifier si les droits existent déjà
+        const { data: existingRights } = await supabase
+          .from('droits_marche')
+          .select('*')
+          .eq('user_id', marcheData.user_id)
+          .eq('marche_id', resultData.id)
+          .single();
+        
+        // Si pas de droits, on les crée
+        if (!existingRights) {
+          await supabase
+            .from('droits_marche')
+            .insert({
+              user_id: marcheData.user_id,
+              marche_id: resultData.id,
+              role_specifique: 'MOE'
+            });
+          console.log(`Rôle MOE attribué à ${marcheData.user_id} pour le marché ${resultData.id}`);
+        }
       } catch (roleError) {
-        console.error('Erreur lors de l\'attribution du rôle MOE au créateur:', roleError);
+        console.error('Erreur non bloquante lors de l\'attribution du rôle MOE:', roleError);
         // On continue même en cas d'erreur d'attribution de rôle
       }
     }

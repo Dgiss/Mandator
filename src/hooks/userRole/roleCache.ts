@@ -1,72 +1,121 @@
 
-import { UserRole, MarcheSpecificRole } from './types';
+/**
+ * Role caching functionality to improve performance and reduce database queries
+ */
 
-// Cache pour les rôles globaux (userID -> role)
-export const globalRoleCache: Map<string, UserRole | null> = new Map();
+import { MarcheSpecificRole, UserRole } from './types';
 
-// Cache pour les rôles spécifiques aux marchés (marcheID_userID -> role)
-export const marketRoleCache: Map<string, MarcheSpecificRole> = new Map();
+// Cache storage with expiry time
+interface CacheItem<T> {
+  value: T;
+  expiry: number;
+}
+
+// Cache for global roles - key is user ID
+export const globalRoleCache = new Map<string, CacheItem<UserRole>>();
+
+// Cache for market specific roles - key is userId:marketId
+export const marketRoleCache = new Map<string, CacheItem<MarcheSpecificRole>>();
+
+// Default cache expiry time (5 minutes)
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+// Session storage keys
+const GLOBAL_ROLE_KEY = 'user_global_role';
 
 /**
- * Génère une clé de cache pour un marché et un utilisateur spécifiques
- * @param marketId ID du marché
- * @param userId ID de l'utilisateur (optionnel, utilise l'utilisateur courant par défaut)
- * @returns Clé de cache
+ * Cache the global role for the current session
  */
-const getMarketCacheKey = (marketId?: string, userId?: string): string => {
-  return `${marketId || 'global'}_${userId || 'current'}`;
-};
-
-/**
- * Met en cache le rôle global d'un utilisateur
- */
-export const cacheGlobalRole = (role: UserRole | null, userId?: string): void => {
-  const key = userId || 'current';
-  globalRoleCache.set(key, role);
-};
-
-/**
- * Met en cache le rôle spécifique pour un marché
- */
-export const cacheMarketRole = (marketId: string, role: MarcheSpecificRole, userId?: string): void => {
-  const key = getMarketCacheKey(marketId, userId);
-  marketRoleCache.set(key, role);
-};
-
-/**
- * Récupère le rôle global en cache
- */
-export const getCachedGlobalRole = (userId?: string): UserRole | null | undefined => {
-  const key = userId || 'current';
-  return globalRoleCache.get(key);
-};
-
-/**
- * Récupère le rôle spécifique en cache pour un marché
- */
-export const getCachedMarketRole = (marketId?: string, userId?: string): MarcheSpecificRole | undefined => {
-  if (!marketId) return undefined;
-  const key = getMarketCacheKey(marketId, userId);
-  return marketRoleCache.get(key);
-};
-
-/**
- * Vide le cache des rôles
- */
-export const clearRoleCache = (userId?: string): void => {
-  if (userId) {
-    // Supprimer uniquement les entrées pour cet utilisateur
-    globalRoleCache.delete(userId);
-    
-    // Supprimer les entrées de marchés pour cet utilisateur
-    for (const key of marketRoleCache.keys()) {
-      if (key.endsWith(`_${userId}`)) {
-        marketRoleCache.delete(key);
-      }
-    }
-  } else {
-    // Vider tout le cache
-    globalRoleCache.clear();
-    marketRoleCache.clear();
+export function cacheGlobalRole(role: UserRole | null) {
+  if (!role) return;
+  
+  // Store in memory cache
+  globalRoleCache.set('current', {
+    value: role,
+    expiry: Date.now() + CACHE_TTL_MS
+  });
+  
+  // Store in session storage for persistence
+  try {
+    sessionStorage.setItem(GLOBAL_ROLE_KEY, role);
+  } catch (e) {
+    // Ignore storage errors
   }
-};
+}
+
+/**
+ * Cache a specific market role
+ */
+export function cacheMarketRole(marketId: string, role: MarcheSpecificRole | null) {
+  if (!marketId) return;
+  
+  marketRoleCache.set(marketId, {
+    value: role,
+    expiry: Date.now() + CACHE_TTL_MS
+  });
+}
+
+/**
+ * Get cached global role if available and not expired
+ */
+export function getCachedGlobalRole(): UserRole | null {
+  // Try memory cache first
+  const cachedItem = globalRoleCache.get('current');
+  
+  if (cachedItem && cachedItem.expiry > Date.now()) {
+    return cachedItem.value;
+  }
+  
+  // Clear expired item
+  if (cachedItem) {
+    globalRoleCache.delete('current');
+  }
+  
+  // Try session storage as fallback
+  try {
+    const storedRole = sessionStorage.getItem(GLOBAL_ROLE_KEY);
+    if (storedRole) {
+      // Refresh cache with stored value
+      cacheGlobalRole(storedRole as UserRole);
+      return storedRole as UserRole;
+    }
+  } catch (e) {
+    // Ignore storage errors
+  }
+  
+  return null;
+}
+
+/**
+ * Get cached market role if available and not expired
+ */
+export function getCachedMarketRole(marketId?: string): MarcheSpecificRole | undefined {
+  if (!marketId) return undefined;
+  
+  const cachedItem = marketRoleCache.get(marketId);
+  
+  if (cachedItem && cachedItem.expiry > Date.now()) {
+    return cachedItem.value;
+  }
+  
+  // Clear expired item
+  if (cachedItem) {
+    marketRoleCache.delete(marketId);
+  }
+  
+  return undefined;
+}
+
+/**
+ * Clear all role caches
+ */
+export function clearRoleCache() {
+  globalRoleCache.clear();
+  marketRoleCache.clear();
+  
+  try {
+    sessionStorage.removeItem(GLOBAL_ROLE_KEY);
+  } catch (e) {
+    // Ignore storage errors
+  }
+}

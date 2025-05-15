@@ -1,68 +1,93 @@
 
-import { supabase } from '@/lib/supabase';
-import { MarcheSpecificRole } from './types';
-import { 
-  marketRoleCache, 
-  cacheMarketRole 
-} from './roleCache';
-import { 
-  fetchSpecificMarketRole, 
-  fetchAllMarketRoles 
-} from '@/utils/auth/roleQueries';
+/**
+ * Utility functions for role handling
+ */
+import { MarcheSpecificRole, UserRole } from './types';
 
 /**
- * Fetch a user's role for a specific market
- * 
- * @param userId User ID
- * @param marcheId Market ID
- * @returns The user's role for that market
+ * Vérifie si un utilisateur peut diffuser des documents sur un marché
  */
-export const fetchMarcheRole = async (
-  userId: string, 
-  marcheId: string
-): Promise<MarcheSpecificRole> => {
-  // Check cache first
-  const cachedRole = marketRoleCache.get(marcheId);
-  if (cachedRole !== undefined) {
-    return cachedRole as MarcheSpecificRole;
+export const canDiffuseMarche = (
+  globalRole: UserRole,
+  marcheRoles: Record<string, MarcheSpecificRole>,
+  marcheId?: string
+): boolean => {
+  // Admin peut tout faire
+  if (globalRole === 'ADMIN') return true;
+  
+  // Si pas d'ID de marché spécifié, vérifier le rôle global
+  if (!marcheId) {
+    return ['MOE', 'MANDATAIRE'].includes(globalRole);
   }
   
-  // If not in cache, fetch from API
-  const role = await fetchSpecificMarketRole(userId, marcheId);
-  
-  // Update cache
-  cacheMarketRole(marcheId, role);
-  
-  return role;
+  // Vérifier le rôle spécifique au marché
+  return ['MOE', 'MANDATAIRE'].includes(marcheRoles[marcheId] || '');
 };
 
 /**
- * Fetch all market roles for a user
- * 
- * @param userId User ID
- * @returns Object mapping market IDs to roles
+ * Vérifie si un utilisateur peut viser des documents sur un marché
  */
-export const fetchMarcheRoles = async (
-  userId: string
-): Promise<Record<string, MarcheSpecificRole>> => {
-  const roles = await fetchAllMarketRoles(userId);
+export const canVisaMarche = (
+  globalRole: UserRole,
+  marcheRoles: Record<string, MarcheSpecificRole>,
+  marcheId?: string
+): boolean => {
+  // Admin peut tout faire
+  if (globalRole === 'ADMIN') return true;
   
-  // Update cache with fetched roles
-  Object.entries(roles).forEach(([marketId, role]) => {
-    // Fix: Convert the role to MarcheSpecificRole or cast it appropriately
-    if (typeof role === 'string') {
-      const specificRole = role as MarcheSpecificRole;
-      cacheMarketRole(marketId, specificRole);
-    }
-  });
+  // Si pas d'ID de marché spécifié, vérifier le rôle global
+  if (!marcheId) {
+    return ['CONTROLEUR', 'MANDATAIRE'].includes(globalRole);
+  }
   
-  return roles;
+  // Vérifier le rôle spécifique au marché
+  return ['CONTROLEUR', 'MANDATAIRE'].includes(marcheRoles[marcheId] || '');
 };
 
 /**
- * Clear all role cache data
+ * Vérifie si un utilisateur peut gérer les rôles sur un marché
  */
-export const clearRoleCache = () => {
-  // Reset cache maps
-  marketRoleCache.clear();
+export const canManageRolesMarche = (
+  globalRole: UserRole,
+  marcheRoles: Record<string, MarcheSpecificRole>,
+  marcheId?: string
+): boolean => {
+  // Admin peut tout faire
+  if (globalRole === 'ADMIN') return true;
+  
+  // MOE a des droits de gestion sur son marché
+  if (marcheId && marcheRoles[marcheId] === 'MOE') {
+    return true;
+  }
+  
+  // Par défaut, seuls les admins peuvent gérer les rôles
+  return false;
+};
+
+/**
+ * Vérifie si un utilisateur peut créer des marchés
+ */
+export const canCreateMarche = (globalRole: UserRole): boolean => {
+  // Seuls les ADMIN, MOE et MANDATAIRE peuvent créer des marchés
+  return ['ADMIN', 'MOE', 'MANDATAIRE'].includes(globalRole);
+};
+
+/**
+ * Vérifie si un utilisateur peut créer des fascicules pour un marché
+ */
+export const canCreateFascicule = (
+  globalRole: UserRole,
+  marcheRoles: Record<string, MarcheSpecificRole>,
+  marcheId?: string
+): boolean => {
+  // Admin peut tout faire
+  if (globalRole === 'ADMIN') return true;
+  
+  // Si pas d'ID de marché spécifié, vérifier le rôle global
+  if (!marcheId) {
+    return ['MOE'].includes(globalRole);
+  }
+  
+  // MOE a des droits sur son marché
+  return marcheRoles[marcheId] === 'MOE';
 };
