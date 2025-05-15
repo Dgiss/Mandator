@@ -71,8 +71,14 @@ export const createMarche = async (marcheData: MarcheCreateData): Promise<Marche
     
     // Utiliser la méthode RPC au lieu d'une insertion directe
     try {
+      // S'assurer que marcheData a toutes les propriétés requises
+      const rpcData = {
+        ...marcheData,
+        titre: marcheData.titre || '' // Assurer que titre existe et n'est pas undefined
+      };
+      
       const { data, error } = await supabase.rpc("create_new_marche", {
-        marche_data: marcheData as Record<string, any>
+        marche_data: rpcData
       });
       
       if (error) {
@@ -88,9 +94,17 @@ export const createMarche = async (marcheData: MarcheCreateData): Promise<Marche
       
       // Fallback: essayer la méthode d'insertion directe
       console.log("Tentative d'insertion directe dans la table marches...");
+      
+      // S'assurer que marcheData a toutes les propriétés requises pour l'insertion
+      // Typescript attend un objet avec une structure spécifique, pas juste Record<string, any>
+      const insertData = {
+        ...marcheData,
+        titre: marcheData.titre || '' // Assurer que titre existe et n'est pas undefined
+      };
+      
       const insertResult = await supabase
         .from('marches')
-        .insert(marcheData as Record<string, any>)
+        .insert(insertData)
         .select('*')
         .single();
       
