@@ -29,7 +29,8 @@ export const useUserRole = (marcheId?: string) => {
     canDiffuse,
     canVisa,
     canManageRoles,
-    canCreateMarche 
+    canCreateMarche,
+    canCreateFascicule
   } = useAccessChecker(
     fetchedRole as UserRole,
     fetchedRoles
@@ -106,6 +107,7 @@ export const useUserRole = (marcheId?: string) => {
     canVisa,
     canManageRoles,
     canCreateMarche,
+    canCreateFascicule,
     getMarcheRole,
     isAdmin,
     isMOE,
