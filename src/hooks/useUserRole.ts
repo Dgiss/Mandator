@@ -4,7 +4,7 @@
 
 import { useUserRole } from './userRole/useUserRole';
 import { UserRole, MarcheSpecificRole, UserRoleInfo } from './userRole/types';
-import { clearRoleCache } from './userRole/roleUtils';
+import { clearRoleCache } from './userRole/roleCache';
 
 // Export direct pour éviter les wrapper inutiles
 export { useUserRole, clearRoleCache };

@@ -91,3 +91,9 @@ export const canCreateFascicule = (
   // MOE a des droits sur son marché
   return marcheRoles[marcheId] === 'MOE';
 };
+
+/**
+ * Clear role caches to force refresh of roles
+ * This is a re-export from roleCache to simplify imports
+ */
+export { clearRoleCache } from './roleCache';

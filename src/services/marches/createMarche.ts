@@ -72,7 +72,7 @@ export const createMarche = async (marcheData: MarcheCreateData): Promise<Marche
     // Utiliser la méthode RPC au lieu d'une insertion directe
     try {
       const { data, error } = await supabase.rpc("create_new_marche", {
-        marche_data: marcheData
+        marche_data: marcheData as Record<string, any>
       });
       
       if (error) {
@@ -90,7 +90,7 @@ export const createMarche = async (marcheData: MarcheCreateData): Promise<Marche
       console.log("Tentative d'insertion directe dans la table marches...");
       const insertResult = await supabase
         .from('marches')
-        .insert(marcheData)
+        .insert(marcheData as Record<string, any>)
         .select('*')
         .single();
       
