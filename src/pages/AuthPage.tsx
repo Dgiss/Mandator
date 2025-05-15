@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -32,6 +31,7 @@ export default function AuthPage() {
   const [registerLoading, setRegisterLoading] = useState(false);
   const [error, setError] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [creatingUsers, setCreatingUsers] = useState(false);
 
   useEffect(() => {
     // Si l'utilisateur est connecté, rediriger vers la page d'accueil
@@ -132,6 +132,22 @@ export default function AuthPage() {
       setError(error.message || "Une erreur est survenue lors de l'inscription");
     } finally {
       setRegisterLoading(false);
+    }
+  };
+
+  const handleSetupTestUsers = async () => {
+    try {
+      setCreatingUsers(true);
+      
+      // Importer dynamiquement pour éviter les erreurs de chargement
+      const { setupTestUsers } = await import('@/utils/auth/setupUsers');
+      await setupTestUsers();
+      
+    } catch (error: any) {
+      console.error("Erreur lors de la création des utilisateurs de test:", error);
+      setError(error.message || "Une erreur est survenue lors de la création des utilisateurs de test");
+    } finally {
+      setCreatingUsers(false);
     }
   };
 
@@ -264,6 +280,25 @@ export default function AuthPage() {
                         <p className="mt-1">admin@admin.com / password</p>
                         <p>moe@moe.com / password</p>
                         <p>mandataire@mandataire.com / password</p>
+                      </div>
+                      
+                      <div className="mt-6 pt-4 border-t border-gray-200">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full"
+                          onClick={handleSetupTestUsers}
+                          disabled={creatingUsers}
+                        >
+                          {creatingUsers ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Création des utilisateurs...
+                            </>
+                          ) : (
+                            "Créer les utilisateurs de test"
+                          )}
+                        </Button>
                       </div>
                     </form>
                   </CardContent>
