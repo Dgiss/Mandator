@@ -1,4 +1,3 @@
-
 /**
  * Utility functions for role handling
  */
@@ -94,6 +93,5 @@ export const canCreateFascicule = (
 
 /**
  * Clear role caches to force refresh of roles
- * This is a re-export from roleCache to simplify imports
  */
 export { clearRoleCache } from './roleCache';

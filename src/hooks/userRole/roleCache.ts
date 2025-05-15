@@ -1,4 +1,3 @@
-
 /**
  * Role caching functionality to improve performance and reduce database queries
  */
@@ -118,4 +117,6 @@ export function clearRoleCache() {
   } catch (e) {
     // Ignore storage errors
   }
+  
+  console.log("Cache des rôles effacé avec succès");
 }
