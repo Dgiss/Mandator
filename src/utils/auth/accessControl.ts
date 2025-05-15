@@ -7,7 +7,7 @@ import { getGlobalUserRole } from './roles';
 
 /**
  * Vérifie si l'utilisateur a accès à un marché spécifique
- * Cette version optimisée utilise les nouvelles fonctions SECURITY DEFINER
+ * Cette version optimisée utilise la nouvelle fonction SECURITY DEFINER
  * @param {string} marcheId L'identifiant du marché
  * @returns {Promise<boolean>} True si l'utilisateur a accès au marché
  */
@@ -34,22 +34,24 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
       // Continue with other checks
     }
     
-    // Try direct check using SECURITY DEFINER RPC function
+    // Use the new non-recursive security definer function
     try {
       const { data: accessData, error: accessError } = await supabase.rpc(
-        'check_market_access',
-        { market_id: marcheId }
+        'check_marche_access',  // Use the new function name that matches what we created in SQL
+        { marche_id: marcheId }
       );
       
       if (!accessError && accessData === true) {
-        console.log(`Access granted through RPC function for user ${user.id} to market ${marcheId}`);
+        console.log(`Access granted through check_marche_access function for user ${user.id} to market ${marcheId}`);
         return true;
       } else if (accessError) {
-        console.log(`RPC function error: ${accessError.message}, trying fallback verification`);
+        console.log(`check_marche_access function error: ${accessError.message}, trying fallback verification`);
       }
     } catch (rpcError) {
       console.log(`RPC function error: ${rpcError}, trying fallback verification`);
     }
+    
+    // Fall back to direct checks if RPC fails
     
     // Check if user is creator (second highest priority)
     try {

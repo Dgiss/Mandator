@@ -25,19 +25,30 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
     if (globalRole === 'ADMIN') {
       console.log(`Utilisateur ${user.id} est ADMIN - accès direct au marché ${id}`);
       
-      // Direct query for ADMIN users to bypass RLS restrictions
-      const { data, error } = await supabase
+      // Utiliser la fonction RPC sécurisée pour éviter les problèmes de récursion
+      const { data, error } = await supabase.rpc(
+        'check_marche_access',
+        { marche_id: id }
+      );
+      
+      if (error) {
+        console.error(`Erreur lors de la vérification d'accès au marché ${id}:`, error);
+        throw error;
+      }
+      
+      // Maintenant faire la requête directe pour récupérer les données du marché
+      const { data: marcheData, error: marcheError } = await supabase
         .from('marches')
         .select('*')
         .eq('id', id)
         .single();
         
-      if (error) {
-        console.error(`Erreur lors de la récupération du marché ${id} (admin path):`, error);
-        throw error;
+      if (marcheError) {
+        console.error(`Erreur lors de la récupération du marché ${id}:`, marcheError);
+        throw marcheError;
       }
       
-      return data as Marche;
+      return marcheData as Marche;
     }
     
     // Standard access check for non-admin users
@@ -49,7 +60,7 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
     
     console.log(`Utilisateur ${user.id} a accès au marché ${id}, récupération des détails...`);
     
-    // Direct query to avoid recursion issues
+    // Direct query to avoid recursion issues - using RLS that now works correctly
     const { data, error } = await supabase
       .from('marches')
       .select('*')

@@ -27,7 +27,7 @@ export const useMarcheDataQueries = (id: string | undefined) => {
     retry: 2
   });
 
-  // Check if the user has access to the marché
+  // Check if the user has access to the marché using the non-recursive function
   const accessCheckQuery = useQuery({
     queryKey: ['marche-access', id],
     queryFn: async () => {
@@ -37,8 +37,20 @@ export const useMarcheDataQueries = (id: string | undefined) => {
       
       // Short circuit for admin users immediately
       if (roleQuery.data === 'ADMIN') {
-        console.log('User is ADMIN, bypassing standard access checks');
-        return true;
+        console.log('User is ADMIN, using secure RPC function for access check');
+        
+        try {
+          // Use the new secure RPC function
+          const { data, error } = await supabase.rpc('check_marche_access', { marche_id: id });
+          if (error) {
+            console.error('Error using check_marche_access:', error);
+            return false;
+          }
+          return data === true;
+        } catch (rpcError) {
+          console.error('Exception using check_marche_access:', rpcError);
+          return false;
+        }
       }
       
       // Otherwise perform the full access check
@@ -69,7 +81,7 @@ export const useMarcheDataQueries = (id: string | undefined) => {
   });
 
   // Should proceed with fetching if: ADMIN user OR has access
-  const shouldProceed = (roleQuery.data === 'ADMIN') || 
+  const shouldProceed = (roleQuery.data === 'ADMIN' && accessCheckQuery.data !== false) || 
                        (accessCheckQuery.isSuccess && accessCheckQuery.data === true);
 
   // Fetch marché details
@@ -105,7 +117,7 @@ export const useMarcheDataQueries = (id: string | undefined) => {
   });
 
   // Determine if subsequent queries should run
-  const shouldContinue = (roleQuery.data === 'ADMIN') || 
+  const shouldContinue = (roleQuery.data === 'ADMIN' && !!id && !accessCheckQuery.isError) || 
                         (!!marcheQuery.data && !marcheQuery.isError && 
                          !accessCheckQuery.isError && accessCheckQuery.data === true);
 
