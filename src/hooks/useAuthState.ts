@@ -6,6 +6,7 @@ import { fetchUserProfile } from '@/services/authService';
 
 /**
  * Custom hook to handle authentication state with improved session management
+ * and database error handling
  */
 export const useAuthState = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -13,8 +14,9 @@ export const useAuthState = () => {
   const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  // Function to safely load user profile with error handling
+  // Function to safely load user profile with error handling and retries
   const loadUserProfile = useCallback(async (userId: string) => {
     try {
       setAuthError(null); // Clear previous errors
@@ -28,9 +30,22 @@ export const useAuthState = () => {
       
       if (error) {
         console.error('Error loading profile:', error);
+        
+        // Si l'erreur concerne une base de données, nous réessayons
+        if (error.message && error.message.includes("Database error") && retryCount < 3) {
+          console.log(`Database error detected, retrying (${retryCount + 1}/3)...`);
+          setRetryCount(prev => prev + 1);
+          // Attendre avant de réessayer
+          setTimeout(() => loadUserProfile(userId), 1000);
+          return;
+        }
+        
         setAuthError('Erreur lors du chargement du profil');
         return;
       }
+      
+      // Réinitialiser le compteur de tentatives en cas de succès
+      setRetryCount(0);
       
       if (data) {
         setProfile(data);
@@ -42,7 +57,7 @@ export const useAuthState = () => {
       console.error('Exception loading profile:', err);
       setAuthError('Exception lors du chargement du profil');
     }
-  }, []);
+  }, [retryCount]);
 
   // Clear all auth state
   const clearAuthState = useCallback(() => {
@@ -50,6 +65,7 @@ export const useAuthState = () => {
     setUser(null);
     setProfile(null);
     setAuthError(null);
+    setRetryCount(0);
   }, []);
 
   // Handle auth state changes with improved error handling

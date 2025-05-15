@@ -6,8 +6,7 @@ import {
   signInWithEmail, 
   signUpWithEmail, 
   signOutUser, 
-  updateUserProfile,
-  fetchUserProfile 
+  updateUserProfile
 } from '@/services/authService';
 
 // Create the context with undefined as initial value
@@ -47,7 +46,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   ) => {
     try {
       setLoginInProgress(true);
-      return await signUpWithEmail(email, password, userData);
+      const result = await signUpWithEmail(email, password, userData);
+      
+      // Retry logic for database errors
+      if (result.error?.message?.includes("Database error")) {
+        console.log("Database error detected, retrying sign up after delay...");
+        await new Promise(resolve => setTimeout(resolve, 1500)); // Wait 1.5s before retry
+        return await signUpWithEmail(email, password, userData);
+      }
+      
+      return result;
     } catch (error) {
       console.error("Unexpected error in sign-up:", error);
       return { error };

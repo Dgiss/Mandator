@@ -1,55 +1,39 @@
 
 import { supabase } from '@/lib/supabase';
-import { toast } from 'sonner';
 import { UserProfileData } from '@/types/auth';
 
 /**
- * Sign in with email and password avec gestion améliorée des erreurs
+ * Connexion avec email et mot de passe
+ * @param email Email de l'utilisateur
+ * @param password Mot de passe
+ * @returns Le résultat de la connexion
  */
 export const signInWithEmail = async (email: string, password: string) => {
   try {
-    console.log(`Tentative de connexion pour ${email}`);
-    
-    // Ajout d'un délai minime pour éviter les conflits potentiels
-    await new Promise(resolve => setTimeout(resolve, 10));
-    
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+    const { data, error } = await supabase.auth.signInWithPassword({ 
+      email, 
+      password 
     });
-
+    
     if (error) {
-      console.error("Erreur d'authentification:", error);
-      
-      // Gestion spécifique pour l'erreur "Database error querying schema"
-      if (error.message?.includes("Database error querying schema") || error.message?.includes("querying")) {
-        toast.error(`Erreur temporaire du serveur. Veuillez réessayer.`);
-        return { error: { message: "Erreur temporaire, merci de réessayer" } };
-      }
-      
-      toast.error(`Erreur de connexion: ${error.message}`);
+      console.error("Error during sign in:", error);
       return { error };
     }
-
-    // Vérifier si la session est bien créée
-    if (!data.session) {
-      console.error("Session non créée après authentification");
-      toast.error("Erreur de connexion: Session non créée");
-      return { error: { message: "Session non créée" } };
-    }
-
-    console.log("Connexion réussie:", data.user?.id);
-    toast.success('Connexion réussie !');
-    return { data, error: null };
-  } catch (error: any) {
-    console.error("Exception lors de la connexion:", error);
-    toast.error(`Erreur de connexion: ${error.message || "Problème inattendu"}`);
-    return { error };
+    
+    return { data };
+  } catch (err) {
+    console.error("Exception in signInWithEmail:", err);
+    return { error: err };
   }
 };
 
 /**
- * Sign up with email and password avec gestion améliorée des profils et des erreurs
+ * Inscription avec email, mot de passe et données utilisateur
+ * Version améliorée avec gestion des erreurs pour le problème de confirmation d'email
+ * @param email Email de l'utilisateur
+ * @param password Mot de passe
+ * @param userData Données supplémentaires (nom, prénom, etc.)
+ * @returns Le résultat de l'inscription
  */
 export const signUpWithEmail = async (
   email: string, 
@@ -57,204 +41,105 @@ export const signUpWithEmail = async (
   userData?: UserProfileData
 ) => {
   try {
-    console.log(`Tentative d'inscription pour ${email}`, userData);
-    
-    // Add email to user metadata
-    const userMetadata = {
-      ...userData,
-      email: email
-    };
-
-    // Inscription via Supabase Auth
+    // 1. Inscription de l'utilisateur
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: userMetadata,
-        emailRedirectTo: window.location.origin + '/auth'
+        data: {
+          ...userData,
+          role_global: 'STANDARD' // Par défaut, tous les nouveaux utilisateurs sont standard
+        },
+        emailRedirectTo: `${window.location.origin}/auth?signupConfirm=true`
       }
     });
-
+    
     if (error) {
-      console.error("Erreur d'inscription:", error);
-      toast.error(`Erreur d'inscription: ${error.message}`);
+      console.error("Error during sign up:", error);
       return { error };
     }
-
-    if (!data.user) {
-      console.error("Utilisateur non créé après inscription");
-      toast.error("Erreur d'inscription: Utilisateur non créé");
-      return { error: { message: "Utilisateur non créé" } };
+    
+    // 2. Si l'inscription réussit mais que l'utilisateur n'est pas confirmé
+    // Nous indiquons à l'utilisateur qu'il doit confirmer son email
+    if (!data.user?.email_confirmed_at) {
+      console.log("User created but email not confirmed. Check your inbox.");
     }
-
-    // Création manuelle du profil pour assurer la synchronisation, avec gestion plus robuste
-    console.log("Création manuelle du profil pour:", data.user.id);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 100)); // Court délai pour permettre à l'utilisateur d'être créé complètement
-      
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: data.user.id,
-          email: email,
-          nom: userData?.nom || '',
-          prenom: userData?.prenom || '',
-          entreprise: userData?.entreprise || '',
-          role_global: 'STANDARD'
-        }, { 
-          onConflict: 'id',
-          ignoreDuplicates: false
-        });
-        
-      if (profileError) {
-        console.warn('Avertissement création de profil:', profileError);
-        toast.warning("L'inscription a réussi mais avec un avertissement sur le profil");
-      }
-    } catch (profileErr) {
-      console.warn('Exception création de profil:', profileErr);
-      toast.warning("L'inscription a réussi mais avec une erreur sur le profil");
-    }
-
-    console.log("Inscription réussie:", data.user.id);
-    toast.success('Inscription réussie ! Veuillez vérifier votre email.');
-    return { data, error: null };
-  } catch (error: any) {
-    console.error("Exception lors de l'inscription:", error);
-    toast.error(`Erreur d'inscription: ${error.message}`);
-    return { error };
+    
+    return { data };
+  } catch (err) {
+    console.error("Exception in signUpWithEmail:", err);
+    return { error: err };
   }
 };
 
 /**
- * Sign out current user avec nettoyage amélioré
+ * Déconnexion
+ * @returns Le résultat de la déconnexion
  */
 export const signOutUser = async () => {
   try {
-    console.log("Tentative de déconnexion");
-    const { error } = await supabase.auth.signOut({
-      scope: 'local' // Déconnecter uniquement sur cet appareil
-    });
+    const { error } = await supabase.auth.signOut();
     
     if (error) {
-      console.error('Erreur lors de la déconnexion:', error);
-      toast.error(`Erreur de déconnexion: ${error.message}`);
+      console.error("Error during sign out:", error);
       return { error };
     }
     
-    // Vider le localStorage pour être sûr
-    localStorage.removeItem('supabase.auth.token');
-    
-    console.log("Déconnexion réussie");
-    toast.success('Déconnexion réussie !');
-    return { error: null };
-  } catch (error: any) {
-    console.error('Exception lors de la déconnexion:', error);
-    toast.error(`Erreur de déconnexion: ${error.message}`);
-    return { error };
+    return { success: true };
+  } catch (err) {
+    console.error("Exception in signOutUser:", err);
+    return { error: err };
   }
 };
 
 /**
- * Fetch user profile data avec gestion améliorée des erreurs
+ * Mise à jour du profil utilisateur
+ * @param userId ID de l'utilisateur
+ * @param data Données à mettre à jour
+ * @returns Le résultat de la mise à jour
  */
-export const fetchUserProfile = async (userId: string) => {
+export const updateUserProfile = async (userId: string, data: UserProfileData) => {
   try {
-    console.log(`Récupération du profil pour ${userId}`);
-    
-    if (!userId) {
-      console.error('fetchUserProfile appelé sans userId');
-      return { data: null, error: { message: "ID utilisateur manquant" } };
-    }
-    
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-
-    if (error) {
-      console.error('Erreur lors du chargement du profil:', error);
-      
-      // Si le profil n'existe pas, essayez de le créer
-      if (error.code === 'PGRST116') {
-        console.log("Profil non trouvé, tentative de création...");
-        const authUser = await supabase.auth.getUser();
-        
-        if (authUser.data?.user) {
-          const { data: newProfile, error: createError } = await supabase
-            .from('profiles')
-            .upsert({
-              id: userId,
-              email: authUser.data.user.email,
-              role_global: 'STANDARD'
-            }, {
-              onConflict: 'id'
-            });
-            
-          if (!createError) {
-            console.log("Profil créé avec succès");
-            return { data: newProfile, error: null };
-          } else {
-            console.error('Échec de création du profil:', createError);
-            return { data: null, error: createError };
-          }
-        }
-      }
-      
-      return { data: null, error };
-    }
-
-    console.log("Profil récupéré avec succès");
-    return { data, error: null };
-  } catch (error: any) {
-    console.error('Exception lors du chargement du profil:', error);
-    return { data: null, error };
-  }
-};
-
-/**
- * Update user profile
- */
-export const updateUserProfile = async (
-  userId: string, 
-  data: UserProfileData
-) => {
-  if (!userId) {
-    return { error: { message: "Aucun utilisateur connecté" } };
-  }
-
-  try {
-    console.log(`Mise à jour du profil pour ${userId}`, data);
-    
-    // Update email in auth.users if email was changed
-    if (data.email) {
-      const { error: updateAuthError } = await supabase.auth.updateUser({
-        email: data.email
-      });
-
-      if (updateAuthError) {
-        toast.error(`Erreur de mise à jour de l'email: ${updateAuthError.message}`);
-        return { error: updateAuthError };
-      }
-    }
-
+    // Mettre à jour le profil dans la base de données
     const { error } = await supabase
       .from('profiles')
       .update(data)
       .eq('id', userId);
-
+    
     if (error) {
-      toast.error(`Erreur de mise à jour du profil: ${error.message}`);
+      console.error("Error updating profile:", error);
       return { error };
     }
-
-    toast.success('Profil mis à jour avec succès !');
-    return { error: null };
-  } catch (error: any) {
-    toast.error(`Erreur de mise à jour du profil: ${error.message}`);
-    return { error };
+    
+    return { success: true };
+  } catch (err) {
+    console.error("Exception in updateUserProfile:", err);
+    return { error: err };
   }
 };
 
-// Export logout for backward compatibility
-export { logout } from '@/utils/auth/logout';
+/**
+ * Récupération des données du profil utilisateur
+ * @param userId ID de l'utilisateur
+ * @returns Les données du profil utilisateur
+ */
+export const fetchUserProfile = async (userId: string) => {
+  try {
+    // Récupérer le profil de l'utilisateur dans la base de données
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle(); // Utilisation de maybeSingle pour éviter les erreurs quand aucun résultat n'est trouvé
+    
+    if (error) {
+      console.error("Error fetching profile:", error);
+      return { error };
+    }
+    
+    return { data };
+  } catch (err) {
+    console.error("Exception in fetchUserProfile:", err);
+    return { error: err };
+  }
+};
