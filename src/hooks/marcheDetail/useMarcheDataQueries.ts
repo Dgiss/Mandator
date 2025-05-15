@@ -2,23 +2,20 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchMarcheById } from '@/services/marches';
 import { supabase } from '@/lib/supabase';
-import { visasService } from '@/services/visasService';
 import { useToast } from '@/hooks/use-toast';
-import { hasAccessToMarche } from '@/utils/auth';
-import { getGlobalUserRole } from '@/utils/auth/roles';
 
 /**
  * Hook that manages data fetching queries for a marché
- * Accès temporairement autorisé pour tous
+ * Accès autorisé pour tous
  */
 export const useMarcheDataQueries = (id: string | undefined) => {
   const { toast } = useToast();
 
-  // Access check is temporarily bypassed - always true
+  // Access check is bypassed - always true
   const accessCheckQuery = useQuery({
     queryKey: ['marche-access', id],
     queryFn: async () => {
-      console.log(`Accès temporairement autorisé pour tous au marché ${id}`);
+      console.log(`Accès autorisé pour tous au marché ${id}`);
       return true;
     },
     enabled: !!id,

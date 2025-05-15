@@ -8,7 +8,7 @@ import { Marche } from './types';
  */
 export const fetchMarches = async (): Promise<Marche[]> => {
   try {
-    console.log("Récupération de tous les marchés (accès temporairement autorisé pour tous)...");
+    console.log("Récupération de tous les marchés...");
     
     // Vérifier que le client Supabase est correctement initialisé
     if (!supabase) {
@@ -16,10 +16,11 @@ export const fetchMarches = async (): Promise<Marche[]> => {
       throw new Error("Client Supabase non initialisé");
     }
     
-    // Requête directe sans vérification d'accès
+    // Requête directe avec la politique RLS simplifiée
     const { data, error } = await supabase
       .from('marches')
-      .select('*');
+      .select('*')
+      .order('datecreation', { ascending: false });
       
     if (error) {
       console.error('Erreur lors de la récupération des marchés:', error);
@@ -47,8 +48,6 @@ export const fetchMarches = async (): Promise<Marche[]> => {
     return formattedMarches as Marche[];
   } catch (error) {
     console.error('Exception lors de la récupération des marchés:', error);
-    // Ne pas laisser remonter l'erreur, mais retourner un tableau vide
-    console.warn("Retour d'un tableau vide suite à une erreur");
     return [];
   }
 };
