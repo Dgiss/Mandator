@@ -1,551 +1,213 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogFooter, 
-  DialogTrigger 
-} from '@/components/ui/dialog';
-import { 
-  Form, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormControl, 
-  FormMessage,
-  FormDescription
-} from '@/components/ui/form';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
+
+import React, { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Slider } from '@/components/ui/slider';
-import { Plus, Edit, Upload, X, File } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { useQuery } from '@tanstack/react-query';
-import { useDropzone } from 'react-dropzone';
-import { checkBucket } from '@/utils/storage-setup';
-import { Fascicule } from '@/services/types';
+import { getGlobalUserRole } from '@/utils/auth/roles';
 
-interface FasciculeFormProps {
+interface MarcheFasciculeFormProps {
+  onClose: (refreshNeeded?: boolean) => void;
   marcheId: string;
-  onFasciculeCreated?: () => void;
-  editingFascicule: Fascicule | null;
-  setEditingFascicule: (fascicule: Fascicule | null) => void;
+  fascicule?: any;
 }
 
-const fasciculeFormSchema = z.object({
-  name: z.string().min(1, { message: 'Le nom est requis' }),
-  description: z.string().min(1, { message: 'La description est requise' }),
-  marche_id: z.string().min(1, { message: 'Le marché est requis' }),
-  nombredocuments: z.coerce.number().min(0).default(0),
-  progression: z.number().min(0).max(100).default(0)
-});
-
-type FasciculeFormValues = z.infer<typeof fasciculeFormSchema>;
-
-// Helper function to sanitize file names
-const sanitizeFileName = (name: string) => name
-  .normalize('NFD')
-  .replace(/[\u0300-\u036f]/g, '')
-  .replace(/[^a-zA-Z0-9.]/g, '-');
-
-const MarcheFasciculeForm: React.FC<FasciculeFormProps> = ({ 
-  marcheId, 
-  onFasciculeCreated, 
-  editingFascicule,
-  setEditingFascicule 
-}) => {
-  const [open, setOpen] = useState(false);
-  const [files, setFiles] = useState<File[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const [userGlobalRole, setUserGlobalRole] = useState<string | null>(null);
+const MarcheFasciculeForm: React.FC<MarcheFasciculeFormProps> = ({ onClose, marcheId, fascicule }) => {
+  const [nom, setNom] = useState<string>(fascicule?.nom || '');
+  const [description, setDescription] = useState<string>(fascicule?.description || '');
+  const [loading, setLoading] = useState<boolean>(false);
   const { toast } = useToast();
+  
+  const isEdit = !!fascicule;
+  const title = isEdit ? "Modifier le fascicule" : "Nouveau fascicule";
 
-  // First, determine the user's global role to optimize further queries
-  useEffect(() => {
-    const getUserRole = async () => {
-      try {
-        // Get current user
-        const { data: userData } = await supabase.auth.getUser();
-        if (!userData?.user) {
-          console.error('User not authenticated');
-          return;
-        }
-
-        // Get user's global role directly from profiles
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('role_global')
-          .eq('id', userData.user.id)
-          .single();
-          
-        if (profileError) {
-          console.error('Error fetching user role:', profileError);
-          return;
-        }
-        
-        setUserGlobalRole(profileData?.role_global || null);
-        console.log('User global role:', profileData?.role_global);
-      } catch (error) {
-        console.error('Error determining user role:', error);
-      }
-    };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    getUserRole();
-  }, []);
-
-  // Récupérer la liste des marchés pour le dropdown - Modified to handle admin bypass
-  const { data: marches = [] } = useQuery({
-    queryKey: ['marches-for-select', userGlobalRole],
-    queryFn: async () => {
-      try {
-        // If user is admin, fetch all marchés directly
-        if (userGlobalRole === 'ADMIN') {
-          console.log('Admin user - fetching all marchés');
-          const { data, error } = await supabase
-            .from('marches')
-            .select('id, titre')
-            .order('titre');
-            
-          if (error) throw error;
-          return data || [];
-        }
-        
-        // Otherwise use the RPC function for non-admin users
-        console.log('Standard user - fetching accessible marchés');
-        const { data, error } = await supabase
-          .rpc('get_accessible_marches_for_user');
-          
-        if (error) {
-          // If RPC fails, try a more direct approach
-          console.error('RPC failed, trying direct query with join:', error);
-          
-          // Get current user
-          const { data: userData } = await supabase.auth.getUser();
-          if (!userData?.user) throw new Error('User not authenticated');
-          
-          // Try a direct query with join to get marchés where user has access
-          const { data: directData, error: directError } = await supabase
-            .from('marches')
-            .select('id, titre')
-            .or(`user_id.eq.${userData.user.id},id.in.(select marche_id from droits_marche where user_id = '${userData.user.id}')`)
-            .order('titre');
-            
-          if (directError) throw directError;
-          return directData || [];
-        }
-        
-        // Return results from the RPC call
-        const marchesWithTitles = data.map((marche: any) => ({
-          id: marche.id,
-          titre: marche.titre || 'Sans titre'
-        }));
-        
-        return marchesWithTitles;
-      } catch (e) {
-        console.error('Error fetching marchés for dropdown:', e);
-        // Last resort - return at least the current marché if we have it
-        if (marcheId) {
-          return [{ id: marcheId, titre: 'Marché actuel' }];
-        }
-        return [];
-      }
-    },
-    enabled: !!userGlobalRole, // Only run once we know the user's role
-    staleTime: 5 * 60 * 1000 // Cache for 5 minutes
-  });
-
-  const form = useForm<FasciculeFormValues>({
-    resolver: zodResolver(fasciculeFormSchema),
-    defaultValues: {
-      name: '',
-      description: '',
-      marche_id: marcheId,
-      nombredocuments: 0,
-      progression: 0
-    }
-  });
-
-  // Initialize dropzone
-  const { getRootProps, getInputProps } = useDropzone({
-    onDrop: acceptedFiles => {
-      setFiles(prevFiles => [...prevFiles, ...acceptedFiles]);
-    },
-    multiple: true
-  });
-
-  // Update form when editing a fascicule or when marcheId changes
-  useEffect(() => {
-    if (editingFascicule) {
-      form.reset({
-        name: editingFascicule.nom,
-        description: editingFascicule.description || '',
-        marche_id: editingFascicule.marche_id || marcheId,
-        nombredocuments: editingFascicule.nombredocuments || 0,
-        progression: editingFascicule.progression || 0
+    if (!nom.trim()) {
+      toast({
+        title: "Erreur",
+        description: "Le nom du fascicule est obligatoire",
+        variant: "destructive",
       });
-      setOpen(true);
-    } else if (marcheId) {
-      form.setValue('marche_id', marcheId);
+      return;
     }
-  }, [editingFascicule, marcheId, form]);
 
-  // Remove a file from the list
-  const removeFile = (indexToRemove: number) => {
-    setFiles(files.filter((_, index) => index !== indexToRemove));
-  };
-
-  // Upload files to Supabase storage
-  const uploadFiles = async (fasciculeId: string) => {
-    if (files.length === 0) return [];
-
-    // Ensure bucket exists
-    await checkBucket('fascicule-attachments');
-    
-    const uploadPromises = files.map(async (file) => {
-      try {
-        const fileName = `${Date.now()}_${sanitizeFileName(file.name)}`;
-        const filePath = `${fasciculeId}/${fileName}`;
-        
-        const { data, error } = await supabase.storage
-          .from('fascicule-attachments')
-          .upload(filePath, file);
-          
-        if (error) throw error;
-        
-        return {
-          name: file.name,
-          path: filePath,
-          type: file.type,
-          size: file.size
-        };
-      } catch (error) {
-        console.error("Error uploading file:", error);
-        toast({
-          title: "Erreur",
-          description: `Échec du téléchargement de ${file.name}`,
-          variant: "destructive",
-        });
-        return null;
-      }
-    });
-    
-    return (await Promise.all(uploadPromises)).filter(Boolean);
-  };
-
-  const onSubmit = async (values: FasciculeFormValues) => {
-    const isEditing = !!editingFascicule;
-    setUploading(true);
+    setLoading(true);
     
     try {
-      // Prepare data for database
-      const fasciculeData = {
-        nom: values.name,
-        description: values.description,
-        marche_id: values.marche_id,
-        nombredocuments: values.nombredocuments,
-        progression: values.progression,
-        datemaj: new Date().toLocaleDateString('fr-FR')
-      };
-      
+      // Vérifier le rôle global pour éviter les erreurs de récursion
+      const globalRole = await getGlobalUserRole();
       let result;
-      let fasciculeId;
       
-      if (isEditing) {
-        // Update existing fascicule
-        fasciculeId = editingFascicule.id;
-        result = await supabase
-          .from('fascicules')
-          .update(fasciculeData)
-          .eq('id', fasciculeId);
-      } else {
-        // Insert new fascicule
-        result = await supabase
-          .from('fascicules')
-          .insert([fasciculeData])
-          .select();
-          
-        if (result.data && result.data.length > 0) {
-          fasciculeId = result.data[0].id;
-        }
-      }
-      
-      if (result.error) {
-        throw new Error(result.error.message);
-      }
-      
-      // Upload files if any
-      if (files.length > 0 && fasciculeId) {
-        const uploadedFiles = await uploadFiles(fasciculeId);
+      // Utiliser une approche différente selon le rôle pour éviter la récursion
+      if (globalRole === 'ADMIN') {
+        console.log('Utilisateur ADMIN - utilisation d\'une insertion directe');
         
-        // Register attachments in documents table
-        if (uploadedFiles.length > 0) {
-          const documentsToInsert = uploadedFiles.map(file => ({
-            nom: file.name,
-            type: file.type.split('/').pop() || 'document',
-            statut: 'Nouveau',
-            version: '1.0',
-            taille: `${Math.round(file.size / 1024)} KB`,
-            marche_id: values.marche_id,
-            fascicule_id: fasciculeId,
-            dateUpload: new Date().toISOString(),
-            file_path: file.path,
-            description: `Pièce jointe pour le fascicule: ${values.name}`
-          }));
-          
-          const { error: docError } = await supabase
-            .from('documents')
-            .insert(documentsToInsert);
-            
-          if (docError) {
-            console.error("Error registering attachments:", docError);
-            toast({
-              title: "Attention",
-              description: "Les fichiers ont été téléversés mais n'ont pas pu être enregistrés dans la base de documents",
-              variant: "default", // Changed from "warning" to "default" to match accepted variants
+        if (isEdit) {
+          // Mise à jour
+          result = await supabase
+            .from('fascicules')
+            .update({
+              nom,
+              description,
+              datemaj: new Date().toISOString(),
+            })
+            .eq('id', fascicule.id);
+        } else {
+          // Création
+          result = await supabase
+            .from('fascicules')
+            .insert({
+              nom,
+              description,
+              marche_id: marcheId,
+              datemaj: new Date().toISOString(),
+              nombredocuments: 0,
+              progression: 0,
             });
+        }
+      } else {
+        // Pour les non-admin, essayer d'utiliser une fonction RPC plus sûre
+        try {
+          if (isEdit) {
+            result = await supabase.rpc(
+              'update_fascicule',
+              {
+                fascicule_id: fascicule.id,
+                fascicule_nom: nom,
+                fascicule_description: description
+              }
+            );
+          } else {
+            result = await supabase.rpc(
+              'create_fascicule',
+              {
+                marche_id_param: marcheId,
+                fascicule_nom: nom,
+                fascicule_description: description
+              }
+            );
+          }
+          
+          // Si la RPC échoue (n'existe pas), faire une insertion directe
+          if (result.error && result.error.message.includes('does not exist')) {
+            console.log('La fonction RPC n\'existe pas, utilisation d\'une requête directe');
+            
+            if (isEdit) {
+              result = await supabase
+                .from('fascicules')
+                .update({
+                  nom,
+                  description,
+                  datemaj: new Date().toISOString(),
+                })
+                .eq('id', fascicule.id);
+            } else {
+              result = await supabase
+                .from('fascicules')
+                .insert({
+                  nom,
+                  description,
+                  marche_id: marcheId,
+                  datemaj: new Date().toISOString(),
+                  nombredocuments: 0,
+                  progression: 0,
+                });
+            }
+          }
+        } catch (rpcError) {
+          console.error('Erreur RPC:', rpcError);
+          
+          // Fallback à une requête directe
+          if (isEdit) {
+            result = await supabase
+              .from('fascicules')
+              .update({
+                nom,
+                description,
+                datemaj: new Date().toISOString(),
+              })
+              .eq('id', fascicule.id);
+          } else {
+            result = await supabase
+              .from('fascicules')
+              .insert({
+                nom,
+                description,
+                marche_id: marcheId,
+                datemaj: new Date().toISOString(),
+                nombredocuments: 0,
+                progression: 0,
+              });
           }
         }
       }
-      
+
+      if (result?.error) {
+        throw result.error;
+      }
+
       toast({
-        title: isEditing ? "Fascicule modifié" : "Fascicule créé",
-        description: isEditing 
-          ? "Le fascicule a été modifié avec succès" 
-          : "Le fascicule a été créé avec succès",
-        variant: "default",
+        title: "Succès",
+        description: isEdit ? "Fascicule mis à jour" : "Fascicule créé",
       });
       
-      form.reset();
-      setOpen(false);
-      setEditingFascicule(null);
-      setFiles([]);
-      
-      if (onFasciculeCreated) {
-        onFasciculeCreated();
-      }
+      onClose(true);
     } catch (error) {
-      console.error('Erreur lors de l\'opération sur le fascicule:', error);
+      console.error('Erreur lors de la sauvegarde du fascicule:', error);
       toast({
         title: "Erreur",
-        description: "Une erreur s'est produite lors de l'opération sur le fascicule",
+        description: "Impossible de sauvegarder le fascicule",
         variant: "destructive",
       });
     } finally {
-      setUploading(false);
+      setLoading(false);
     }
   };
-
-  const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      setEditingFascicule(null);
-      form.reset();
-      setFiles([]);
-    }
-    setOpen(newOpen);
-  };
-
-  const dialogTitle = editingFascicule ? "Modifier le fascicule" : "Créer un nouveau fascicule";
-  const submitButtonText = editingFascicule ? "Enregistrer les modifications" : "Créer le fascicule";
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button className="flex items-center">
-          {editingFascicule ? (
-            <>
-              <Edit className="mr-2 h-4 w-4" /> Modifier
-            </>
-          ) : (
-            <>
-              <Plus className="mr-2 h-4 w-4" /> Nouveau fascicule
-            </>
-          )}
-        </Button>
-      </DialogTrigger>
-      
-      <DialogContent className="sm:max-w-[650px]">
+    <Dialog open={true} onOpenChange={() => onClose()}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{dialogTitle}</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nom du fascicule*</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Fascicule technique" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Nom du fascicule</Label>
+            <Input
+              id="name"
+              value={nom}
+              onChange={(e) => setNom(e.target.value)}
+              placeholder="Nom du fascicule"
+              required
             />
-            
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description*</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Description détaillée du fascicule..." 
-                      className="min-h-[100px]" 
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Description du fascicule"
+              rows={3}
             />
-            
-            <FormField
-              control={form.control}
-              name="marche_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Marché associé*</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner un marché" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {marches.map((marche: any) => (
-                        <SelectItem key={marche.id} value={marche.id}>
-                          {marche.titre}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="nombredocuments"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nombre de documents</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      min="0" 
-                      {...field} 
-                      onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Ce nombre sera mis à jour automatiquement lorsque des documents sont ajoutés
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="progression"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Progression ({field.value}%)</FormLabel>
-                  <FormControl>
-                    <Slider
-                      min={0}
-                      max={100}
-                      step={1}
-                      defaultValue={[field.value]}
-                      onValueChange={(values) => field.onChange(values[0])}
-                      className="pt-5 pb-1"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* File upload section */}
-            <div className="space-y-4">
-              <FormLabel>Pièces jointes</FormLabel>
-              <div 
-                {...getRootProps()} 
-                className="border-2 border-dashed border-gray-300 rounded-md p-6 cursor-pointer hover:bg-gray-50 transition-colors"
-              >
-                <input {...getInputProps()} />
-                <div className="flex flex-col items-center justify-center text-center">
-                  <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                  <p className="text-sm font-medium">Cliquez ou glissez-déposez vos fichiers ici</p>
-                  <p className="text-xs text-gray-500 mt-1">PDF, DOC, DOCX, XLS, XLSX, Images</p>
-                </div>
-              </div>
-              
-              {files.length > 0 && (
-                <div className="mt-4">
-                  <h4 className="text-sm font-medium mb-2">Fichiers sélectionnés ({files.length})</h4>
-                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                    {files.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded border">
-                        <div className="flex items-center">
-                          <File className="w-4 h-4 mr-2 flex-shrink-0" />
-                          <span className="text-sm truncate max-w-[300px]">{file.name}</span>
-                          <span className="text-xs text-gray-500 ml-2">({(file.size / 1024).toFixed(1)} KB)</span>
-                        </div>
-                        <Button 
-                          type="button" 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 w-8 p-0" 
-                          onClick={() => removeFile(index)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            
-            <DialogFooter className="mt-6">
-              <Button 
-                variant="outline" 
-                type="button" 
-                onClick={() => handleOpenChange(false)}
-                disabled={uploading}
-              >
-                Annuler
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={uploading}
-              >
-                {uploading ? "Téléchargement en cours..." : submitButtonText}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+          </div>
+          
+          <DialogFooter className="pt-4">
+            <Button type="button" variant="outline" onClick={() => onClose()} disabled={loading}>
+              Annuler
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Enregistrement...' : isEdit ? 'Mettre à jour' : 'Créer'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
