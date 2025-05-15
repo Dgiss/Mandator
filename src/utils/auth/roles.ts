@@ -188,3 +188,77 @@ export const canCreateMarches = async (): Promise<boolean> => {
   const role = await getGlobalUserRole();
   return role === 'ADMIN' || role === 'MOE';
 };
+
+/**
+ * Helper function to get all user roles and permissions in one call
+ * This avoids multiple separate database calls that can cause recursion issues
+ */
+export const getUserPermissions = async (marcheId?: string): Promise<{
+  globalRole: UserRole | null,
+  specificRole?: MarcheSpecificRole | null,
+  isCreator?: boolean,
+  hasAccess?: boolean
+}> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { globalRole: null };
+    
+    // Get global role
+    const globalRole = await getGlobalUserRole();
+    
+    // If ADMIN, no need for further checks
+    if (globalRole === 'ADMIN') {
+      return { 
+        globalRole, 
+        specificRole: 'ADMIN', 
+        isCreator: true,
+        hasAccess: true 
+      };
+    }
+    
+    // If no marcheId provided, just return global role
+    if (!marcheId) {
+      return { globalRole };
+    }
+    
+    // For specific market, get direct database info
+    const [marketData, rightData] = await Promise.allSettled([
+      // Check if user is creator
+      supabase
+        .from('marches')
+        .select('user_id')
+        .eq('id', marcheId)
+        .single(),
+      
+      // Check if user has specific rights
+      supabase
+        .from('droits_marche')
+        .select('role_specifique')
+        .eq('user_id', user.id)
+        .eq('marche_id', marcheId)
+        .single()
+    ]);
+    
+    // Process results
+    const isCreator = marketData.status === 'fulfilled' && 
+                     !marketData.value.error && 
+                     marketData.value.data?.user_id === user.id;
+                     
+    const specificRole = rightData.status === 'fulfilled' && 
+                         !rightData.value.error ? 
+                         rightData.value.data?.role_specifique as MarcheSpecificRole : 
+                         null;
+    
+    const hasAccess = isCreator || specificRole !== null;
+    
+    return {
+      globalRole,
+      specificRole: isCreator && !specificRole ? 'MOE' : specificRole,
+      isCreator,
+      hasAccess
+    };
+  } catch (error) {
+    console.error('Error getting user permissions:', error);
+    return { globalRole: null };
+  }
+};

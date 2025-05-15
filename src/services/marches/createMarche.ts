@@ -30,131 +30,104 @@ export const createMarche = async (marcheData: MarcheCreateData): Promise<Marche
       }
     }
     
-    // Nettoyer les valeurs undefined qui peuvent causer des problèmes
-    const cleanedData = { ...marcheData };
-    Object.keys(cleanedData).forEach(key => {
-      if (cleanedData[key] === undefined) {
-        delete cleanedData[key];
+    // Nettoyer les données d'entrée pour éviter les erreurs
+    let cleanedData: Record<string, any> = {};
+    
+    // Copier uniquement les champs valides (non undefined/non objets complexes)
+    Object.keys(marcheData).forEach(key => {
+      const value = marcheData[key];
+      if (value !== undefined) {
+        // Convertir les objets complexes en valeurs simples
+        if (value !== null && typeof value === 'object') {
+          if ('_type' in value && value._type === 'undefined') {
+            cleanedData[key] = null;
+          } else if (typeof value.toString === 'function') {
+            cleanedData[key] = value.toString();
+          } else {
+            cleanedData[key] = null;
+          }
+        } else {
+          cleanedData[key] = value;
+        }
       }
     });
     
-    // Traitement pour les champs pays et région qui peuvent causer des erreurs
-    if (cleanedData.pays !== null && 
-        typeof cleanedData.pays === 'object' && 
-        cleanedData.pays !== undefined) {
-      if ('_type' in (cleanedData.pays as any) && (cleanedData.pays as any)._type === 'undefined') {
-        cleanedData.pays = null;
-      }
-    }
-    
-    if (cleanedData.region !== null && 
-        typeof cleanedData.region === 'object' && 
-        cleanedData.region !== undefined) {
-      if ('_type' in (cleanedData.region as any) && (cleanedData.region as any)._type === 'undefined') {
-        cleanedData.region = null;
-      }
-    }
-    
     console.log("Création d'un nouveau marché avec les données:", cleanedData);
     
-    // Assurer que les buckets nécessaires existent avant d'insérer le marché
-    if (cleanedData.image || cleanedData.logo) {
-      try {
-        await fileStorage.ensureBucketExists('marches', true);
-        console.log("Vérification du bucket marches terminée");
-      } catch (bucketError) {
-        // En cas d'erreur liée au bucket, on continue quand même
-        console.warn("Erreur non bloquante lors de la vérification des buckets:", bucketError);
-      }
-    }
-    
-    // Vérifier si le titre existe et n'est pas vide
+    // S'assurer que le titre est présent
     if (!cleanedData.titre || cleanedData.titre.trim() === '') {
       throw new Error('Le titre du marché est obligatoire');
     }
     
-    // Préparer les données pour l'insertion en s'assurant que les types sont corrects
-    const insertableData = {
-      titre: cleanedData.titre,
-      description: cleanedData.description || null,
-      client: cleanedData.client || null,
-      statut: cleanedData.statut || 'En attente',
-      budget: cleanedData.budget || null,
-      image: cleanedData.image || null,
-      logo: cleanedData.logo || null,
-      user_id: cleanedData.user_id,
-      datecreation: cleanedData.datecreation
-    };
-    
-    // Ajouter les champs optionnels s'ils existent
-    if (cleanedData.type_marche) insertableData['type_marche'] = cleanedData.type_marche;
-    if (cleanedData.adresse) insertableData['adresse'] = cleanedData.adresse;
-    if (cleanedData.ville) insertableData['ville'] = cleanedData.ville;
-    if (cleanedData.code_postal) insertableData['code_postal'] = cleanedData.code_postal;
-    if (cleanedData.pays && typeof cleanedData.pays === 'string') insertableData['pays'] = cleanedData.pays;
-    if (cleanedData.region && typeof cleanedData.region === 'string') insertableData['region'] = cleanedData.region;
-    if (cleanedData.date_debut) insertableData['date_debut'] = cleanedData.date_debut;
-    if (cleanedData.date_fin) insertableData['date_fin'] = cleanedData.date_fin;
-    if (cleanedData.date_notification) insertableData['date_notification'] = cleanedData.date_notification;
-    if (cleanedData.periode_preparation) insertableData['periode_preparation'] = cleanedData.periode_preparation;
-    if (cleanedData.periode_chantier) insertableData['periode_chantier'] = cleanedData.periode_chantier;
-    if (cleanedData.date_fin_gpa) insertableData['date_fin_gpa'] = cleanedData.date_fin_gpa;
-    if (cleanedData.commentaire) insertableData['commentaire'] = cleanedData.commentaire;
-    
-    // Variable pour stocker le résultat final
-    let resultData: Marche | null = null;
-    
-    // Insertion directe - plus simple et moins propice aux erreurs
-    const insertResult = await supabase
-      .from('marches')
-      .insert(insertableData)
-      .select('*')
-      .single();
-    
-    if (insertResult.error) {
-      // Gestion spécifique selon le type d'erreur
-      if (insertResult.error.code === '42P17') {
-        console.error('Erreur RLS détectée:', insertResult.error);
-        throw new Error('Problème d\'accès à la base de données - Contactez l\'administrateur');
-      } else if (insertResult.error.code === '23505') {
-        console.error('Conflit de données:', insertResult.error);
-        throw new Error('Un marché avec ces informations existe déjà');
-      } else {
-        console.error('Erreur lors de la création du marché:', insertResult.error);
-        throw new Error(`Impossible de créer le marché: ${insertResult.error.message}`);
+    // Vérifier l'existence du bucket pour les images si nécessaire
+    if (cleanedData.image || cleanedData.logo) {
+      try {
+        await fileStorage.ensureBucketExists('marches', true);
+      } catch (bucketError) {
+        console.warn("Erreur non bloquante lors de la vérification du bucket:", bucketError);
       }
     }
     
-    resultData = insertResult.data as Marche;
-    console.log("Marché créé avec succès:", resultData);
+    // Essayer d'utiliser la fonction RPC sécurisée d'abord (moins de problèmes de RLS)
+    try {
+      const { data: rpcResult, error: rpcError } = await supabase.rpc(
+        'create_new_marche',
+        { marche_data: cleanedData }
+      );
+      
+      if (!rpcError) {
+        console.log("Marché créé avec succès via RPC:", rpcResult);
+        
+        // Forcer la mise à jour du cache des droits
+        clearRoleCache();
+        
+        return rpcResult as Marche;
+      }
+      
+      console.warn("Impossible de créer le marché via RPC, tentative de fallback:", rpcError);
+    } catch (rpcException) {
+      console.warn("Exception RPC, tentative de fallback:", rpcException);
+    }
     
-    // Si marché créé avec succès, on s'assure qu'il y a bien des droits
-    if (resultData && typeof resultData === 'object' && 'id' in resultData && resultData.id && cleanedData.user_id) {
+    // Fallback: insertion directe dans la table marches
+    const { data: insertResult, error: insertError } = await supabase
+      .from('marches')
+      .insert(cleanedData)
+      .select('*')
+      .single();
+    
+    if (insertError) {
+      console.error('Erreur lors de la création du marché:', insertError);
+      throw new Error(`Impossible de créer le marché: ${insertError.message}`);
+    }
+    
+    const newMarche = insertResult as Marche;
+    console.log("Marché créé avec succès via insertion directe:", newMarche);
+    
+    // Attribuer le rôle MOE au créateur
+    if (newMarche && newMarche.id && cleanedData.user_id) {
       try {
-        // Attribuer directement le rôle MOE à l'utilisateur, sans vérification (optimisation)
         await supabase
           .from('droits_marche')
           .insert({
             user_id: cleanedData.user_id,
-            marche_id: resultData.id,
+            marche_id: newMarche.id,
             role_specifique: 'MOE'
           });
-        console.log(`Rôle MOE attribué à ${cleanedData.user_id} pour le marché ${resultData.id}`);
+        
+        console.log(`Rôle MOE attribué à ${cleanedData.user_id} pour le marché ${newMarche.id}`);
         
         // Effacer le cache des rôles pour forcer une actualisation
         clearRoleCache();
       } catch (roleError) {
-        console.error('Erreur non bloquante lors de l\'attribution du rôle MOE:', roleError);
-        // On continue même en cas d'erreur d'attribution de rôle
+        console.warn('Erreur non bloquante lors de l\'attribution du rôle MOE:', roleError);
       }
     }
     
-    return resultData;
-    
+    return newMarche;
   } catch (error: any) {
     console.error('Exception lors de la création du marché:', error);
     
-    // Transformer l'erreur pour l'affichage utilisateur
     const userFriendlyError = {
       message: error.message || 'Erreur lors de la création du marché',
       code: error.code || 'UNKNOWN',

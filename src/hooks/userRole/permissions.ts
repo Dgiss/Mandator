@@ -1,99 +1,100 @@
 
-import { UserRole, MarcheSpecificRole } from './types';
+/**
+ * Permission checking utility functions
+ * These are optimized versions of the functions from roleUtils.ts
+ */
+import { MarcheSpecificRole, UserRole } from './types';
 
 /**
- * Vérifier si un utilisateur peut diffuser des documents dans un marché
+ * Vérifie si un utilisateur peut diffuser des documents sur un marché
  */
-export function canDiffuseMarche(
-  globalRole: UserRole | null,
+export const canDiffuseMarche = (
+  globalRole: UserRole,
   marcheRoles: Record<string, MarcheSpecificRole>,
   marcheId?: string
-): boolean {
-  // Les admins peuvent tout faire
+): boolean => {
+  // Admin peut tout faire
   if (globalRole === 'ADMIN') return true;
   
-  // Si aucun marché n'est spécifié, vérifier le rôle global
+  // Si pas d'ID de marché spécifié, vérifier le rôle global
   if (!marcheId) {
-    return globalRole === 'MOE' || globalRole === 'MANDATAIRE';
+    return ['MOE', 'MANDATAIRE'].includes(globalRole);
   }
   
-  // Vérifier le rôle spécifique au marché
-  const marcheRole = marcheRoles[marcheId];
-  return marcheRole === 'MOE' || marcheRole === 'MANDATAIRE';
-}
+  // Vérifier le rôle spécifique au marché s'il existe
+  const specificRole = marcheRoles[marcheId];
+  if (!specificRole) return false;
+  
+  return ['MOE', 'MANDATAIRE'].includes(specificRole);
+};
 
 /**
- * Vérifier si un utilisateur peut viser des documents dans un marché
+ * Vérifie si un utilisateur peut viser des documents sur un marché
  */
-export function canVisaMarche(
-  globalRole: UserRole | null,
+export const canVisaMarche = (
+  globalRole: UserRole,
   marcheRoles: Record<string, MarcheSpecificRole>,
   marcheId?: string
-): boolean {
-  // Les admins peuvent tout faire
+): boolean => {
+  // Admin peut tout faire
   if (globalRole === 'ADMIN') return true;
   
-  // Si aucun marché n'est spécifié, vérifier le rôle global
+  // Si pas d'ID de marché spécifié, vérifier le rôle global
   if (!marcheId) {
-    return globalRole === 'MOE';
+    return ['CONTROLEUR', 'MANDATAIRE'].includes(globalRole);
   }
   
-  // Vérifier le rôle spécifique au marché
-  const marcheRole = marcheRoles[marcheId];
-  return marcheRole === 'MOE';
-}
+  // Vérifier le rôle spécifique au marché s'il existe
+  const specificRole = marcheRoles[marcheId];
+  if (!specificRole) return false;
+  
+  return ['CONTROLEUR', 'MANDATAIRE'].includes(specificRole);
+};
 
 /**
- * Vérifier si un utilisateur peut gérer les rôles dans un marché
+ * Vérifie si un utilisateur peut gérer les rôles sur un marché
  */
-export function canManageRolesMarche(
-  globalRole: UserRole | null,
+export const canManageRolesMarche = (
+  globalRole: UserRole,
   marcheRoles: Record<string, MarcheSpecificRole>,
   marcheId?: string
-): boolean {
-  // Les admins peuvent tout faire
+): boolean => {
+  // Admin peut tout faire
   if (globalRole === 'ADMIN') return true;
   
-  // Si aucun marché n'est spécifié, vérifier le rôle global
-  if (!marcheId) {
-    return globalRole === 'MOE';
+  // MOE a des droits de gestion sur son marché
+  if (marcheId && marcheRoles[marcheId] === 'MOE') {
+    return true;
   }
   
-  // Vérifier le rôle spécifique au marché
-  const marcheRole = marcheRoles[marcheId];
-  return marcheRole === 'MOE';
-}
+  // Par défaut, seuls les admins peuvent gérer les rôles
+  return false;
+};
 
 /**
- * Vérifier si un utilisateur peut créer des marchés
+ * Vérifie si un utilisateur peut créer des marchés
  */
-export function canCreateMarche(
-  globalRole: UserRole | null
-): boolean {
-  // Les admins peuvent toujours créer des marchés
-  if (globalRole === 'ADMIN') return true;
-  
-  // Les MOE et MANDATAIRE peuvent créer des marchés
-  return globalRole === 'MOE' || globalRole === 'MANDATAIRE';
-}
+export const canCreateMarche = (globalRole: UserRole): boolean => {
+  // Seuls les ADMIN, MOE et MANDATAIRE peuvent créer des marchés
+  return ['ADMIN', 'MOE', 'MANDATAIRE'].includes(globalRole);
+};
 
 /**
- * Vérifier si un utilisateur peut créer des fascicules dans un marché
+ * Vérifie si un utilisateur peut créer des fascicules pour un marché
  */
-export function canCreateFascicule(
-  globalRole: UserRole | null,
+export const canCreateFascicule = (
+  globalRole: UserRole,
   marcheRoles: Record<string, MarcheSpecificRole>,
   marcheId?: string
-): boolean {
-  // Les admins peuvent tout faire
+): boolean => {
+  // Admin peut tout faire
   if (globalRole === 'ADMIN') return true;
   
-  // Si aucun marché n'est spécifié, vérifier le rôle global
+  // Si pas d'ID de marché spécifié, vérifier le rôle global
   if (!marcheId) {
-    return globalRole === 'MOE';
+    return ['MOE'].includes(globalRole);
   }
   
-  // Vérifier le rôle spécifique au marché
-  const marcheRole = marcheRoles[marcheId];
-  return marcheRole === 'MOE';
-}
+  // Vérifier spécifiquement si l'utilisateur est MOE sur ce marché
+  return marcheRoles[marcheId] === 'MOE';
+};

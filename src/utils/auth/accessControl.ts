@@ -22,24 +22,7 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
     
     console.log(`Checking access to market ${marcheId} for user ${user.id}...`);
     
-    try {
-      // Utilisation de la nouvelle fonction sécurisée pour vérifier l'accès
-      const { data: accessData, error: accessError } = await supabase.rpc(
-        'check_user_marche_access_safe',
-        { user_id: user.id, marche_id: marcheId }
-      );
-      
-      if (!accessError && accessData === true) {
-        console.log(`Access granted through safe RPC function for user ${user.id} to market ${marcheId}`);
-        return true;
-      } else if (accessError) {
-        console.log(`Safe RPC function error: ${accessError.message}, trying fallback verification`);
-      }
-    } catch (rpcError) {
-      console.log(`Safe RPC function not available, trying legacy checks`);
-    }
-    
-    // HIGHEST PRIORITY: Check if user has ADMIN role first
+    // HIGHEST PRIORITY: Check if user has ADMIN role first using cached or direct query
     try {
       const globalRole = await getGlobalUserRole();
       if (globalRole === 'ADMIN') {
@@ -51,15 +34,33 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
       // Continue with other checks
     }
     
+    // Try direct check using SECURITY DEFINER RPC function
+    try {
+      const { data: accessData, error: accessError } = await supabase.rpc(
+        'check_market_access',
+        { market_id: marcheId }
+      );
+      
+      if (!accessError && accessData === true) {
+        console.log(`Access granted through RPC function for user ${user.id} to market ${marcheId}`);
+        return true;
+      } else if (accessError) {
+        console.log(`RPC function error: ${accessError.message}, trying fallback verification`);
+      }
+    } catch (rpcError) {
+      console.log(`RPC function error: ${rpcError}, trying fallback verification`);
+    }
+    
     // Check if user is creator (second highest priority)
     try {
-      const { data: marcheData, error: marcheError } = await supabase
+      // Use separate non-recursive query
+      const { data, error } = await supabase
         .from('marches')
         .select('user_id')
         .eq('id', marcheId)
         .maybeSingle();
       
-      if (!marcheError && marcheData && marcheData.user_id === user.id) {
+      if (!error && data && data.user_id === user.id) {
         console.log(`User ${user.id} is creator of market ${marcheId} - access granted`);
         return true;
       }
@@ -67,16 +68,17 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
       console.error('Error checking market creator:', creatorError);
     }
     
-    // Check for explicit rights
+    // Final check: explicit rights in droits_marche table
+    // Use direct query to avoid potential recursion
     try {
-      const { data: droitData, error: droitError } = await supabase
+      const { data, error } = await supabase
         .from('droits_marche')
         .select('id')
         .eq('user_id', user.id)
         .eq('marche_id', marcheId)
         .maybeSingle();
         
-      if (!droitError && droitData) {
+      if (!error && data) {
         console.log(`User ${user.id} has explicit rights for market ${marcheId} - access granted`);
         return true;
       }
