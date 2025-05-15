@@ -1,12 +1,13 @@
 
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { AuthContextType } from '@/types/auth';
 import { useAuthState } from '@/hooks/useAuthState';
 import { 
   signInWithEmail, 
   signUpWithEmail, 
   signOutUser, 
-  updateUserProfile 
+  updateUserProfile,
+  fetchUserProfile 
 } from '@/services/authService';
 
 // Create the context with undefined as initial value
@@ -14,10 +15,17 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { session, user, profile, loading, setProfile } = useAuthState();
+  const [loginInProgress, setLoginInProgress] = useState(false);
 
   // Sign in function
   const signIn = async (email: string, password: string) => {
-    return signInWithEmail(email, password);
+    try {
+      setLoginInProgress(true);
+      const result = await signInWithEmail(email, password);
+      return result;
+    } finally {
+      setLoginInProgress(false);
+    }
   };
 
   // Sign up function
@@ -26,7 +34,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     password: string, 
     userData?: { nom?: string; prenom?: string; entreprise?: string; email?: string }
   ) => {
-    return signUpWithEmail(email, password, userData);
+    try {
+      setLoginInProgress(true);
+      return await signUpWithEmail(email, password, userData);
+    } finally {
+      setLoginInProgress(false);
+    }
   };
 
   // Sign out function
@@ -66,6 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user, 
         profile, 
         loading, 
+        loginInProgress,
         signIn, 
         signUp, 
         signOut, 
@@ -85,6 +99,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-// Missing import from the service file
-import { fetchUserProfile } from '@/services/authService';

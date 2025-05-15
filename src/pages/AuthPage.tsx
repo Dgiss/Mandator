@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -11,13 +12,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, Mail, Key, User, Building } from 'lucide-react';
+import { FileText, Mail, Key, User, Building, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { validateField } from '@/hooks/form/validation';
 
 export default function AuthPage() {
   const navigate = useNavigate();
-  const { user, loading, signIn, signUp } = useAuth();
+  const { user, loading, signIn, signUp, loginInProgress } = useAuth();
 
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -27,7 +28,6 @@ export default function AuthPage() {
   const [prenom, setPrenom] = useState('');
   const [nom, setNom] = useState('');
   const [entreprise, setEntreprise] = useState('');
-  const [loginLoading, setLoginLoading] = useState(false);
   const [registerLoading, setRegisterLoading] = useState(false);
   const [error, setError] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -80,12 +80,10 @@ export default function AuthPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoginLoading(true);
 
     const emailError = validateEmailField(loginEmail);
     if (emailError) {
       setError(emailError);
-      setLoginLoading(false);
       return;
     }
 
@@ -96,8 +94,6 @@ export default function AuthPage() {
       }
     } catch (error: any) {
       setError(error.message || "Une erreur est survenue lors de la connexion");
-    } finally {
-      setLoginLoading(false);
     }
   };
 
@@ -135,7 +131,10 @@ export default function AuthPage() {
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <p>Chargement...</p>
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 animate-spin text-btp-blue" />
+          <p>Chargement...</p>
+        </div>
       </div>
     );
   }
@@ -239,10 +238,24 @@ export default function AuthPage() {
                         type="submit" 
                         className="w-full mt-6 bg-btp-blue hover:bg-btp-navy" 
                         variant="btpPrimary"
-                        disabled={loginLoading}
+                        disabled={loginInProgress}
                       >
-                        {loginLoading ? "Connexion en cours..." : "Se connecter"}
+                        {loginInProgress ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Connexion en cours...
+                          </>
+                        ) : (
+                          "Se connecter"
+                        )}
                       </Button>
+                      
+                      <div className="mt-4 text-center text-sm text-gray-500">
+                        <p>Utilisez un des comptes test:</p>
+                        <p className="mt-1">admin@admin.com / password</p>
+                        <p>moe@moe.com / password</p>
+                        <p>mandataire@mandataire.com / password</p>
+                      </div>
                     </form>
                   </CardContent>
                 </Card>
@@ -351,7 +364,14 @@ export default function AuthPage() {
                         variant="btpPrimary"
                         disabled={registerLoading}
                       >
-                        {registerLoading ? "Inscription en cours..." : "S'inscrire"}
+                        {registerLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Inscription en cours...
+                          </>
+                        ) : (
+                          "S'inscrire"
+                        )}
                       </Button>
                     </form>
                   </CardContent>

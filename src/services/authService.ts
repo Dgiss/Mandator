@@ -54,6 +54,29 @@ export const signUpWithEmail = async (
       return { error };
     }
 
+    // Check if we need to manually create a profile (sometimes trigger doesn't work)
+    try {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: data.user?.id,
+          email: email,
+          nom: userData?.nom || '',
+          prenom: userData?.prenom || '',
+          entreprise: userData?.entreprise || '',
+          role_global: 'STANDARD'
+        }, { 
+          onConflict: 'id',
+          ignoreDuplicates: false
+        });
+        
+      if (profileError) {
+        console.warn('Profile creation warning:', profileError);
+      }
+    } catch (profileErr) {
+      console.warn('Profile creation exception:', profileErr);
+    }
+
     toast.success('Inscription réussie ! Veuillez vérifier votre email.');
     return { error: null };
   } catch (error: any) {
@@ -97,6 +120,29 @@ export const fetchUserProfile = async (userId: string) => {
 
     if (error) {
       console.error('Erreur lors du chargement du profil:', error);
+      
+      // If profile doesn't exist, try to create it
+      if (error.code === 'PGRST116') {
+        const authUser = await supabase.auth.getUser();
+        if (authUser.data?.user) {
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .upsert({
+              id: userId,
+              email: authUser.data.user.email,
+              role_global: 'STANDARD'
+            }, {
+              onConflict: 'id'
+            });
+            
+          if (!createError) {
+            return { data: newProfile, error: null };
+          } else {
+            console.error('Failed to create profile:', createError);
+          }
+        }
+      }
+      
       return { data: null, error };
     }
 
@@ -149,5 +195,5 @@ export const updateUserProfile = async (
   }
 };
 
-// Update the import
+// Export logout for backward compatibility
 export { logout } from '@/utils/auth/logout';

@@ -7,6 +7,7 @@ export interface AuthContextType {
   user: User | null;
   profile: any | null;
   loading: boolean;
+  loginInProgress?: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any | null }>;
   signUp: (
     email: string, 

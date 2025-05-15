@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { fetchUserProfile } from '@/services/authService';
@@ -12,6 +12,20 @@ export const useAuthState = () => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Function to safely load user profile with error handling
+  const loadUserProfile = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await fetchUserProfile(userId);
+      if (error) {
+        console.error('Error loading profile:', error);
+        return;
+      }
+      setProfile(data);
+    } catch (err) {
+      console.error('Exception loading profile:', err);
+    }
+  }, []);
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -49,17 +63,7 @@ export const useAuthState = () => {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
-
-  // Function to load user profile
-  const loadUserProfile = async (userId: string) => {
-    const { data, error } = await fetchUserProfile(userId);
-    if (error) {
-      console.error('Error loading profile:', error);
-      return;
-    }
-    setProfile(data);
-  };
+  }, [loadUserProfile]);
 
   return { session, user, profile, loading, setProfile };
 };
