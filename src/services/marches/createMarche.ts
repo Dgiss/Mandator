@@ -58,7 +58,7 @@ export const createMarche = async (marcheData: MarcheCreateData): Promise<Marche
     let resultData: Marche | null = null;
     
     // Utiliser la méthode RPC au lieu d'une insertion directe pour contourner les problèmes de RLS
-    const { data, error } = await supabase.rpc("create_new_marche", {
+    const { data, error } = await supabase.rpc("create_new_marche" as any, {
       marche_data: marcheData
     });
     
@@ -92,7 +92,8 @@ export const createMarche = async (marcheData: MarcheCreateData): Promise<Marche
       
       resultData = insertResult.data as Marche;
     } else {
-      resultData = data as Marche;
+      // Use type assertion with unknown as intermediate step for type safety
+      resultData = data as unknown as Marche;
     }
     
     console.log("Marché créé avec succès:", resultData);
@@ -100,7 +101,7 @@ export const createMarche = async (marcheData: MarcheCreateData): Promise<Marche
     // Si marché créé avec succès, attribuer automatiquement les droits de MOE au créateur
     if (resultData && typeof resultData === 'object' && 'id' in resultData && resultData.id && marcheData.user_id) {
       try {
-        await supabase.rpc("assign_role_to_user", {
+        await supabase.rpc("assign_role_to_user" as any, {
           user_id: marcheData.user_id,
           marche_id: resultData.id,
           role_specifique: 'MOE'
