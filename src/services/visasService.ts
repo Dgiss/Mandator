@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase';
 import { Visa } from './types';
 
@@ -116,10 +115,9 @@ export const visasService = {
         .from('visas')
         .select('version, marche_id, document_id')
         .eq('id', visaId)
-        .maybeSingle();  // Utilisation de maybeSingle() au lieu de single()
+        .single();
       
       if (visaError) throw visaError;
-      if (!visaData) throw new Error("Visa non trouvé");
       
       // 2. Mettre à jour le visa
       const { data: updatedVisa, error: visaUpdateError } = await supabase
@@ -138,8 +136,8 @@ export const visasService = {
       let versionStatus: string;
       
       // Extraire le type de visa du commentaire
-      const isVSO = commentaire.includes('VSO:') || commentaire.toUpperCase().includes('VSO');
-      const isVAO = commentaire.includes('VAO:') || commentaire.toUpperCase().includes('VAO');
+      const isVSO = commentaire.includes('VSO:');
+      const isVAO = commentaire.includes('VAO:');
       
       if (decision === 'approuve' || isVSO) {
         // Pour VSO: Document et version marqués comme "BPE"
@@ -187,10 +185,9 @@ export const visasService = {
           .select('*')
           .eq('document_id', visaData.document_id)
           .eq('version', visaData.version)
-          .maybeSingle();  // Utilisation de maybeSingle() au lieu de single()
+          .single();
           
         if (versionFetchError) throw versionFetchError;
-        if (!versionData) throw new Error("Données de version non trouvées");
         
         // Créer une nouvelle version incrémentée
         const { error: newVersionError } = await supabase
@@ -226,6 +223,36 @@ export const visasService = {
     }
   },
 
+  // Supprimer un visa
+  async deleteVisa(visaId: string) {
+    // D'abord récupérer le chemin du fichier si présent
+    const { data: visaData, error: fetchError } = await supabase
+      .from('visas')
+      .select('attachment_path')
+      .eq('id', visaId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // Si un fichier est associé, le supprimer
+    if (visaData.attachment_path) {
+      const { error: storageError } = await supabase.storage
+        .from('visas')
+        .remove([visaData.attachment_path]);
+
+      if (storageError) throw storageError;
+    }
+
+    // Enfin, supprimer l'enregistrement
+    const { error: deleteError } = await supabase
+      .from('visas')
+      .delete()
+      .eq('id', visaId);
+
+    if (deleteError) throw deleteError;
+    return true;
+  },
+
   // Télécharger un fichier attaché à un visa
   async downloadVisaAttachment(attachmentPath: string) {
     const { data, error } = await supabase.storage
@@ -246,7 +273,7 @@ export const visasService = {
       .from('profiles')
       .select('role_global')
       .eq('id', user.id)
-      .maybeSingle();  // Utilisation de maybeSingle() au lieu de single()
+      .single();
     
     if (profileError) {
       console.error('Erreur lors de la récupération du profil:', profileError);
