@@ -7,7 +7,7 @@ import { getGlobalUserRole } from './roles';
 
 /**
  * Vérifie si l'utilisateur a accès à un marché spécifique
- * Cette version améliorée évite la récursion infinie des politiques RLS
+ * Cette version optimisée utilise les nouvelles fonctions SECURITY DEFINER
  * @param {string} marcheId L'identifiant du marché
  * @returns {Promise<boolean>} True si l'utilisateur a accès au marché
  */
@@ -22,39 +22,36 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
     
     console.log(`Checking access to market ${marcheId} for user ${user.id}...`);
     
-    // HIGHEST PRIORITY: Check if user has ADMIN role first - DIRECT QUERY APPROACH
     try {
-      const globalRole = await getGlobalUserRole();
-      if (globalRole === 'ADMIN') {
-        console.log(`User ${user.id} is ADMIN - access granted to market ${marcheId}`);
-        return true; // Admin always has access - no further checks needed
-      }
-    } catch (roleError) {
-      console.error('Error checking global role:', roleError);
-      // Continue with other checks - don't fail immediately
-    }
-    
-    // Try using a security definer function if available
-    try {
+      // Utilisation de la fonction RPC security definer pour vérifier l'accès
       const { data: accessData, error: accessError } = await supabase.rpc(
-        'check_user_marche_access',
-        { 
-          user_id: user.id, 
-          marche_id: marcheId 
-        }
+        'user_can_access_marche',
+        { marche_id: marcheId }
       );
       
       if (!accessError && accessData === true) {
         console.log(`Access granted through RPC function for user ${user.id} to market ${marcheId}`);
         return true;
       } else if (accessError) {
-        console.log(`RPC function error: ${accessError.message}, trying direct queries`);
+        console.log(`RPC function error: ${accessError.message}, trying direct verification`);
       }
     } catch (rpcError) {
-      console.log(`RPC function not available, trying direct queries`);
+      console.log(`RPC function not available, trying legacy checks`);
     }
     
-    // Check if user is creator (second highest priority) - DIRECT QUERY APPROACH
+    // HIGHEST PRIORITY: Check if user has ADMIN role first
+    try {
+      const globalRole = await getGlobalUserRole();
+      if (globalRole === 'ADMIN') {
+        console.log(`User ${user.id} is ADMIN - access granted to market ${marcheId}`);
+        return true; // Admin always has access
+      }
+    } catch (roleError) {
+      console.error('Error checking global role:', roleError);
+      // Continue with other checks
+    }
+    
+    // Check if user is creator (second highest priority)
     try {
       const { data: marcheData, error: marcheError } = await supabase
         .from('marches')
@@ -70,10 +67,8 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
       console.error('Error checking market creator:', creatorError);
     }
     
-    // Direct query for droits_marche to avoid recursion
+    // Check for explicit rights
     try {
-      console.log("Checking direct query for droits_marche...");
-      // Utiliser une requête SQL non récursive via une RPC
       const { data: droitData, error: droitError } = await supabase
         .from('droits_marche')
         .select('id')
@@ -82,7 +77,7 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
         .maybeSingle();
         
       if (!droitError && droitData) {
-        console.log(`User ${user.id} has explicit rights for market ${marcheId} via direct query - access granted`);
+        console.log(`User ${user.id} has explicit rights for market ${marcheId} - access granted`);
         return true;
       }
     } catch (directQueryError) {

@@ -1,20 +1,39 @@
 
-export type UserRole = 'ADMIN' | 'MOE' | 'MANDATAIRE' | 'STANDARD';
-export type MarcheSpecificRole = 'MOE' | 'MANDATAIRE' | 'CONSULTANT' | null;
+/**
+ * Types pour la gestion des rôles utilisateurs
+ */
 
+/**
+ * Rôle global d'un utilisateur
+ */
+export type UserRole = 'ADMIN' | 'MOE' | 'MANDATAIRE' | 'STANDARD';
+
+/**
+ * Rôle spécifique à un marché
+ */
+export type MarcheSpecificRole = 'MOE' | 'MANDATAIRE' | 'OBSERVATEUR' | null;
+
+/**
+ * Informations complètes sur le rôle d'un utilisateur
+ */
 export interface UserRoleInfo {
-  role: UserRole;
-  loading: boolean;
-  error: Error | null;
+  /**
+   * Rôle global de l'utilisateur
+   */
+  role: UserRole | null;
+  
+  /**
+   * Rôles spécifiques aux marchés (par ID de marché)
+   */
   marcheRoles: Record<string, MarcheSpecificRole>;
-  refreshRoles: () => void;
-  isAdmin: boolean;
-  isMOE: boolean; 
-  isMandataire: boolean;
-  canCreateMarche: boolean;
-  canEdit: (marcheId?: string) => boolean;
-  canDiffuse: (marcheId?: string) => boolean;
-  canVisa: (marcheId?: string) => boolean;
-  canManageRoles: (marcheId?: string) => boolean;
-  getMarcheRole: (marcheId: string) => Promise<MarcheSpecificRole>;
+  
+  /**
+   * État de chargement
+   */
+  loading: boolean;
+  
+  /**
+   * Erreur éventuelle
+   */
+  error: Error | null;
 }

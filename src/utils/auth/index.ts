@@ -1,3 +1,4 @@
+
 /**
  * Main auth utilities entry point
  * Re-exports functions from the different auth modules for easier imports
@@ -21,5 +22,4 @@ export const checkAccess = hasAccessToMarche;
 export default {
   checkAuth: () => import('./checkAuth'),
   logout: () => import('./logout'),
-  // ...other functionality as needed
 };

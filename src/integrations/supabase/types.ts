@@ -885,6 +885,14 @@ export type Database = {
           updated_at: string | null
         }[]
       }
+      user_can_access_marche: {
+        Args: { marche_id: string }
+        Returns: boolean
+      }
+      user_can_create_marche: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       user_has_access_to_marche: {
         Args: { user_id: string; marche_id: string }
         Returns: boolean
