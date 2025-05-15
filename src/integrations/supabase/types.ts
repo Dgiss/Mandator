@@ -772,6 +772,10 @@ export type Database = {
         Args: { droit_id: string }
         Returns: boolean
       }
+      check_marche_access: {
+        Args: { marche_id: string }
+        Returns: boolean
+      }
       check_market_access: {
         Args: { market_id: string }
         Returns: boolean
