@@ -16,7 +16,12 @@ export const useMarcheDataQueries = (id: string | undefined) => {
   const roleQuery = useQuery({
     queryKey: ['user-global-role'],
     queryFn: async () => {
-      return await getGlobalUserRole();
+      try {
+        return await getGlobalUserRole();
+      } catch (error) {
+        console.error('Error fetching global role:', error);
+        return 'STANDARD';
+      }
     },
     staleTime: 5 * 60 * 1000,
     retry: 2
@@ -46,6 +51,11 @@ export const useMarcheDataQueries = (id: string | undefined) => {
       onSettled: (data: boolean | undefined, error: Error | null) => {
         if (error) {
           console.error("Erreur lors de la vérification des droits d'accès:", error);
+          toast({
+            title: "Erreur d'accès",
+            description: "Une erreur est survenue lors de la vérification de vos droits d'accès.",
+            variant: "destructive",
+          });
         } else if (data === false) {
           console.warn(`L'utilisateur n'a pas accès au marché ${id}`);
           toast({
@@ -69,27 +79,13 @@ export const useMarcheDataQueries = (id: string | undefined) => {
       if (!id) return null;
       console.log("Chargement des données du marché:", id);
       
-      // Special handling for admin users
-      if (roleQuery.data === 'ADMIN') {
-        console.log("Admin user detected, proceeding with direct marché fetch");
-        
-        // Direct fetch for admin users to bypass RLS
-        const { data, error } = await supabase
-          .from('marches')
-          .select('*')
-          .eq('id', id)
-          .single();
-          
-        if (error) {
-          console.error("Admin fetch failed:", error);
-          throw error;
-        }
-        
-        return data;
+      try {
+        // Use our reliable fetchMarcheById function that handles permissions
+        return await fetchMarcheById(id);
+      } catch (error) {
+        console.error("Error fetching marché:", error);
+        throw error;
       }
-      
-      // Standard fetch method that respects RLS policies
-      return await fetchMarcheById(id);
     },
     enabled: !!id && shouldProceed,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -130,19 +126,25 @@ export const useMarcheDataQueries = (id: string | undefined) => {
     queryKey: ['documents-recents', id],
     queryFn: async () => {
       if (!id) return [];
-      const { data, error } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('marche_id', id)
-        .order('created_at', { ascending: false })
-        .limit(3);
       
-      if (error) {
-        console.error("Erreur lors du chargement des documents récents:", error);
-        throw error;
+      try {
+        const { data, error } = await supabase
+          .from('documents')
+          .select('*')
+          .eq('marche_id', id)
+          .order('created_at', { ascending: false })
+          .limit(3);
+        
+        if (error) {
+          console.error("Erreur lors du chargement des documents récents:", error);
+          throw error;
+        }
+        
+        return data || [];
+      } catch (error) {
+        console.error("Error fetching documents:", error);
+        return [];
       }
-      
-      return data || [];
     },
     enabled: !!id && shouldContinue,
     staleTime: 5 * 60 * 1000,
@@ -154,18 +156,24 @@ export const useMarcheDataQueries = (id: string | undefined) => {
     queryKey: ['fascicules', id],
     queryFn: async () => {
       if (!id) return [];
-      const { data, error } = await supabase
-        .from('fascicules')
-        .select('*')
-        .eq('marche_id', id)
-        .order('nom', { ascending: true });
       
-      if (error) {
-        console.error("Erreur lors du chargement des fascicules:", error);
-        throw error;
+      try {
+        const { data, error } = await supabase
+          .from('fascicules')
+          .select('*')
+          .eq('marche_id', id)
+          .order('nom', { ascending: true });
+        
+        if (error) {
+          console.error("Erreur lors du chargement des fascicules:", error);
+          throw error;
+        }
+        
+        return data || [];
+      } catch (error) {
+        console.error("Error fetching fascicules:", error);
+        return [];
       }
-      
-      return data || [];
     },
     enabled: !!id && shouldContinue,
     staleTime: 5 * 60 * 1000,

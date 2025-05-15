@@ -768,6 +768,10 @@ export type Database = {
         Args: { user_id: string; marche_id: string; role_specifique: string }
         Returns: undefined
       }
+      check_user_marche_access: {
+        Args: { user_id: string; marche_id: string }
+        Returns: boolean
+      }
       check_versions_non_diffusees: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -852,7 +856,7 @@ export type Database = {
         Returns: string
       }
       get_user_role_for_marche: {
-        Args: { user_id: string; marche_id: string }
+        Args: { marche_id: string } | { user_id: string; marche_id: string }
         Returns: string
       }
       is_admin: {

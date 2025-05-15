@@ -35,6 +35,7 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
     
     // Check if user is creator (second highest priority)
     try {
+      // Direct query to check if user is the creator, avoiding RPC call
       const { data: marcheData, error: marcheError } = await supabase
         .from('marches')
         .select('user_id')
@@ -47,10 +48,9 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
       }
     } catch (creatorError) {
       console.error('Error checking market creator:', creatorError);
-      // Continue with other checks
     }
     
-    // Check specific market rights using fixed RPC function
+    // Check specific market rights using user_has_access_to_marche RPC function
     try {
       const { data: hasAccess, error: accessError } = await supabase
         .rpc('user_has_access_to_marche', {
@@ -63,11 +63,9 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
         return true;
       } else if (accessError) {
         console.error('Error in RPC access check:', accessError);
-        // Continue to fallback - don't immediately return false
       }
     } catch (rpcError) {
       console.error('Exception in RPC access check:', rpcError);
-      // Continue to fallback
     }
     
     // Fallback: Direct query as a last resort
@@ -90,8 +88,14 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
     
     // LAST RESORT: Double-check ADMIN status one more time
     try {
-      const role = await getGlobalUserRole();
-      if (role === 'ADMIN') {
+      // Direct query to profiles table to check ADMIN status
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('role_global')
+        .eq('id', user.id)
+        .single();
+        
+      if (!profileError && profileData && profileData.role_global === 'ADMIN') {
         console.log(`Final check: User is ADMIN - granting access to market ${marcheId}`);
         return true;
       }
@@ -104,26 +108,6 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
     return false;
   } catch (error) {
     console.error('Major exception checking access rights:', error);
-    
-    // Last desperate check for ADMIN, outside all other error handling
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('role_global')
-          .eq('id', user.id)
-          .maybeSingle();
-          
-        if (!profileError && profile && profile.role_global === 'ADMIN') {
-          console.log(`Emergency admin check: User is ADMIN - granting access to market ${marcheId}`);
-          return true;
-        }
-      }
-    } catch (emergencyError) {
-      console.error('Emergency admin check failed:', emergencyError);
-    }
-    
     return false;
   }
 };
