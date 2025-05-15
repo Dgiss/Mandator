@@ -34,18 +34,6 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
         
       if (error) {
         console.error(`Erreur lors de la récupération du marché ${id} (admin path):`, error);
-        
-        // Try alternative method for admin if direct query fails
-        const { data: allMarches, error: allMarchesError } = await supabase
-          .rpc('get_accessible_marches_for_user');
-          
-        if (!allMarchesError) {
-          const marche = allMarches.find((m: any) => m.id === id);
-          if (marche) {
-            return marche as Marche;
-          }
-        }
-        
         throw error;
       }
       
@@ -61,7 +49,7 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
     
     console.log(`Utilisateur ${user.id} a accès au marché ${id}, récupération des détails...`);
     
-    // Retrieve the market data with a direct query (avoiding RPC calls that might cause recursion)
+    // Direct query to avoid recursion issues
     const { data, error } = await supabase
       .from('marches')
       .select('*')

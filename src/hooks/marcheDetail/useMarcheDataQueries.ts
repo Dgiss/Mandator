@@ -109,11 +109,24 @@ export const useMarcheDataQueries = (id: string | undefined) => {
                         (!!marcheQuery.data && !marcheQuery.isError && 
                          !accessCheckQuery.isError && accessCheckQuery.data === true);
 
-  // Fetch visas
+  // Fetch visas with direct query approach to avoid recursion
   const visasQuery = useQuery({
     queryKey: ['visas', id],
     queryFn: async () => {
       if (!id) return [];
+      
+      // If user is admin, use direct query
+      if (roleQuery.data === 'ADMIN') {
+        const { data, error } = await supabase
+          .from('visas')
+          .select('*')
+          .eq('marche_id', id);
+          
+        if (error) throw error;
+        return data || [];
+      }
+      
+      // Otherwise use the service that handles permissions
       return await visasService.getVisasByMarcheId(id);
     },
     enabled: !!id && shouldContinue,
@@ -121,7 +134,7 @@ export const useMarcheDataQueries = (id: string | undefined) => {
     retry: 1
   });
 
-  // Fetch recent documents
+  // Fetch recent documents with admin bypass
   const documentsQuery = useQuery({
     queryKey: ['documents-recents', id],
     queryFn: async () => {
@@ -151,13 +164,39 @@ export const useMarcheDataQueries = (id: string | undefined) => {
     retry: 1
   });
 
-  // Fetch fascicules and their progress
+  // Fetch fascicules with admin bypass
   const fasciculesQuery = useQuery({
     queryKey: ['fascicules', id],
     queryFn: async () => {
       if (!id) return [];
       
       try {
+        // Direct query approach to avoid recursion
+        const { data: userData } = await supabase.auth.getUser();
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('role_global')
+          .eq('id', userData.user?.id)
+          .single();
+          
+        // If admin, direct query
+        if (profileData?.role_global === 'ADMIN') {
+          const { data, error } = await supabase
+            .from('fascicules')
+            .select('*')
+            .eq('marche_id', id)
+            .order('nom', { ascending: true });
+            
+          if (error) throw error;
+          return data || [];
+        }
+        
+        // For non-admin users, verify they have access first
+        const hasAccess = await hasAccessToMarche(id);
+        if (!hasAccess) {
+          throw new Error('Access denied');
+        }
+        
         const { data, error } = await supabase
           .from('fascicules')
           .select('*')

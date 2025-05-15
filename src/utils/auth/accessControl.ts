@@ -50,27 +50,9 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
       console.error('Error checking market creator:', creatorError);
     }
     
-    // Check specific market rights using user_has_access_to_marche RPC function
+    // Direct query for droits_marche to avoid recursion
     try {
-      const { data: hasAccess, error: accessError } = await supabase
-        .rpc('user_has_access_to_marche', {
-          user_id: user.id,
-          marche_id: marcheId
-        });
-      
-      if (!accessError && hasAccess === true) {
-        console.log(`Access check via RPC successful - access granted to market ${marcheId}`);
-        return true;
-      } else if (accessError) {
-        console.error('Error in RPC access check:', accessError);
-      }
-    } catch (rpcError) {
-      console.error('Exception in RPC access check:', rpcError);
-    }
-    
-    // Fallback: Direct query as a last resort
-    try {
-      console.log("Falling back to direct query for access check...");
+      console.log("Checking direct query for droits_marche...");
       const { data: droitData, error: droitError } = await supabase
         .from('droits_marche')
         .select('id')
@@ -86,21 +68,19 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
       console.error('Exception in direct query access check:', directQueryError);
     }
     
-    // LAST RESORT: Double-check ADMIN status one more time
+    // Last resort check with user_has_access_to_marche but avoid exposing error
     try {
-      // Direct query to profiles table to check ADMIN status
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('role_global')
-        .eq('id', user.id)
-        .single();
-        
-      if (!profileError && profileData && profileData.role_global === 'ADMIN') {
-        console.log(`Final check: User is ADMIN - granting access to market ${marcheId}`);
+      const { data, error } = await supabase
+        .rpc('user_has_access_to_marche', {
+          user_id: user.id,
+          marche_id: marcheId
+        });
+      
+      if (!error && data === true) {
         return true;
       }
-    } catch (finalRoleError) {
-      console.error('Final error checking admin status:', finalRoleError);
+    } catch (e) {
+      console.log("Error with RPC check, continuing...");
     }
     
     // If we get here, no access was found through any method

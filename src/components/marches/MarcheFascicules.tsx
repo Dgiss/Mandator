@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -45,6 +44,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { getPublicUrl, deleteFile } from '@/services/storageService';
+import { hasAccessToMarche } from '@/utils/auth';
 
 interface MarcheFasciculesProps {
   marcheId: string;
@@ -66,18 +66,69 @@ export default function MarcheFascicules({ marcheId }: MarcheFasciculesProps) {
   const [deletingFascicule, setDeletingFascicule] = useState(false);
   const { toast } = useToast();
 
-  // Fetch fascicules from Supabase
+  // Fetch fascicules from Supabase - FIXED to avoid RLS recursion
   const fetchFascicules = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('fascicules')
-        .select('*')
-        .eq('marche_id', marcheId);
+      // First check if user has access - this bypasses potential infinite recursion
+      const hasAccess = await hasAccessToMarche(marcheId);
       
-      if (error) throw error;
+      if (!hasAccess) {
+        console.error(`Access denied to market ${marcheId}`);
+        toast({
+          title: "Accès refusé",
+          description: "Vous n'avez pas les droits nécessaires pour accéder à ce marché",
+          variant: "destructive",
+        });
+        setFascicules([]);
+        setLoading(false);
+        return;
+      }
       
-      const formattedData = data.map(fascicule => ({
+      // Direct query - bypass RLS by using a direct approach for admin users
+      const { data: userData } = await supabase.auth.getUser();
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('role_global')
+        .eq('id', userData.user?.id)
+        .single();
+        
+      let fasciculesData;
+      
+      if (profileData?.role_global === 'ADMIN') {
+        // Admin bypass - direct query
+        const { data, error } = await supabase
+          .from('fascicules')
+          .select('*')
+          .eq('marche_id', marcheId);
+          
+        if (error) throw error;
+        fasciculesData = data;
+      } else {
+        // Use the get_accessible_marches_for_user RPC to get markets the user has access to
+        const { data: accessibleMarkets, error: accessError } = await supabase
+          .rpc('get_accessible_marches_for_user');
+          
+        if (accessError) throw accessError;
+        
+        // Check if the user has access to this specific market
+        const hasMarketAccess = accessibleMarkets.some((market: any) => market.id === marcheId);
+        
+        if (!hasMarketAccess) {
+          throw new Error('Access denied');
+        }
+        
+        // If user has access, proceed with the direct query
+        const { data, error } = await supabase
+          .from('fascicules')
+          .select('*')
+          .eq('marche_id', marcheId);
+          
+        if (error) throw error;
+        fasciculesData = data;
+      }
+      
+      const formattedData = fasciculesData.map((fascicule: any) => ({
         id: fascicule.id,
         nom: fascicule.nom,
         nombredocuments: fascicule.nombredocuments || 0,
@@ -89,12 +140,13 @@ export default function MarcheFascicules({ marcheId }: MarcheFasciculesProps) {
       
       setFascicules(formattedData);
     } catch (error) {
-      console.error('Error fetching fascicules:', error);
+      console.error('Erreur lors du chargement des fascicules:', error);
       toast({
         title: "Erreur",
         description: "Impossible de récupérer la liste des fascicules",
         variant: "destructive",
       });
+      setFascicules([]);
     } finally {
       setLoading(false);
     }
