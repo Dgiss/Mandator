@@ -4,11 +4,14 @@ import { toast } from 'sonner';
 import { UserProfileData } from '@/types/auth';
 
 /**
- * Sign in with email and password
+ * Sign in with email and password avec gestion améliorée des erreurs
  */
 export const signInWithEmail = async (email: string, password: string) => {
   try {
     console.log(`Tentative de connexion pour ${email}`);
+    
+    // Ajout d'un délai minime pour éviter les conflits potentiels
+    await new Promise(resolve => setTimeout(resolve, 10));
     
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -17,6 +20,13 @@ export const signInWithEmail = async (email: string, password: string) => {
 
     if (error) {
       console.error("Erreur d'authentification:", error);
+      
+      // Gestion spécifique pour l'erreur "Database error querying schema"
+      if (error.message?.includes("Database error querying schema") || error.message?.includes("querying")) {
+        toast.error(`Erreur temporaire du serveur. Veuillez réessayer.`);
+        return { error: { message: "Erreur temporaire, merci de réessayer" } };
+      }
+      
       toast.error(`Erreur de connexion: ${error.message}`);
       return { error };
     }
@@ -33,13 +43,13 @@ export const signInWithEmail = async (email: string, password: string) => {
     return { data, error: null };
   } catch (error: any) {
     console.error("Exception lors de la connexion:", error);
-    toast.error(`Erreur de connexion: ${error.message}`);
+    toast.error(`Erreur de connexion: ${error.message || "Problème inattendu"}`);
     return { error };
   }
 };
 
 /**
- * Sign up with email and password avec gestion améliorée des profils
+ * Sign up with email and password avec gestion améliorée des profils et des erreurs
  */
 export const signUpWithEmail = async (
   email: string, 
@@ -77,9 +87,11 @@ export const signUpWithEmail = async (
       return { error: { message: "Utilisateur non créé" } };
     }
 
-    // Création manuelle du profil pour assurer la synchronisation
+    // Création manuelle du profil pour assurer la synchronisation, avec gestion plus robuste
     console.log("Création manuelle du profil pour:", data.user.id);
     try {
+      await new Promise(resolve => setTimeout(resolve, 100)); // Court délai pour permettre à l'utilisateur d'être créé complètement
+      
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({

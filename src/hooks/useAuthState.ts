@@ -17,6 +17,13 @@ export const useAuthState = () => {
   // Function to safely load user profile with error handling
   const loadUserProfile = useCallback(async (userId: string) => {
     try {
+      setAuthError(null); // Clear previous errors
+      
+      if (!userId) {
+        console.warn('loadUserProfile called with empty userId');
+        return;
+      }
+      
       const { data, error } = await fetchUserProfile(userId);
       
       if (error) {
@@ -27,7 +34,6 @@ export const useAuthState = () => {
       
       if (data) {
         setProfile(data);
-        setAuthError(null);
       } else {
         console.warn('No profile data found');
         setAuthError('Profil non trouvé');
@@ -46,7 +52,7 @@ export const useAuthState = () => {
     setAuthError(null);
   }, []);
 
-  // Handle auth state changes
+  // Handle auth state changes with improved error handling
   const handleAuthStateChange = useCallback((event: string, currentSession: Session | null) => {
     console.log('Auth state changed:', event, currentSession?.user?.id);
     
@@ -60,11 +66,13 @@ export const useAuthState = () => {
     setSession(currentSession);
     setUser(currentSession?.user ?? null);
     
-    // Load profile if user exists
+    // Load profile if user exists, with safer async handling
     if (currentSession?.user) {
       // Defer the profile fetch to avoid recursion issues
       setTimeout(() => {
-        loadUserProfile(currentSession.user!.id);
+        if (currentSession?.user) {
+          loadUserProfile(currentSession.user.id);
+        }
       }, 0);
     } else if (event !== 'TOKEN_REFRESHED') {
       // Don't clear profile on token refresh
@@ -74,31 +82,47 @@ export const useAuthState = () => {
 
   useEffect(() => {
     console.log('Setting up auth state listener...');
+    let didCancel = false;
     
     // Setup auth state change listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
     
-    // Then check current session
-    supabase.auth.getSession().then(({ data: { session: currentSession }, error }) => {
-      if (error) {
-        console.error('Error getting session:', error);
-        setAuthError(error.message);
+    // Then check current session with proper error handling
+    const initializeAuthState = async () => {
+      try {
+        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting session:', error);
+          setAuthError(error.message);
+        }
+        
+        if (!didCancel) {
+          console.log('Initial session check:', currentSession?.user?.id);
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
+          
+          if (currentSession?.user) {
+            loadUserProfile(currentSession.user.id);
+          }
+          
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('Exception in auth initialization:', err);
+        if (!didCancel) {
+          setAuthError('Erreur lors de l\'initialisation de l\'authentification');
+          setLoading(false);
+        }
       }
-      
-      console.log('Initial session check:', currentSession?.user?.id);
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      
-      if (currentSession?.user) {
-        loadUserProfile(currentSession.user.id);
-      }
-      
-      setLoading(false);
-    });
+    };
+    
+    initializeAuthState();
 
-    // Clean up subscription
+    // Clean up subscription and prevent state updates after unmount
     return () => {
       console.log('Cleaning up auth state listener');
+      didCancel = true;
       subscription?.unsubscribe();
     };
   }, [handleAuthStateChange, loadUserProfile]);

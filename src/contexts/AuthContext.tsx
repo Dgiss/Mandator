@@ -17,12 +17,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { session, user, profile, loading, authError, setProfile, refreshProfile } = useAuthState();
   const [loginInProgress, setLoginInProgress] = useState(false);
 
-  // Sign in function
+  // Sign in function with improved error handling
   const signIn = async (email: string, password: string) => {
     try {
       setLoginInProgress(true);
       const result = await signInWithEmail(email, password);
+      
+      // Retry logic for database errors
+      if (result.error?.message?.includes("Database error")) {
+        console.log("Database error detected, retrying once after delay...");
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1s before retry
+        return await signInWithEmail(email, password);
+      }
+      
       return result;
+    } catch (error) {
+      console.error("Unexpected error in sign-in:", error);
+      return { error };
     } finally {
       setLoginInProgress(false);
     }
@@ -37,6 +48,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoginInProgress(true);
       return await signUpWithEmail(email, password, userData);
+    } catch (error) {
+      console.error("Unexpected error in sign-up:", error);
+      return { error };
     } finally {
       setLoginInProgress(false);
     }
@@ -44,11 +58,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Sign out function with improved state cleanup
   const signOut = async () => {
-    // First update local state to prevent multiple logout attempts
-    setProfile(null);
-    
-    // Then perform the actual signout
-    await signOutUser();
+    try {
+      // First update local state to prevent multiple logout attempts
+      setProfile(null);
+      
+      // Then perform the actual signout
+      await signOutUser();
+    } catch (error) {
+      console.error("Error during sign out:", error);
+      throw error;
+    }
   };
 
   // Update profile function
