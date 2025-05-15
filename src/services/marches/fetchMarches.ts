@@ -3,12 +3,12 @@ import { supabase } from '@/lib/supabase';
 import { Marche } from './types';
 
 /**
- * Récupérer tous les marchés depuis Supabase auxquels l'utilisateur a accès
+ * Récupérer tous les marchés depuis Supabase sans restriction d'accès
  * @returns {Promise<Marche[]>} Liste des marchés
  */
 export const fetchMarches = async (): Promise<Marche[]> => {
   try {
-    console.log("Récupération des marchés auxquels l'utilisateur a accès...");
+    console.log("Récupération de tous les marchés (accès temporairement autorisé pour tous)...");
     
     // Vérifier que le client Supabase est correctement initialisé
     if (!supabase) {
@@ -16,28 +16,14 @@ export const fetchMarches = async (): Promise<Marche[]> => {
       throw new Error("Client Supabase non initialisé");
     }
     
-    // Utiliser la fonction get_accessible_marches_for_user qui est sécurisée contre la récursion
-    const { data, error } = await supabase.rpc('get_accessible_marches_for_user');
-    
+    // Requête directe sans vérification d'accès
+    const { data, error } = await supabase
+      .from('marches')
+      .select('*');
+      
     if (error) {
       console.error('Erreur lors de la récupération des marchés:', error);
-      
-      // Si la fonction RPC échoue, essayer une requête directe mais sécurisée
-      try {
-        const { data: directData, error: directError } = await supabase
-          .from('marches')
-          .select('*');
-          
-        if (directError) {
-          throw directError;
-        }
-        
-        console.log("Marchés récupérés par requête directe:", directData?.length || 0);
-        return directData as Marche[] || [];
-      } catch (directError) {
-        console.error('Erreur lors de la requête directe:', directError);
-        throw error; // Renvoyer l'erreur originale
-      }
+      throw error;
     }
     
     console.log("Marchés récupérés:", data?.length || 0);
