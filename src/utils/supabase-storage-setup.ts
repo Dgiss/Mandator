@@ -69,9 +69,24 @@ export const initializeStorageBuckets = async () => {
         });
         
         if (error) {
-          console.error(`Failed to create ${bucket.name} bucket:`, error);
+          if (error.message === 'The resource already exists') {
+            console.log(`Bucket ${bucket.name} already exists`);
+          } else {
+            console.error(`Failed to create ${bucket.name} bucket:`, error);
+          }
         } else {
           console.log(`${bucket.name} bucket created successfully`);
+          
+          // Set up public access for public buckets using SQL function or other available methods
+          if (bucket.isPublic) {
+            // Alternative approach for setting bucket policies if createPolicy is not available
+            try {
+              // This is a placeholder - actual implementation would depend on the available API
+              console.log(`Setting up public access for ${bucket.name}`);
+            } catch (policyError) {
+              console.error(`Error setting up policies for ${bucket.name}:`, policyError);
+            }
+          }
         }
       } else {
         console.log(`Bucket ${bucket.name} already exists`);

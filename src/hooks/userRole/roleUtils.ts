@@ -49,7 +49,11 @@ export const fetchMarcheRoles = async (
   
   // Update cache with fetched roles
   Object.entries(roles).forEach(([marketId, role]) => {
-    cacheMarketRole(marketId, role as string);
+    // Fix: Convert the role to MarcheSpecificRole or cast it appropriately
+    if (typeof role === 'string') {
+      const specificRole = role as MarcheSpecificRole;
+      cacheMarketRole(marketId, specificRole);
+    }
   });
   
   return roles;

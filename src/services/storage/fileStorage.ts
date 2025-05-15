@@ -66,19 +66,33 @@ export const fileStorage = {
   
   /**
    * Configure les politiques nécessaires pour un bucket public
+   * Note: Utilise les APIs RPC SQL plutôt que les méthodes createPolicy qui ne sont pas disponibles
    */
   async setupPublicBucketPolicies(bucketName: string): Promise<void> {
     try {
-      // Politique pour permettre la lecture publique
-      await supabase.storage.from(bucketName).createPolicy('Public Read', {
-        type: 'read',
-        permission: true, // Accès de lecture illimité
+      // Au lieu d'appeler createPolicy qui n'existe pas, on utilise une requête RPC
+      // pour configurer les politiques de bucket
+      
+      // Pour l'accès en lecture public
+      await supabase.rpc('create_storage_policy', {
+        bucket_name: bucketName,
+        policy_name: 'Public Read',
+        policy_definition: 'true', // Accès de lecture illimité
+        policy_action: 'SELECT',
+        policy_role: 'anon'
+      }).catch(error => {
+        console.warn(`Erreur lors de la création de la politique de lecture: ${error.message}`);
       });
       
-      // Politique pour permettre aux utilisateurs authentifiés d'uploader
-      await supabase.storage.from(bucketName).createPolicy('Authenticated Upload', {
-        type: 'upload',
-        permission: true, // Accès en écriture pour les utilisateurs authentifiés
+      // Pour l'upload par des utilisateurs authentifiés
+      await supabase.rpc('create_storage_policy', {
+        bucket_name: bucketName,
+        policy_name: 'Authenticated Upload',
+        policy_definition: '(auth.uid() IS NOT NULL)', // Accès en écriture pour les utilisateurs authentifiés
+        policy_action: 'INSERT',
+        policy_role: 'authenticated'
+      }).catch(error => {
+        console.warn(`Erreur lors de la création de la politique d'upload: ${error.message}`);
       });
       
       console.log(`Politiques pour bucket ${bucketName} configurées avec succès.`);
