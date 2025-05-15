@@ -14,7 +14,7 @@ import {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { session, user, profile, loading, setProfile } = useAuthState();
+  const { session, user, profile, loading, authError, setProfile, refreshProfile } = useAuthState();
   const [loginInProgress, setLoginInProgress] = useState(false);
 
   // Sign in function
@@ -28,7 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Sign up function
+  // Sign up function with improved error handling
   const signUp = async (
     email: string, 
     password: string, 
@@ -42,7 +42,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Sign out function
+  // Sign out function with improved state cleanup
   const signOut = async () => {
     // First update local state to prevent multiple logout attempts
     setProfile(null);
@@ -62,11 +62,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const result = await updateUserProfile(user.id, data);
     
     if (!result.error) {
-      // Update profile in state if successful
-      const { data: updatedProfile } = await fetchUserProfile(user.id);
-      if (updatedProfile) {
-        setProfile(updatedProfile);
-      }
+      // Refresh profile in state if successful
+      refreshProfile();
     }
     
     return result;
@@ -80,10 +77,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         profile, 
         loading, 
         loginInProgress,
+        authError,
         signIn, 
         signUp, 
         signOut, 
-        updateProfile 
+        updateProfile,
+        refreshProfile
       }}
     >
       {children}

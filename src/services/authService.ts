@@ -8,26 +8,38 @@ import { UserProfileData } from '@/types/auth';
  */
 export const signInWithEmail = async (email: string, password: string) => {
   try {
+    console.log(`Tentative de connexion pour ${email}`);
+    
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
+      console.error("Erreur d'authentification:", error);
       toast.error(`Erreur de connexion: ${error.message}`);
       return { error };
     }
 
+    // Vérifier si la session est bien créée
+    if (!data.session) {
+      console.error("Session non créée après authentification");
+      toast.error("Erreur de connexion: Session non créée");
+      return { error: { message: "Session non créée" } };
+    }
+
+    console.log("Connexion réussie:", data.user?.id);
     toast.success('Connexion réussie !');
-    return { error: null };
+    return { data, error: null };
   } catch (error: any) {
+    console.error("Exception lors de la connexion:", error);
     toast.error(`Erreur de connexion: ${error.message}`);
     return { error };
   }
 };
 
 /**
- * Sign up with email and password
+ * Sign up with email and password avec gestion améliorée des profils
  */
 export const signUpWithEmail = async (
   email: string, 
@@ -35,31 +47,43 @@ export const signUpWithEmail = async (
   userData?: UserProfileData
 ) => {
   try {
+    console.log(`Tentative d'inscription pour ${email}`, userData);
+    
     // Add email to user metadata
     const userMetadata = {
       ...userData,
       email: email
     };
 
+    // Inscription via Supabase Auth
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: userMetadata
+        data: userMetadata,
+        emailRedirectTo: window.location.origin + '/auth'
       }
     });
 
     if (error) {
+      console.error("Erreur d'inscription:", error);
       toast.error(`Erreur d'inscription: ${error.message}`);
       return { error };
     }
 
-    // Check if we need to manually create a profile (sometimes trigger doesn't work)
+    if (!data.user) {
+      console.error("Utilisateur non créé après inscription");
+      toast.error("Erreur d'inscription: Utilisateur non créé");
+      return { error: { message: "Utilisateur non créé" } };
+    }
+
+    // Création manuelle du profil pour assurer la synchronisation
+    console.log("Création manuelle du profil pour:", data.user.id);
     try {
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
-          id: data.user?.id,
+          id: data.user.id,
           email: email,
           nom: userData?.nom || '',
           prenom: userData?.prenom || '',
@@ -71,26 +95,33 @@ export const signUpWithEmail = async (
         });
         
       if (profileError) {
-        console.warn('Profile creation warning:', profileError);
+        console.warn('Avertissement création de profil:', profileError);
+        toast.warning("L'inscription a réussi mais avec un avertissement sur le profil");
       }
     } catch (profileErr) {
-      console.warn('Profile creation exception:', profileErr);
+      console.warn('Exception création de profil:', profileErr);
+      toast.warning("L'inscription a réussi mais avec une erreur sur le profil");
     }
 
+    console.log("Inscription réussie:", data.user.id);
     toast.success('Inscription réussie ! Veuillez vérifier votre email.');
-    return { error: null };
+    return { data, error: null };
   } catch (error: any) {
+    console.error("Exception lors de l'inscription:", error);
     toast.error(`Erreur d'inscription: ${error.message}`);
     return { error };
   }
 };
 
 /**
- * Sign out current user
+ * Sign out current user avec nettoyage amélioré
  */
 export const signOutUser = async () => {
   try {
-    const { error } = await supabase.auth.signOut();
+    console.log("Tentative de déconnexion");
+    const { error } = await supabase.auth.signOut({
+      scope: 'local' // Déconnecter uniquement sur cet appareil
+    });
     
     if (error) {
       console.error('Erreur lors de la déconnexion:', error);
@@ -98,6 +129,10 @@ export const signOutUser = async () => {
       return { error };
     }
     
+    // Vider le localStorage pour être sûr
+    localStorage.removeItem('supabase.auth.token');
+    
+    console.log("Déconnexion réussie");
     toast.success('Déconnexion réussie !');
     return { error: null };
   } catch (error: any) {
@@ -108,10 +143,17 @@ export const signOutUser = async () => {
 };
 
 /**
- * Fetch user profile data
+ * Fetch user profile data avec gestion améliorée des erreurs
  */
 export const fetchUserProfile = async (userId: string) => {
   try {
+    console.log(`Récupération du profil pour ${userId}`);
+    
+    if (!userId) {
+      console.error('fetchUserProfile appelé sans userId');
+      return { data: null, error: { message: "ID utilisateur manquant" } };
+    }
+    
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -121,9 +163,11 @@ export const fetchUserProfile = async (userId: string) => {
     if (error) {
       console.error('Erreur lors du chargement du profil:', error);
       
-      // If profile doesn't exist, try to create it
+      // Si le profil n'existe pas, essayez de le créer
       if (error.code === 'PGRST116') {
+        console.log("Profil non trouvé, tentative de création...");
         const authUser = await supabase.auth.getUser();
+        
         if (authUser.data?.user) {
           const { data: newProfile, error: createError } = await supabase
             .from('profiles')
@@ -136,9 +180,11 @@ export const fetchUserProfile = async (userId: string) => {
             });
             
           if (!createError) {
+            console.log("Profil créé avec succès");
             return { data: newProfile, error: null };
           } else {
-            console.error('Failed to create profile:', createError);
+            console.error('Échec de création du profil:', createError);
+            return { data: null, error: createError };
           }
         }
       }
@@ -146,9 +192,10 @@ export const fetchUserProfile = async (userId: string) => {
       return { data: null, error };
     }
 
+    console.log("Profil récupéré avec succès");
     return { data, error: null };
   } catch (error: any) {
-    console.error('Erreur lors du chargement du profil:', error);
+    console.error('Exception lors du chargement du profil:', error);
     return { data: null, error };
   }
 };
@@ -165,6 +212,8 @@ export const updateUserProfile = async (
   }
 
   try {
+    console.log(`Mise à jour du profil pour ${userId}`, data);
+    
     // Update email in auth.users if email was changed
     if (data.email) {
       const { error: updateAuthError } = await supabase.auth.updateUser({

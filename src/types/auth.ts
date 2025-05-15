@@ -8,7 +8,8 @@ export interface AuthContextType {
   profile: any | null;
   loading: boolean;
   loginInProgress?: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any | null }>;
+  authError?: string | null;
+  signIn: (email: string, password: string) => Promise<{ error: any | null; data?: any }>;
   signUp: (
     email: string, 
     password: string, 
@@ -18,7 +19,7 @@ export interface AuthContextType {
       entreprise?: string; 
       email?: string 
     }
-  ) => Promise<{ error: any | null }>;
+  ) => Promise<{ error: any | null; data?: any }>;
   signOut: () => Promise<void>;
   updateProfile: (data: { 
     nom?: string; 
@@ -26,6 +27,7 @@ export interface AuthContextType {
     entreprise?: string; 
     email?: string 
   }) => Promise<{ error: any | null }>;
+  refreshProfile?: () => void;
 }
 
 export interface UserProfileData {

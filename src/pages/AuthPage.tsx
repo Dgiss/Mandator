@@ -12,13 +12,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, Mail, Key, User, Building, Loader2 } from 'lucide-react';
+import { FileText, Mail, Key, User, Building, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { validateField } from '@/hooks/form/validation';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function AuthPage() {
   const navigate = useNavigate();
-  const { user, loading, signIn, signUp, loginInProgress } = useAuth();
+  const { user, loading, signIn, signUp, loginInProgress, authError } = useAuth();
 
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -38,6 +39,13 @@ export default function AuthPage() {
       navigate('/home');
     }
   }, [user, loading, navigate]);
+
+  // Afficher les erreurs d'authentification
+  useEffect(() => {
+    if (authError) {
+      setError(authError);
+    }
+  }, [authError]);
 
   const validateEmailField = (email: string) => {
     const emailValidation = validateField('email', email, {
@@ -183,9 +191,10 @@ export default function AuthPage() {
               </TabsList>
               
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
-                  {error}
-                </div>
+                <Alert variant="destructive" className="mb-6">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
               
               <TabsContent value="login">
