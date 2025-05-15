@@ -35,48 +35,42 @@ export const fetchFasciculesByMarcheId = async (marcheId: string): Promise<any[]
       return data || [];
     }
     
-    // Pour les non-admin, utiliser une fonction RPC spécifique
-    // Cette fonction devrait être créée côté Supabase pour éviter la récursion infinie
-    console.log(`Utilisateur non-ADMIN - utilisation de get_fascicules_for_marche pour le marché ${marcheId}`);
+    // Pour les non-admin, utiliser une requête directe avec gestion d'erreur
+    console.log(`Utilisateur non-ADMIN - utilisation de requête directe pour le marché ${marcheId}`);
     
     try {
-      // Tenter d'utiliser la fonction RPC si elle existe
-      const { data, error } = await supabase.rpc(
-        'get_fascicules_for_marche', 
-        { marche_id_param: marcheId }
-      );
-
-      if (error) {
-        console.error(`La fonction RPC 'get_fascicules_for_marche' a échoué:`, error);
-        // Fallback à une requête directe si la RPC n'existe pas
-        const { data: directData, error: directError } = await supabase
-          .from('fascicules')
-          .select('*')
-          .eq('marche_id', marcheId);
-        
-        if (directError) {
-          console.error(`Erreur lors de la récupération directe des fascicules:`, directError);
-          throw directError;
-        }
-        
-        return directData || [];
-      }
-      
-      return data || [];
-    } catch (rpcError) {
-      console.error(`Exception lors de l'appel RPC:`, rpcError);
-      // Fallback to direct query with careful error handling
-      const { data: fallbackData, error: fallbackError } = await supabase
+      // Essayer une requête directe
+      const { data, error } = await supabase
         .from('fascicules')
         .select('*')
         .eq('marche_id', marcheId);
       
-      if (fallbackError) {
-        console.error(`Fallback query a échoué:`, fallbackError);
-        return [];
+      if (error) {
+        console.error(`Erreur lors de la récupération directe des fascicules:`, error);
+        throw error;
       }
       
-      return fallbackData || [];
+      return data || [];
+    } catch (directQueryError) {
+      console.error(`Exception lors de la requête directe:`, directQueryError);
+      
+      // En cas d'erreur, faire un autre essai avec une approche alternative
+      try {
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('fascicules')
+          .select('*')
+          .eq('marche_id', marcheId);
+        
+        if (fallbackError) {
+          console.error(`Requête alternative a échoué:`, fallbackError);
+          return [];
+        }
+        
+        return fallbackData || [];
+      } catch (fallbackError) {
+        console.error('Erreur lors de la requête alternative:', fallbackError);
+        return [];
+      }
     }
   } catch (error) {
     console.error('Exception lors de la récupération des fascicules:', error);

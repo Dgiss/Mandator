@@ -83,3 +83,28 @@ export const canCreateMarche = (globalRole: UserRole): boolean => {
   // Seuls les administrateurs et les MOE peuvent créer des marchés
   return globalRole === 'ADMIN' || globalRole === 'MOE';
 };
+
+/**
+ * Vérifie si l'utilisateur peut créer des fascicules pour un marché spécifique
+ */
+export const canCreateFascicule = (
+  globalRole: UserRole,
+  marcheRoles: Record<string, MarcheSpecificRole>, 
+  marcheId?: string
+): boolean => {
+  // Les administrateurs peuvent toujours créer des fascicules
+  if (globalRole === 'ADMIN') {
+    return true;
+  }
+  
+  // Si nous avons un ID de marché, vérifions le rôle spécifique pour ce marché
+  if (marcheId && marcheRoles[marcheId]) {
+    // Les MOE peuvent créer des fascicules pour leur marché
+    if (marcheRoles[marcheId] === 'MOE') {
+      return true;
+    }
+  }
+
+  // Par défaut, seuls les administrateurs et les MOE peuvent créer des fascicules
+  return globalRole === 'MOE';
+};

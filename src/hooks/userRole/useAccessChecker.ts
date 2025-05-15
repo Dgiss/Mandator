@@ -1,7 +1,13 @@
 
 import { useCallback } from 'react';
 import { UserRole, MarcheSpecificRole } from './types';
-import { canDiffuseMarche, canVisaMarche, canCreateMarche as checkCanCreateMarche, canManageRolesMarche } from './permissions';
+import { 
+  canDiffuseMarche, 
+  canVisaMarche, 
+  canCreateMarche as checkCanCreateMarche, 
+  canManageRolesMarche,
+  canCreateFascicule as checkCanCreateFascicule
+} from './permissions';
 
 /**
  * Hook for checking various access permissions based on user roles
@@ -53,10 +59,22 @@ export function useAccessChecker(
   // Memoize result to avoid unnecessary recalculations
   const canCreateMarche = checkCanCreateMarche(globalRole);
   
+  // Check if user can create fascicules for a market
+  const canCreateFascicule = useCallback((marcheId?: string) => {
+    // Fast path for admins
+    if (globalRole === 'ADMIN') {
+      return true;
+    }
+    
+    const result = checkCanCreateFascicule(globalRole, marcheRoles, marcheId);
+    return result;
+  }, [globalRole, marcheRoles]);
+  
   return {
     canDiffuse,
     canVisa,
     canManageRoles,
-    canCreateMarche
+    canCreateMarche,
+    canCreateFascicule
   };
 }

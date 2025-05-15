@@ -71,56 +71,34 @@ const MarcheFasciculeForm: React.FC<MarcheFasciculeFormProps> = ({ onClose, marc
             });
         }
       } else {
-        // Pour les non-admin, essayer d'utiliser une fonction RPC plus sûre
+        // Pour les non-admin, essayer d'utiliser une insertion directe avec gestion d'erreur
         try {
           if (isEdit) {
-            result = await supabase.rpc(
-              'update_fascicule',
-              {
-                fascicule_id: fascicule.id,
-                fascicule_nom: nom,
-                fascicule_description: description
-              }
-            );
+            // Remove the RPC call that doesn't exist and use direct update
+            result = await supabase
+              .from('fascicules')
+              .update({
+                nom,
+                description,
+                datemaj: new Date().toISOString(),
+              })
+              .eq('id', fascicule.id);
           } else {
-            result = await supabase.rpc(
-              'create_fascicule',
-              {
-                marche_id_param: marcheId,
-                fascicule_nom: nom,
-                fascicule_description: description
-              }
-            );
+            // Remove the RPC call that doesn't exist and use direct insert
+            result = await supabase
+              .from('fascicules')
+              .insert({
+                nom,
+                description,
+                marche_id: marcheId,
+                datemaj: new Date().toISOString(),
+                nombredocuments: 0,
+                progression: 0,
+              });
           }
           
-          // Si la RPC échoue (n'existe pas), faire une insertion directe
-          if (result.error && result.error.message.includes('does not exist')) {
-            console.log('La fonction RPC n\'existe pas, utilisation d\'une requête directe');
-            
-            if (isEdit) {
-              result = await supabase
-                .from('fascicules')
-                .update({
-                  nom,
-                  description,
-                  datemaj: new Date().toISOString(),
-                })
-                .eq('id', fascicule.id);
-            } else {
-              result = await supabase
-                .from('fascicules')
-                .insert({
-                  nom,
-                  description,
-                  marche_id: marcheId,
-                  datemaj: new Date().toISOString(),
-                  nombredocuments: 0,
-                  progression: 0,
-                });
-            }
-          }
-        } catch (rpcError) {
-          console.error('Erreur RPC:', rpcError);
+        } catch (error) {
+          console.error('Erreur:', error);
           
           // Fallback à une requête directe
           if (isEdit) {
