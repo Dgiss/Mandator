@@ -2,6 +2,12 @@
 import { UserRole, MarcheSpecificRole } from './types';
 
 /**
+ * Permission check functions optimized for performance.
+ * These functions implement fast paths for common cases and
+ * properly handle edge cases to avoid errors.
+ */
+
+/**
  * Vérifie si l'utilisateur peut diffuser un document pour un marché spécifique
  */
 export const canDiffuseMarche = (
@@ -9,13 +15,13 @@ export const canDiffuseMarche = (
   marcheRoles: Record<string, MarcheSpecificRole>, 
   marcheId?: string
 ): boolean => {
-  // Les administrateurs peuvent toujours diffuser
+  // Fast path: les administrateurs peuvent toujours diffuser
   if (globalRole === 'ADMIN') {
     return true;
   }
   
   // Si nous avons un ID de marché, vérifions le rôle spécifique pour ce marché
-  if (marcheId && marcheRoles[marcheId]) {
+  if (marcheId && marcheRoles && marcheRoles[marcheId]) {
     // Les MOE peuvent diffuser
     if (marcheRoles[marcheId] === 'MOE') {
       return true;
@@ -34,13 +40,13 @@ export const canVisaMarche = (
   marcheRoles: Record<string, MarcheSpecificRole>, 
   marcheId?: string
 ): boolean => {
-  // Les administrateurs peuvent toujours viser
+  // Fast path: les administrateurs peuvent toujours viser
   if (globalRole === 'ADMIN') {
     return true;
   }
   
   // Si nous avons un ID de marché, vérifions le rôle spécifique pour ce marché
-  if (marcheId && marcheRoles[marcheId]) {
+  if (marcheId && marcheRoles && marcheRoles[marcheId]) {
     // Les MANDATAIRES peuvent viser
     if (marcheRoles[marcheId] === 'MANDATAIRE') {
       return true;
@@ -59,13 +65,13 @@ export const canManageRolesMarche = (
   marcheRoles: Record<string, MarcheSpecificRole>, 
   marcheId?: string
 ): boolean => {
-  // Les administrateurs peuvent toujours gérer les rôles
+  // Fast path: les administrateurs peuvent toujours gérer les rôles
   if (globalRole === 'ADMIN') {
     return true;
   }
   
   // Si nous avons un ID de marché, vérifions le rôle spécifique pour ce marché
-  if (marcheId && marcheRoles[marcheId]) {
+  if (marcheId && marcheRoles && marcheRoles[marcheId]) {
     // Les MOE peuvent gérer les rôles de leur marché
     if (marcheRoles[marcheId] === 'MOE') {
       return true;
@@ -92,13 +98,13 @@ export const canCreateFascicule = (
   marcheRoles: Record<string, MarcheSpecificRole>, 
   marcheId?: string
 ): boolean => {
-  // Les administrateurs peuvent toujours créer des fascicules
+  // Fast path: les administrateurs peuvent toujours créer des fascicules
   if (globalRole === 'ADMIN') {
     return true;
   }
   
   // Si nous avons un ID de marché, vérifions le rôle spécifique pour ce marché
-  if (marcheId && marcheRoles[marcheId]) {
+  if (marcheId && marcheRoles && marcheRoles[marcheId]) {
     // Les MOE peuvent créer des fascicules pour leur marché
     if (marcheRoles[marcheId] === 'MOE') {
       return true;

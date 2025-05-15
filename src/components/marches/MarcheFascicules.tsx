@@ -18,7 +18,7 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
   const [showForm, setShowForm] = useState<boolean>(false);
   const [selectedFascicule, setSelectedFascicule] = useState<any>(null);
   const { toast } = useToast();
-  const { role, canCreateFascicule } = useUserRole();
+  const { canCreateFascicule, isAdmin } = useUserRole(marcheId);
 
   useEffect(() => {
     loadFascicules();
@@ -30,7 +30,7 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
       console.log(`Chargement des fascicules pour le marché ${marcheId}...`);
       const data = await fetchFasciculesByMarcheId(marcheId);
       console.log(`${data.length} fascicules chargés`);
-      setFascicules(data);
+      setFascicules(data || []);
     } catch (error) {
       console.error('Error fetching fascicules:', error);
       toast({
@@ -60,8 +60,8 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
     }
   };
 
-  // Déterminer si l'utilisateur peut créer ou modifier des fascicules
-  const userCanCreateOrEdit = role === 'ADMIN' || canCreateFascicule(marcheId);
+  // Determine if user can create or modify fascicules
+  const userCanCreateOrEdit = isAdmin || canCreateFascicule(marcheId);
 
   return (
     <div>

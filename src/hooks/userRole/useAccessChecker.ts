@@ -1,5 +1,5 @@
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { UserRole, MarcheSpecificRole } from './types';
 import { 
   canDiffuseMarche, 
@@ -10,65 +10,63 @@ import {
 } from './permissions';
 
 /**
- * Hook for checking various access permissions based on user roles
- * Optimized to prevent excessive logging and infinite loop issues
+ * Optimized hook for checking various access permissions based on user roles
+ * Uses memoization to prevent excessive recalculations and improve performance
  */
 export function useAccessChecker(
   globalRole: UserRole,
   marcheRoles: Record<string, MarcheSpecificRole>
 ) {
+  // Fast access check for Admin users
+  const isAdmin = useMemo(() => globalRole === 'ADMIN', [globalRole]);
+  
   // Check if user can diffuse documents on a market
   const canDiffuse = useCallback((marcheId?: string) => {
-    // Fast path for admins to prevent unnecessary processing
-    if (globalRole === 'ADMIN') {
-      return true;
-    }
+    // Fast path for admins
+    if (isAdmin) return true;
     
-    const result = canDiffuseMarche(globalRole, marcheRoles, marcheId);
-    return result;
-  }, [globalRole, marcheRoles]);
+    return canDiffuseMarche(globalRole, marcheRoles, marcheId);
+  }, [globalRole, marcheRoles, isAdmin]);
   
   // Check if user can visa documents on a market
   const canVisa = useCallback((marcheId?: string) => {
-    // Fast path for admins to prevent unnecessary processing
-    if (globalRole === 'ADMIN') {
-      return true;
-    }
+    // Fast path for admins
+    if (isAdmin) return true;
     
-    const result = canVisaMarche(globalRole, marcheRoles, marcheId);
-    return result;
-  }, [globalRole, marcheRoles]);
+    return canVisaMarche(globalRole, marcheRoles, marcheId);
+  }, [globalRole, marcheRoles, isAdmin]);
   
   // Check if user can manage roles on a market
   const canManageRoles = useCallback((marcheId?: string) => {
-    // Admins can always manage roles
-    if (globalRole === 'ADMIN') {
-      return true;
-    }
+    // Fast path for admins
+    if (isAdmin) return true;
     
-    // Check specific market role
+    // Fast path for MOE on specific market
     if (marcheId && marcheRoles[marcheId] === 'MOE') {
       return true;
     }
     
-    const result = canManageRolesMarche(globalRole, marcheRoles, marcheId);
-    return result;
-  }, [globalRole, marcheRoles]);
+    return canManageRolesMarche(globalRole, marcheRoles, marcheId);
+  }, [globalRole, marcheRoles, isAdmin]);
   
   // Check if user can create markets (global permission)
   // Memoize result to avoid unnecessary recalculations
-  const canCreateMarche = checkCanCreateMarche(globalRole);
+  const canCreateMarche = useMemo(() => {
+    return isAdmin || checkCanCreateMarche(globalRole);
+  }, [globalRole, isAdmin]);
   
   // Check if user can create fascicules for a market
   const canCreateFascicule = useCallback((marcheId?: string) => {
     // Fast path for admins
-    if (globalRole === 'ADMIN') {
+    if (isAdmin) return true;
+    
+    // Fast path for MOE on specific market
+    if (marcheId && marcheRoles[marcheId] === 'MOE') {
       return true;
     }
     
-    const result = checkCanCreateFascicule(globalRole, marcheRoles, marcheId);
-    return result;
-  }, [globalRole, marcheRoles]);
+    return checkCanCreateFascicule(globalRole, marcheRoles, marcheId);
+  }, [globalRole, marcheRoles, isAdmin]);
   
   return {
     canDiffuse,

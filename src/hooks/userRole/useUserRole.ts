@@ -1,20 +1,22 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
 import { UserRoleInfo, MarcheSpecificRole, UserRole } from './types';
 import { useRoleFetcher } from './useRoleFetcher';
 import { useAccessChecker } from './useAccessChecker';
+import { clearRoleCache } from './roleCache';
 
-// Create a simple cache to limit API calls
-const roleCache = new Map<string, UserRoleInfo>();
-
+/**
+ * Main hook for accessing and managing user roles throughout the application
+ * @param marcheId Optional market ID to get specific permissions for
+ */
 export const useUserRole = (marcheId?: string) => {
+  // Local state
   const [role, setRole] = useState<UserRole | null>(null);
   const [marcheRoles, setMarcheRoles] = useState<Record<string, MarcheSpecificRole>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  // Use our specialized hooks
+  // Use specialized hooks
   const { 
     role: fetchedRole, 
     loading: roleLoading, 
@@ -36,17 +38,17 @@ export const useUserRole = (marcheId?: string) => {
     fetchedRoles
   );
 
-  // Add a canEdit function for backwards compatibility
-  const canEdit = useCallback((marcheId?: string) => {
-    return canDiffuse(marcheId);
-  }, [canDiffuse]);
+  // Legacy compatibility - canEdit is now an alias for canDiffuse
+  const canEdit = useCallback((specificMarcheId?: string) => {
+    return canDiffuse(specificMarcheId || marcheId);
+  }, [canDiffuse, marcheId]);
 
   // Helper method to check if user is MOE (either globally or for specified market)
   const isMOE = useCallback((specificMarcheId?: string) => {
     // Use the provided marcheId parameter, fallback to the hook's marcheId
     const targetMarcheId = specificMarcheId || marcheId;
     
-    // Check if user is admin (admins can do everything)
+    // Fast path: admins can do everything
     if (fetchedRole === 'ADMIN') return true;
     
     // Check global role
@@ -65,7 +67,7 @@ export const useUserRole = (marcheId?: string) => {
     // Use the provided marcheId parameter, fallback to the hook's marcheId
     const targetMarcheId = specificMarcheId || marcheId;
     
-    // Check if user is admin (admins can do everything)
+    // Fast path: admins can do everything
     if (fetchedRole === 'ADMIN') return true;
     
     // Check global role
@@ -88,11 +90,9 @@ export const useUserRole = (marcheId?: string) => {
     }
   }, [fetchedRole, fetchedRoles, roleLoading]);
 
-  // Function to clear role cache (useful when role changes)
+  // Function to clear role cache and refresh roles
   const refreshRoles = useCallback(() => {
-    // Clear the cache
-    roleCache.delete('userInfo');
-    // Re-fetch roles
+    clearRoleCache();
     setLoading(true);
   }, []);
 

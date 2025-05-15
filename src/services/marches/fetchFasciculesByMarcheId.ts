@@ -43,7 +43,8 @@ export const fetchFasciculesByMarcheId = async (marcheId: string): Promise<any[]
       const { data, error } = await supabase
         .from('fascicules')
         .select('*')
-        .eq('marche_id', marcheId);
+        .eq('marche_id', marcheId)
+        .order('nom', { ascending: true });
       
       if (error) {
         console.error(`Erreur lors de la récupération directe des fascicules:`, error);
@@ -56,9 +57,10 @@ export const fetchFasciculesByMarcheId = async (marcheId: string): Promise<any[]
       
       // En cas d'erreur, faire un autre essai avec une approche alternative
       try {
+        // Utiliser une sélection simplifiée pour minimiser les risques d'erreur RLS
         const { data: fallbackData, error: fallbackError } = await supabase
           .from('fascicules')
-          .select('*')
+          .select('id, nom, description, nombredocuments, datemaj, progression')
           .eq('marche_id', marcheId);
         
         if (fallbackError) {

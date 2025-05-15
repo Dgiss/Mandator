@@ -1,13 +1,12 @@
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { getGlobalUserRole } from '@/utils/auth/roles';
 
 interface MarcheFasciculeFormProps {
   onClose: (refreshNeeded?: boolean) => void;
@@ -15,150 +14,103 @@ interface MarcheFasciculeFormProps {
   fascicule?: any;
 }
 
-const MarcheFasciculeForm: React.FC<MarcheFasciculeFormProps> = ({ onClose, marcheId, fascicule }) => {
-  const [nom, setNom] = useState<string>(fascicule?.nom || '');
-  const [description, setDescription] = useState<string>(fascicule?.description || '');
-  const [loading, setLoading] = useState<boolean>(false);
+const MarcheFasciculeForm: React.FC<MarcheFasciculeFormProps> = ({
+  onClose,
+  marcheId,
+  fascicule
+}) => {
+  const isEditing = !!fascicule;
+  const [nom, setNom] = useState(fascicule?.nom || '');
+  const [description, setDescription] = useState(fascicule?.description || '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-  
-  const isEdit = !!fascicule;
-  const title = isEdit ? "Modifier le fascicule" : "Nouveau fascicule";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!nom.trim()) {
-      toast({
-        title: "Erreur",
-        description: "Le nom du fascicule est obligatoire",
-        variant: "destructive",
-      });
-      return;
-    }
+    setIsSubmitting(true);
 
-    setLoading(true);
-    
     try {
-      // Vérifier le rôle global pour éviter les erreurs de récursion
-      const globalRole = await getGlobalUserRole();
-      let result;
-      
-      // Utiliser une approche différente selon le rôle pour éviter la récursion
-      if (globalRole === 'ADMIN') {
-        console.log('Utilisateur ADMIN - utilisation d\'une insertion directe');
+      // Validation
+      if (!nom.trim()) {
+        toast({
+          title: "Champ requis",
+          description: "Le nom du fascicule est obligatoire",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (isEditing) {
+        // Update existing fascicule
+        const { error } = await supabase
+          .from('fascicules')
+          .update({
+            nom,
+            description: description || null,
+            datemaj: new Date().toISOString()
+          })
+          .eq('id', fascicule.id);
+
+        if (error) {
+          throw error;
+        }
         
-        if (isEdit) {
-          // Mise à jour
-          result = await supabase
-            .from('fascicules')
-            .update({
-              nom,
-              description,
-              datemaj: new Date().toISOString(),
-            })
-            .eq('id', fascicule.id);
-        } else {
-          // Création
-          result = await supabase
-            .from('fascicules')
-            .insert({
-              nom,
-              description,
-              marche_id: marcheId,
-              datemaj: new Date().toISOString(),
-              nombredocuments: 0,
-              progression: 0,
-            });
-        }
+        toast({
+          title: "Fascicule mis à jour",
+          description: "Le fascicule a été mis à jour avec succès",
+        });
       } else {
-        // Pour les non-admin, essayer d'utiliser une insertion directe avec gestion d'erreur
-        try {
-          if (isEdit) {
-            // Remove the RPC call that doesn't exist and use direct update
-            result = await supabase
-              .from('fascicules')
-              .update({
-                nom,
-                description,
-                datemaj: new Date().toISOString(),
-              })
-              .eq('id', fascicule.id);
-          } else {
-            // Remove the RPC call that doesn't exist and use direct insert
-            result = await supabase
-              .from('fascicules')
-              .insert({
-                nom,
-                description,
-                marche_id: marcheId,
-                datemaj: new Date().toISOString(),
-                nombredocuments: 0,
-                progression: 0,
-              });
-          }
-          
-        } catch (error) {
-          console.error('Erreur:', error);
-          
-          // Fallback à une requête directe
-          if (isEdit) {
-            result = await supabase
-              .from('fascicules')
-              .update({
-                nom,
-                description,
-                datemaj: new Date().toISOString(),
-              })
-              .eq('id', fascicule.id);
-          } else {
-            result = await supabase
-              .from('fascicules')
-              .insert({
-                nom,
-                description,
-                marche_id: marcheId,
-                datemaj: new Date().toISOString(),
-                nombredocuments: 0,
-                progression: 0,
-              });
-          }
+        // Create new fascicule
+        const { error } = await supabase
+          .from('fascicules')
+          .insert({
+            marche_id: marcheId,
+            nom,
+            description: description || null,
+            datemaj: new Date().toISOString(),
+            nombredocuments: 0,
+            progression: 0
+          });
+
+        if (error) {
+          throw error;
         }
+        
+        toast({
+          title: "Fascicule créé",
+          description: "Le nouveau fascicule a été créé avec succès",
+        });
       }
 
-      if (result?.error) {
-        throw result.error;
-      }
-
-      toast({
-        title: "Succès",
-        description: isEdit ? "Fascicule mis à jour" : "Fascicule créé",
-      });
-      
+      // Close the form and trigger a refresh
       onClose(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur lors de la sauvegarde du fascicule:', error);
       toast({
         title: "Erreur",
-        description: "Impossible de sauvegarder le fascicule",
+        description: error.message || "Une erreur est survenue lors de la sauvegarde du fascicule",
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
     <Dialog open={true} onOpenChange={() => onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? `Modifier le fascicule: ${fascicule.nom}` : 'Créer un nouveau fascicule'}
+          </DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Nom du fascicule</Label>
+            <Label htmlFor="nom">Nom du fascicule *</Label>
             <Input
-              id="name"
+              id="nom"
               value={nom}
               onChange={(e) => setNom(e.target.value)}
               placeholder="Nom du fascicule"
@@ -172,19 +124,32 @@ const MarcheFasciculeForm: React.FC<MarcheFasciculeFormProps> = ({ onClose, marc
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Description du fascicule"
-              rows={3}
+              placeholder="Description du fascicule (optionnel)"
+              rows={4}
             />
           </div>
           
-          <DialogFooter className="pt-4">
-            <Button type="button" variant="outline" onClick={() => onClose()} disabled={loading}>
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onClose()}
+              disabled={isSubmitting}
+            >
               Annuler
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Enregistrement...' : isEdit ? 'Mettre à jour' : 'Créer'}
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+            >
+              {isSubmitting 
+                ? 'Enregistrement...' 
+                : isEditing 
+                  ? 'Mettre à jour' 
+                  : 'Créer'
+              }
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
