@@ -18,9 +18,12 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
       throw new Error('Utilisateur non connecté');
     }
     
-    // Check access using the secure function
+    // Check access using the existing check_user_marche_access function
     const { data: hasAccess, error: accessError } = await supabase
-      .rpc('check_marche_access', { marche_id_param: id });
+      .rpc('check_user_marche_access', { 
+        user_id: user.id, 
+        marche_id: id 
+      });
     
     if (accessError) {
       console.error(`Erreur lors de la vérification des droits d'accès pour le marché ${id}:`, accessError);
@@ -34,22 +37,25 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
     
     console.log(`Utilisateur ${user.id} a accès au marché ${id}, récupération des détails...`);
     
-    // Use the security definer function to fetch marché details
+    // Use direct query with the RLS policies that are in place
     const { data, error } = await supabase
-      .rpc('get_marche_by_id', { marche_id_param: id });
+      .from('marches')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
     
     if (error) {
       console.error(`Erreur lors de la récupération du marché ${id}:`, error);
       throw error;
     }
     
-    if (!data || !Array.isArray(data) || data.length === 0) {
+    if (!data) {
       console.error(`Marché ${id} non trouvé`);
       return null;
     }
     
     console.log(`Marché ${id} récupéré avec succès`);
-    return data[0] as Marche;
+    return data as Marche;
   } catch (error) {
     console.error('Exception lors de la récupération du marché:', error);
     throw error;

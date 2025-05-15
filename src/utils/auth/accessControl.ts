@@ -33,9 +33,12 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
       // Continue with other checks - don't fail immediately
     }
     
-    // Use our new secure function to check access
+    // Use existing user_has_access_to_marche function
     const { data: hasAccess, error } = await supabase
-      .rpc('check_marche_access', { marche_id_param: marcheId });
+      .rpc('user_has_access_to_marche', { 
+        user_id: user.id, 
+        marche_id: marcheId 
+      });
       
     if (error) {
       console.error('Error checking access via RPC:', error);
