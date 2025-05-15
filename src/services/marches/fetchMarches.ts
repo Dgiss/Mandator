@@ -16,8 +16,11 @@ export const fetchMarches = async (): Promise<Marche[]> => {
       throw new Error("Client Supabase non initialisé");
     }
     
-    // Use our dedicated RPC function that avoids RLS infinite recursion
-    const { data, error } = await supabase.rpc('get_accessible_marches_for_user');
+    // Use direct query with the RLS policies now properly set up
+    const { data, error } = await supabase
+      .from('marches')
+      .select('*')
+      .order('datecreation', { ascending: false });
     
     if (error) {
       console.error('Erreur lors de la récupération des marchés:', error);

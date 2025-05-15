@@ -29,31 +29,25 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
     
     console.log(`Utilisateur ${user.id} a accès au marché ${id}, récupération des détails...`);
     
-    // Use execute_query with a parameterized query to bypass RLS issues
-    // This function was created in a migration and is a SECURITY DEFINER function
-    const { data, error } = await supabase.rpc(
-      'execute_query',
-      { 
-        query_text: `SELECT * FROM marches WHERE id = '${id}'` 
-      }
-    );
+    // Use direct select from the marche table with proper RLS now in place
+    const { data, error } = await supabase
+      .from('marches')
+      .select('*')
+      .eq('id', id)
+      .single();
     
     if (error) {
-      console.error(`Erreur lors de la récupération du marché ${id} via RPC:`, error);
+      console.error(`Erreur lors de la récupération du marché ${id}:`, error);
       throw error;
     }
     
-    if (!data || data.length === 0) {
+    if (!data) {
       console.error(`Marché ${id} non trouvé`);
       return null;
     }
     
-    // The execute_query function returns an array with JSON stringified rows
-    // We need to extract the first item (since we're querying by ID)
-    const marcheData = data[0];
-    
-    console.log(`Marché ${id} récupéré avec succès via RPC`);
-    return marcheData as Marche;
+    console.log(`Marché ${id} récupéré avec succès`);
+    return data as Marche;
   } catch (error) {
     console.error('Exception lors de la récupération du marché:', error);
     throw error;

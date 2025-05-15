@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
@@ -61,9 +60,6 @@ const RolesDialogContent: React.FC<RolesDialogContentProps> = ({ marcheId, march
               description: "Vous n'avez pas les droits nécessaires pour accéder à ce marché",
               variant: "destructive",
             });
-            
-            // Optional: Navigate away if no access
-            // navigate('/marches');
           }
         }
       } catch (error) {

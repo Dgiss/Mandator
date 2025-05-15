@@ -33,7 +33,7 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
       // Continue with other checks - don't fail immediately
     }
     
-    // Use our dedicated RPC function to avoid recursive calls to marches table
+    // Use the user_has_access_to_marche RPC function
     try {
       const { data, error } = await supabase.rpc(
         'user_has_access_to_marche', 
@@ -55,37 +55,32 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
       // Continue with fallback checks
     }
     
-    // Fallback: Check if user is creator (second highest priority)
+    // Fallback: Check if user is creator using direct query
     try {
-      // This is a direct query but safer since it's just checking a single row
-      // and the user has to be logged in to execute it
-      const { data: marcheData, error: marcheError } = await supabase.rpc(
-        'execute_query', 
-        { 
-          query_text: `SELECT user_id FROM marches WHERE id = '${marcheId}'` 
-        }
-      );
+      const { data: marcheData, error: marcheError } = await supabase
+        .from('marches')
+        .select('user_id')
+        .eq('id', marcheId)
+        .single();
       
-      if (!marcheError && marcheData && marcheData.length > 0) {
-        const creatorId = marcheData[0].user_id;
-        if (creatorId === user.id) {
+      if (!marcheError && marcheData) {
+        if (marcheData.user_id === user.id) {
           console.log(`User ${user.id} is creator of market ${marcheId} - access granted`);
           return true;
         }
       }
     } catch (creatorError) {
       console.error('Error checking market creator:', creatorError);
-      // Continue with other checks
     }
     
-    // Fallback for most cases: Check direct rights
+    // Fallback: Check direct rights
     try {
-      const { data, error } = await supabase.rpc(
-        'execute_query', 
-        { 
-          query_text: `SELECT id FROM droits_marche WHERE user_id = '${user.id}' AND marche_id = '${marcheId}' LIMIT 1` 
-        }
-      );
+      const { data, error } = await supabase
+        .from('droits_marche')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('marche_id', marcheId)
+        .limit(1);
       
       if (!error && data && data.length > 0) {
         console.log(`User ${user.id} has explicit rights for market ${marcheId} - access granted`);
