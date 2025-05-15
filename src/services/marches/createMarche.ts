@@ -2,7 +2,6 @@
 import { supabase } from '@/lib/supabase';
 import { Marche, MarcheCreateData } from './types';
 import { fileStorage } from '../storage/fileStorage';
-import { toast } from '@/hooks/use-toast';
 import { clearRoleCache } from '@/hooks/userRole/roleCache';
 
 /**
@@ -90,9 +89,33 @@ export const createMarche = async (marcheData: MarcheCreateData): Promise<Marche
     }
     
     // Fallback: insertion directe dans la table marches
+    // Assurons-nous que les types correspondent à la signature de la méthode
     const { data: insertResult, error: insertError } = await supabase
       .from('marches')
-      .insert(cleanedData)
+      .insert({
+        titre: cleanedData.titre,
+        description: cleanedData.description,
+        client: cleanedData.client,
+        statut: cleanedData.statut || 'En attente',
+        budget: cleanedData.budget,
+        image: cleanedData.image,
+        logo: cleanedData.logo,
+        user_id: cleanedData.user_id,
+        datecreation: cleanedData.datecreation,
+        type_marche: cleanedData.type_marche,
+        adresse: cleanedData.adresse,
+        ville: cleanedData.ville,
+        code_postal: cleanedData.code_postal,
+        pays: cleanedData.pays,
+        region: cleanedData.region,
+        date_debut: cleanedData.date_debut,
+        date_fin: cleanedData.date_fin,
+        date_notification: cleanedData.date_notification,
+        periode_preparation: cleanedData.periode_preparation,
+        periode_chantier: cleanedData.periode_chantier,
+        date_fin_gpa: cleanedData.date_fin_gpa,
+        commentaire: cleanedData.commentaire
+      })
       .select('*')
       .single();
     

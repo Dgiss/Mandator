@@ -210,7 +210,7 @@ export const getUserPermissions = async (marcheId?: string): Promise<{
     if (globalRole === 'ADMIN') {
       return { 
         globalRole, 
-        specificRole: 'ADMIN', 
+        specificRole: 'MOE' as MarcheSpecificRole, // Fixed type issue here
         isCreator: true,
         hasAccess: true 
       };
