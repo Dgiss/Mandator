@@ -38,12 +38,12 @@ export const createMarche = async (marcheData: MarcheCreateData): Promise<Marche
     
     // Traitement spécial pour les champs pays et région qui montrent des erreurs
     if (marcheData.pays !== null && typeof marcheData.pays === 'object' && 
-        marcheData.pays && '_type' in marcheData.pays && marcheData.pays._type === 'undefined') {
+        marcheData.pays && '_type' in (marcheData.pays as any) && (marcheData.pays as any)._type === 'undefined') {
       marcheData.pays = null;
     }
     
     if (marcheData.region !== null && typeof marcheData.region === 'object' && 
-        marcheData.region && '_type' in marcheData.region && marcheData.region._type === 'undefined') {
+        marcheData.region && '_type' in (marcheData.region as any) && (marcheData.region as any)._type === 'undefined') {
       marcheData.region = null;
     }
     
