@@ -33,8 +33,7 @@ export const createMarche = async (marcheData: MarcheCreateData): Promise<Marche
       await fileStorage.ensureBucketExists('marches', true);
     }
     
-    // Utilisation d'un try/catch spécifique pour l'insertion 
-    // pour capturer les erreurs précises
+    // Utiliser un try/catch spécifique pour l'insertion pour capturer les erreurs précises
     try {
       const { data, error } = await supabase
         .from('marches')
@@ -43,13 +42,8 @@ export const createMarche = async (marcheData: MarcheCreateData): Promise<Marche
         .single();
       
       if (error) {
-        if (error.code === '42P17') {
-          console.error('Erreur de récursion infinie détectée dans la politique RLS:', error);
-          throw new Error('Erreur de configuration RLS - Contactez le support technique.');
-        } else {
-          console.error('Erreur lors de la création du marché:', error);
-          throw error;
-        }
+        console.error('Erreur lors de la création du marché:', error);
+        throw error;
       }
       
       console.log("Marché créé avec succès:", data);
@@ -70,7 +64,7 @@ export const createMarche = async (marcheData: MarcheCreateData): Promise<Marche
       }
       
       return data as Marche;
-    } catch (insertError) {
+    } catch (insertError: any) {
       // Capture spécifique de l'erreur d'insertion
       console.error('Exception lors de l\'insertion du marché:', insertError);
       throw insertError;

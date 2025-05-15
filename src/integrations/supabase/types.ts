@@ -768,6 +768,14 @@ export type Database = {
         Args: { user_id: string; marche_id: string; role_specifique: string }
         Returns: undefined
       }
+      check_droits_access: {
+        Args: { droit_id: string }
+        Returns: boolean
+      }
+      check_market_access: {
+        Args: { market_id: string }
+        Returns: boolean
+      }
       check_user_marche_access: {
         Args: { user_id: string; marche_id: string }
         Returns: boolean
