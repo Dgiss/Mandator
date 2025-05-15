@@ -85,7 +85,7 @@ export const signOutUser = async () => {
       return { error };
     }
     
-    return { success: true };
+    return { error: null, success: true };
   } catch (err) {
     console.error("Exception in signOutUser:", err);
     return { error: err };
@@ -111,7 +111,7 @@ export const updateUserProfile = async (userId: string, data: UserProfileData) =
       return { error };
     }
     
-    return { success: true };
+    return { error: null, success: true };
   } catch (err) {
     console.error("Exception in updateUserProfile:", err);
     return { error: err };
@@ -137,7 +137,7 @@ export const fetchUserProfile = async (userId: string) => {
       return { error };
     }
     
-    return { data };
+    return { error: null, data };
   } catch (err) {
     console.error("Exception in fetchUserProfile:", err);
     return { error: err };

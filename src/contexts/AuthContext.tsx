@@ -22,14 +22,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoginInProgress(true);
       const result = await signInWithEmail(email, password);
       
-      // Retry logic for database errors
-      if (result.error?.message?.includes("Database error")) {
-        console.log("Database error detected, retrying once after delay...");
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1s before retry
-        return await signInWithEmail(email, password);
+      // Convertir au format attendu par AuthContextType
+      if (result.error) {
+        return { error: result.error };
+      } else {
+        return { error: null, data: result.data };
       }
-      
-      return result;
     } catch (error) {
       console.error("Unexpected error in sign-in:", error);
       return { error };
@@ -48,14 +46,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoginInProgress(true);
       const result = await signUpWithEmail(email, password, userData);
       
-      // Retry logic for database errors
-      if (result.error?.message?.includes("Database error")) {
-        console.log("Database error detected, retrying sign up after delay...");
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Wait 1.5s before retry
-        return await signUpWithEmail(email, password, userData);
+      // Convertir au format attendu par AuthContextType
+      if (result.error) {
+        return { error: result.error };
+      } else {
+        return { error: null, data: result.data };
       }
-      
-      return result;
     } catch (error) {
       console.error("Unexpected error in sign-up:", error);
       return { error };
@@ -88,12 +84,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const result = await updateUserProfile(user.id, data);
     
-    if (!result.error) {
+    // Convertir au format attendu par AuthContextType
+    if (result.error) {
+      return { error: result.error };
+    } else {
       // Refresh profile in state if successful
       refreshProfile();
+      return { error: null };
     }
-    
-    return result;
   };
 
   return (
