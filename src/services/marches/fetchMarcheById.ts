@@ -1,8 +1,6 @@
 
 import { supabase } from '@/lib/supabase';
 import { Marche } from './types';
-import { hasAccessToMarche } from '@/utils/auth';
-import { getGlobalUserRole } from '@/utils/auth/roles';
 
 /**
  * Récupérer un marché spécifique par son ID
@@ -20,8 +18,15 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
       throw new Error('Utilisateur non connecté');
     }
     
-    // IMPORTANT: Verify if user has access to this market using our helper function
-    const hasAccess = await hasAccessToMarche(id);
+    // Check access using the secure function
+    const { data: hasAccess, error: accessError } = await supabase
+      .rpc('check_marche_access', { marche_id_param: id });
+    
+    if (accessError) {
+      console.error(`Erreur lors de la vérification des droits d'accès pour le marché ${id}:`, accessError);
+      throw accessError;
+    }
+    
     if (!hasAccess) {
       console.error(`Accès refusé au marché ${id} pour l'utilisateur ${user.id}`);
       throw new Error('Accès refusé');
@@ -29,25 +34,22 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
     
     console.log(`Utilisateur ${user.id} a accès au marché ${id}, récupération des détails...`);
     
-    // Use direct select from the marche table with proper RLS now in place
+    // Use the security definer function to fetch marché details
     const { data, error } = await supabase
-      .from('marches')
-      .select('*')
-      .eq('id', id)
-      .single();
+      .rpc('get_marche_by_id', { marche_id_param: id });
     
     if (error) {
       console.error(`Erreur lors de la récupération du marché ${id}:`, error);
       throw error;
     }
     
-    if (!data) {
+    if (!data || !Array.isArray(data) || data.length === 0) {
       console.error(`Marché ${id} non trouvé`);
       return null;
     }
     
     console.log(`Marché ${id} récupéré avec succès`);
-    return data as Marche;
+    return data[0] as Marche;
   } catch (error) {
     console.error('Exception lors de la récupération du marché:', error);
     throw error;

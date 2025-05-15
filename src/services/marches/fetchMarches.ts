@@ -16,11 +16,33 @@ export const fetchMarches = async (): Promise<Marche[]> => {
       throw new Error("Client Supabase non initialisé");
     }
     
-    // Use direct query with the RLS policies now properly set up
-    const { data, error } = await supabase
-      .from('marches')
-      .select('*')
-      .order('datecreation', { ascending: false });
+    // First get global role for optimized fetching
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('role_global')
+      .single();
+      
+    const isAdmin = profileData?.role_global === 'ADMIN';
+    
+    // Different query strategies based on role
+    let data;
+    let error;
+    
+    if (isAdmin) {
+      // Admins can see all markets
+      const response = await supabase
+        .from('marches')
+        .select('*')
+        .order('datecreation', { ascending: false });
+        
+      data = response.data;
+      error = response.error;
+    } else {
+      // Use the get_accessible_marches_for_user function for other users
+      const response = await supabase.rpc('get_accessible_marches_for_user');
+      data = response.data;
+      error = response.error;
+    }
     
     if (error) {
       console.error('Erreur lors de la récupération des marchés:', error);

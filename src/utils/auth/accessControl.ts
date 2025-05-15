@@ -33,26 +33,16 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
       // Continue with other checks - don't fail immediately
     }
     
-    // Use the user_has_access_to_marche RPC function
-    try {
-      const { data, error } = await supabase.rpc(
-        'user_has_access_to_marche', 
-        {
-          user_id: user.id,
-          marche_id: marcheId
-        }
-      );
+    // Use our new secure function to check access
+    const { data: hasAccess, error } = await supabase
+      .rpc('check_marche_access', { marche_id_param: marcheId });
       
-      if (error) {
-        console.error('Error checking access via RPC:', error);
-        // Continue with fallback checks
-      } else {
-        console.log(`Access check via RPC for market ${marcheId}: ${data ? 'granted' : 'denied'}`);
-        return !!data;
-      }
-    } catch (rpcError) {
-      console.error('Exception in RPC access check:', rpcError);
-      // Continue with fallback checks
+    if (error) {
+      console.error('Error checking access via RPC:', error);
+      // Fall back to direct checks
+    } else {
+      console.log(`Access check via RPC for market ${marcheId}: ${hasAccess ? 'granted' : 'denied'}`);
+      return !!hasAccess;
     }
     
     // Fallback: Check if user is creator using direct query
