@@ -54,9 +54,10 @@ export const fileStorage = {
       
       console.log(`Bucket ${bucketName} créé avec succès.`);
       
-      // Ajouter les politiques de bucket si c'est un bucket public
+      // Pour les buckets publics, nous ne pouvons pas définir des politiques directement
+      // via l'API JS, donc nous allons juste logger l'information
       if (isPublic) {
-        await this.setupPublicBucketPolicies(bucketName);
+        console.log(`Bucket ${bucketName} a été créé comme public. Des configurations supplémentaires peuvent être nécessaires via la console Supabase.`);
       }
     } catch (error) {
       console.error(`Erreur lors de la création/vérification du bucket ${bucketName}:`, error);
@@ -66,36 +67,18 @@ export const fileStorage = {
   
   /**
    * Configure les politiques nécessaires pour un bucket public
-   * Note: Utilise les APIs RPC SQL plutôt que les méthodes createPolicy qui ne sont pas disponibles
+   * Note: Cette fonction est conservée pour la compatibilité ascendante mais
+   * les politiques devraient être configurées via l'interface Supabase ou SQL
    */
   async setupPublicBucketPolicies(bucketName: string): Promise<void> {
     try {
-      // Au lieu d'appeler createPolicy qui n'existe pas, on utilise une requête RPC
-      // pour configurer les politiques de bucket
+      console.log(`Pour configurer des politiques pour le bucket ${bucketName}, veuillez utiliser l'interface Supabase ou des scripts SQL.`);
+      console.log(`Les politiques ne peuvent pas être configurées directement via l'API JavaScript.`);
       
-      // Pour l'accès en lecture public
-      await supabase.rpc('create_storage_policy', {
-        bucket_name: bucketName,
-        policy_name: 'Public Read',
-        policy_definition: 'true', // Accès de lecture illimité
-        policy_action: 'SELECT',
-        policy_role: 'anon'
-      }).catch(error => {
-        console.warn(`Erreur lors de la création de la politique de lecture: ${error.message}`);
-      });
+      // Note: La création de politiques via l'API JavaScript n'est pas disponible
+      // Les politiques doivent être configurées via l'interface Supabase ou des scripts SQL
       
-      // Pour l'upload par des utilisateurs authentifiés
-      await supabase.rpc('create_storage_policy', {
-        bucket_name: bucketName,
-        policy_name: 'Authenticated Upload',
-        policy_definition: '(auth.uid() IS NOT NULL)', // Accès en écriture pour les utilisateurs authentifiés
-        policy_action: 'INSERT',
-        policy_role: 'authenticated'
-      }).catch(error => {
-        console.warn(`Erreur lors de la création de la politique d'upload: ${error.message}`);
-      });
-      
-      console.log(`Politiques pour bucket ${bucketName} configurées avec succès.`);
+      console.log(`Bucket ${bucketName} : des configurations manuelles de politiques peuvent être nécessaires.`);
     } catch (error) {
       console.warn(`Erreur lors de la configuration des politiques pour ${bucketName}:`, error);
       // Ne pas bloquer l'application pour une erreur de politique

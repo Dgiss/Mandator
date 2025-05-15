@@ -77,15 +77,9 @@ export const initializeStorageBuckets = async () => {
         } else {
           console.log(`${bucket.name} bucket created successfully`);
           
-          // Set up public access for public buckets using SQL function or other available methods
+          // Note about public buckets
           if (bucket.isPublic) {
-            // Alternative approach for setting bucket policies if createPolicy is not available
-            try {
-              // This is a placeholder - actual implementation would depend on the available API
-              console.log(`Setting up public access for ${bucket.name}`);
-            } catch (policyError) {
-              console.error(`Error setting up policies for ${bucket.name}:`, policyError);
-            }
+            console.log(`Note: For public buckets like "${bucket.name}", you may need to configure storage policies through the Supabase dashboard.`);
           }
         }
       } else {
