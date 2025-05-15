@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,7 +45,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { getPublicUrl, deleteFile } from '@/services/storageService';
-import { hasAccessToMarche } from '@/utils/auth';
 
 interface MarcheFasciculesProps {
   marcheId: string;
@@ -64,98 +64,183 @@ export default function MarcheFascicules({ marcheId }: MarcheFasciculesProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [fasciculeToDelete, setFasciculeToDelete] = useState<Fascicule | null>(null);
   const [deletingFascicule, setDeletingFascicule] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Fetch fascicules from Supabase - FIXED to avoid RLS recursion
-  const fetchFascicules = async () => {
-    setLoading(true);
-    try {
-      // First check if user has access - this bypasses potential infinite recursion
-      const hasAccess = await hasAccessToMarche(marcheId);
-      
-      if (!hasAccess) {
-        console.error(`Access denied to market ${marcheId}`);
+  // First determine the user's role to optimize queries
+  useEffect(() => {
+    const getUserRole = async () => {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData?.user) {
+          console.error('No authenticated user found');
+          return;
+        }
+        
+        // Direct query to get user role from profiles
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('role_global')
+          .eq('id', userData.user.id)
+          .single();
+          
+        if (profileError) {
+          console.error('Error fetching user profile:', profileError);
+          return;
+        }
+        
+        setUserRole(profileData?.role_global || null);
+        console.log('User role determined:', profileData?.role_global);
+      } catch (error) {
+        console.error('Error determining user role:', error);
+      }
+    };
+    
+    getUserRole();
+  }, []);
+
+  // Fetch fascicules from Supabase with admin bypass
+  useEffect(() => {
+    if (!marcheId || !userRole) return;
+    
+    const fetchFascicules = async () => {
+      setLoading(true);
+      try {
+        console.log(`Fetching fascicules for marché ${marcheId} as ${userRole}`);
+        
+        // ADMIN bypass for direct query
+        if (userRole === 'ADMIN') {
+          console.log('Admin user - using direct query');
+          const { data: fasciculesData, error } = await supabase
+            .from('fascicules')
+            .select('*')
+            .eq('marche_id', marcheId);
+            
+          if (error) throw error;
+          
+          // Format data
+          const formattedData = (fasciculesData || []).map(fascicule => ({
+            id: fascicule.id,
+            nom: fascicule.nom,
+            nombredocuments: fascicule.nombredocuments || 0,
+            datemaj: fascicule.datemaj || new Date().toLocaleDateString('fr-FR'),
+            progression: fascicule.progression || 0,
+            description: fascicule.description,
+            marche_id: fascicule.marche_id
+          }));
+          
+          setFascicules(formattedData);
+          console.log('Fetched fascicules:', formattedData.length);
+          return;
+        }
+        
+        // For non-admin users, verify access using direct query
+        console.log('Standard user - checking access before fetching');
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData?.user) {
+          throw new Error('User not authenticated');
+        }
+        
+        // First check if user is creator of the marché
+        const { data: marcheData, error: marcheError } = await supabase
+          .from('marches')
+          .select('user_id')
+          .eq('id', marcheId)
+          .single();
+          
+        if (!marcheError && marcheData && marcheData.user_id === userData.user.id) {
+          console.log('User is creator of the marché, fetching fascicules');
+          const { data: fasciculesData, error } = await supabase
+            .from('fascicules')
+            .select('*')
+            .eq('marche_id', marcheId);
+            
+          if (error) throw error;
+          
+          const formattedData = (fasciculesData || []).map(fascicule => ({
+            id: fascicule.id,
+            nom: fascicule.nom,
+            nombredocuments: fascicule.nombredocuments || 0,
+            datemaj: fascicule.datemaj || new Date().toLocaleDateString('fr-FR'),
+            progression: fascicule.progression || 0,
+            description: fascicule.description,
+            marche_id: fascicule.marche_id
+          }));
+          
+          setFascicules(formattedData);
+          console.log('Fetched fascicules as creator:', formattedData.length);
+          return;
+        }
+        
+        // Check if user has explicit rights to the marché
+        const { data: droitData, error: droitError } = await supabase
+          .from('droits_marche')
+          .select('id')
+          .eq('user_id', userData.user.id)
+          .eq('marche_id', marcheId)
+          .maybeSingle();
+          
+        if (droitError) {
+          console.error('Error checking user rights:', droitError);
+        }
+        
+        if (droitData) {
+          // User has explicit rights, fetch fascicules
+          console.log('User has explicit rights, fetching fascicules');
+          const { data: fasciculesData, error } = await supabase
+            .from('fascicules')
+            .select('*')
+            .eq('marche_id', marcheId);
+            
+          if (error) throw error;
+          
+          const formattedData = (fasciculesData || []).map(fascicule => ({
+            id: fascicule.id,
+            nom: fascicule.nom,
+            nombredocuments: fascicule.nombredocuments || 0,
+            datemaj: fascicule.datemaj || new Date().toLocaleDateString('fr-FR'),
+            progression: fascicule.progression || 0,
+            description: fascicule.description,
+            marche_id: fascicule.marche_id
+          }));
+          
+          setFascicules(formattedData);
+          console.log('Fetched fascicules with explicit rights:', formattedData.length);
+          return;
+        }
+        
+        // If we get here, user doesn't have access
+        console.warn('User has no access to this marché');
         toast({
           title: "Accès refusé",
           description: "Vous n'avez pas les droits nécessaires pour accéder à ce marché",
           variant: "destructive",
         });
         setFascicules([]);
+        
+      } catch (error) {
+        console.error('Error fetching fascicules:', error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de récupérer la liste des fascicules",
+          variant: "destructive",
+        });
+        setFascicules([]);
+      } finally {
         setLoading(false);
-        return;
       }
-      
-      // Direct query - bypass RLS by using a direct approach for admin users
-      const { data: userData } = await supabase.auth.getUser();
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('role_global')
-        .eq('id', userData.user?.id)
-        .single();
-        
-      let fasciculesData;
-      
-      if (profileData?.role_global === 'ADMIN') {
-        // Admin bypass - direct query
-        const { data, error } = await supabase
-          .from('fascicules')
-          .select('*')
-          .eq('marche_id', marcheId);
-          
-        if (error) throw error;
-        fasciculesData = data;
-      } else {
-        // Use the get_accessible_marches_for_user RPC to get markets the user has access to
-        const { data: accessibleMarkets, error: accessError } = await supabase
-          .rpc('get_accessible_marches_for_user');
-          
-        if (accessError) throw accessError;
-        
-        // Check if the user has access to this specific market
-        const hasMarketAccess = accessibleMarkets.some((market: any) => market.id === marcheId);
-        
-        if (!hasMarketAccess) {
-          throw new Error('Access denied');
-        }
-        
-        // If user has access, proceed with the direct query
-        const { data, error } = await supabase
-          .from('fascicules')
-          .select('*')
-          .eq('marche_id', marcheId);
-          
-        if (error) throw error;
-        fasciculesData = data;
-      }
-      
-      const formattedData = fasciculesData.map((fascicule: any) => ({
-        id: fascicule.id,
-        nom: fascicule.nom,
-        nombredocuments: fascicule.nombredocuments || 0,
-        datemaj: fascicule.datemaj || new Date().toLocaleDateString('fr-FR'),
-        progression: fascicule.progression || 0,
-        description: fascicule.description,
-        marche_id: fascicule.marche_id
-      }));
-      
-      setFascicules(formattedData);
-    } catch (error) {
-      console.error('Erreur lors du chargement des fascicules:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de récupérer la liste des fascicules",
-        variant: "destructive",
-      });
-      setFascicules([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+    
+    fetchFascicules();
+  }, [marcheId, userRole, toast]);
 
-  // Fetch documents for a specific fascicule
+  // Fetch documents for a specific fascicule - with admin bypass
   const fetchFasciculeDocuments = async (fasciculeId: string) => {
     setLoadingDocuments(true);
     try {
+      console.log(`Fetching documents for fascicule ${fasciculeId} as ${userRole}`);
+      
+      // Direct query for all users since we've already verified access to the marché
       const { data, error } = await supabase
         .from('documents')
         .select('*')
@@ -164,6 +249,7 @@ export default function MarcheFascicules({ marcheId }: MarcheFasciculesProps) {
       if (error) throw error;
       
       setFasciculeDocuments(data || []);
+      console.log('Fetched documents:', data?.length || 0);
     } catch (error) {
       console.error('Error fetching documents for fascicule:', error);
       toast({
@@ -177,17 +263,51 @@ export default function MarcheFascicules({ marcheId }: MarcheFasciculesProps) {
     }
   };
 
-  // Load fascicules on component mount
-  useEffect(() => {
-    fetchFascicules();
-  }, [marcheId]);
-
   const handleEditFascicule = (fascicule: Fascicule) => {
     setEditingFascicule(fascicule);
   };
 
   const handleFasciculeCreated = () => {
-    fetchFascicules();
+    // Reload fascicules data after creation
+    if (marcheId && userRole) {
+      setLoading(true);
+      
+      const reloadFascicules = async () => {
+        try {
+          let queryBuilder = supabase
+            .from('fascicules')
+            .select('*')
+            .eq('marche_id', marcheId);
+            
+          const { data, error } = await queryBuilder;
+          
+          if (error) throw error;
+          
+          const formattedData = (data || []).map(fascicule => ({
+            id: fascicule.id,
+            nom: fascicule.nom,
+            nombredocuments: fascicule.nombredocuments || 0,
+            datemaj: fascicule.datemaj || new Date().toLocaleDateString('fr-FR'),
+            progression: fascicule.progression || 0,
+            description: fascicule.description,
+            marche_id: fascicule.marche_id
+          }));
+          
+          setFascicules(formattedData);
+        } catch (error) {
+          console.error('Error reloading fascicules:', error);
+          toast({
+            title: "Erreur",
+            description: "Impossible de rafraîchir la liste des fascicules",
+            variant: "destructive",
+          });
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      reloadFascicules();
+    }
   };
 
   const handleViewDocuments = (fascicule: Fascicule) => {
@@ -248,7 +368,7 @@ export default function MarcheFascicules({ marcheId }: MarcheFasciculesProps) {
       toast({
         title: "Téléchargement réussi",
         description: `Le fichier ${document.nom} a été téléchargé`,
-        variant: "success",
+        variant: "default",
       });
     } catch (error) {
       console.error('Error downloading document:', error);
@@ -313,7 +433,7 @@ export default function MarcheFascicules({ marcheId }: MarcheFasciculesProps) {
       toast({
         title: "Fascicule supprimé",
         description: `Le fascicule "${fasciculeToDelete.nom}" et ses documents associés ont été supprimés avec succès`,
-        variant: "success",
+        variant: "default",
       });
     } catch (error) {
       console.error('Error deleting fascicule:', error);

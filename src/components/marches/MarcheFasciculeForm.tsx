@@ -70,20 +70,101 @@ const MarcheFasciculeForm: React.FC<FasciculeFormProps> = ({
   const [open, setOpen] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [userGlobalRole, setUserGlobalRole] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Récupérer la liste des marchés pour le dropdown
-  const { data: marches = [] } = useQuery({
-    queryKey: ['marches-for-select'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('marches')
-        .select('id, titre')
-        .order('titre');
+  // First, determine the user's global role to optimize further queries
+  useEffect(() => {
+    const getUserRole = async () => {
+      try {
+        // Get current user
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData?.user) {
+          console.error('User not authenticated');
+          return;
+        }
+
+        // Get user's global role directly from profiles
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('role_global')
+          .eq('id', userData.user.id)
+          .single();
+          
+        if (profileError) {
+          console.error('Error fetching user role:', profileError);
+          return;
+        }
         
-      if (error) throw error;
-      return data || [];
-    }
+        setUserGlobalRole(profileData?.role_global || null);
+        console.log('User global role:', profileData?.role_global);
+      } catch (error) {
+        console.error('Error determining user role:', error);
+      }
+    };
+    
+    getUserRole();
+  }, []);
+
+  // Récupérer la liste des marchés pour le dropdown - Modified to handle admin bypass
+  const { data: marches = [] } = useQuery({
+    queryKey: ['marches-for-select', userGlobalRole],
+    queryFn: async () => {
+      try {
+        // If user is admin, fetch all marchés directly
+        if (userGlobalRole === 'ADMIN') {
+          console.log('Admin user - fetching all marchés');
+          const { data, error } = await supabase
+            .from('marches')
+            .select('id, titre')
+            .order('titre');
+            
+          if (error) throw error;
+          return data || [];
+        }
+        
+        // Otherwise use the RPC function for non-admin users
+        console.log('Standard user - fetching accessible marchés');
+        const { data, error } = await supabase
+          .rpc('get_accessible_marches_for_user');
+          
+        if (error) {
+          // If RPC fails, try a more direct approach
+          console.error('RPC failed, trying direct query with join:', error);
+          
+          // Get current user
+          const { data: userData } = await supabase.auth.getUser();
+          if (!userData?.user) throw new Error('User not authenticated');
+          
+          // Try a direct query with join to get marchés where user has access
+          const { data: directData, error: directError } = await supabase
+            .from('marches')
+            .select('id, titre')
+            .or(`user_id.eq.${userData.user.id},id.in.(select marche_id from droits_marche where user_id = '${userData.user.id}')`)
+            .order('titre');
+            
+          if (directError) throw directError;
+          return directData || [];
+        }
+        
+        // Return results from the RPC call
+        const marchesWithTitles = data.map((marche: any) => ({
+          id: marche.id,
+          titre: marche.titre || 'Sans titre'
+        }));
+        
+        return marchesWithTitles;
+      } catch (e) {
+        console.error('Error fetching marchés for dropdown:', e);
+        // Last resort - return at least the current marché if we have it
+        if (marcheId) {
+          return [{ id: marcheId, titre: 'Marché actuel' }];
+        }
+        return [];
+      }
+    },
+    enabled: !!userGlobalRole, // Only run once we know the user's role
+    staleTime: 5 * 60 * 1000 // Cache for 5 minutes
   });
 
   const form = useForm<FasciculeFormValues>({
@@ -244,7 +325,7 @@ const MarcheFasciculeForm: React.FC<FasciculeFormProps> = ({
         description: isEditing 
           ? "Le fascicule a été modifié avec succès" 
           : "Le fascicule a été créé avec succès",
-        variant: "success",
+        variant: "default",
       });
       
       form.reset();

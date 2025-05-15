@@ -23,8 +23,14 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
     
     // HIGHEST PRIORITY: Check if user has ADMIN role first
     try {
-      const globalRole = await getGlobalUserRole();
-      if (globalRole === 'ADMIN') {
+      // Direct query to avoid RLS recursion
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('role_global')
+        .eq('id', user.id)
+        .single();
+        
+      if (!profileError && profileData && profileData.role_global === 'ADMIN') {
         console.log(`User ${user.id} is ADMIN - access granted to market ${marcheId}`);
         return true; // Admin always has access - no further checks needed
       }
@@ -66,21 +72,6 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
       }
     } catch (directQueryError) {
       console.error('Exception in direct query access check:', directQueryError);
-    }
-    
-    // Last resort check with user_has_access_to_marche but avoid exposing error
-    try {
-      const { data, error } = await supabase
-        .rpc('user_has_access_to_marche', {
-          user_id: user.id,
-          marche_id: marcheId
-        });
-      
-      if (!error && data === true) {
-        return true;
-      }
-    } catch (e) {
-      console.log("Error with RPC check, continuing...");
     }
     
     // If we get here, no access was found through any method
