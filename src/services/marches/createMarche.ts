@@ -37,11 +37,13 @@ export const createMarche = async (marcheData: MarcheCreateData): Promise<Marche
     });
     
     // Traitement spécial pour les champs pays et région qui montrent des erreurs
-    if (typeof marcheData.pays === 'object' && marcheData.pays?._type === 'undefined') {
+    if (typeof marcheData.pays === 'object' && marcheData.pays !== null && 
+        '_type' in marcheData.pays && marcheData.pays._type === 'undefined') {
       marcheData.pays = null;
     }
     
-    if (typeof marcheData.region === 'object' && marcheData.region?._type === 'undefined') {
+    if (typeof marcheData.region === 'object' && marcheData.region !== null && 
+        '_type' in marcheData.region && marcheData.region._type === 'undefined') {
       marcheData.region = null;
     }
     
@@ -52,8 +54,11 @@ export const createMarche = async (marcheData: MarcheCreateData): Promise<Marche
       await fileStorage.ensureBucketExists('marches', true);
     }
     
+    // Variable pour stocker le résultat final
+    let resultData: Marche | null = null;
+    
     // Utiliser la méthode RPC au lieu d'une insertion directe pour contourner les problèmes de RLS
-    const { data, error } = await supabase.rpc('create_new_marche', {
+    const { data, error } = await supabase.rpc("create_new_marche", {
       marche_data: marcheData
     });
     
@@ -85,27 +90,29 @@ export const createMarche = async (marcheData: MarcheCreateData): Promise<Marche
         throw new Error('Aucune donnée retournée après la création du marché');
       }
       
-      data = insertResult.data;
+      resultData = insertResult.data as Marche;
+    } else {
+      resultData = data as Marche;
     }
     
-    console.log("Marché créé avec succès:", data);
+    console.log("Marché créé avec succès:", resultData);
     
     // Si marché créé avec succès, attribuer automatiquement les droits de MOE au créateur
-    if (data && data.id && marcheData.user_id) {
+    if (resultData && typeof resultData === 'object' && 'id' in resultData && resultData.id && marcheData.user_id) {
       try {
-        await supabase.rpc('assign_role_to_user', {
+        await supabase.rpc("assign_role_to_user", {
           user_id: marcheData.user_id,
-          marche_id: data.id,
+          marche_id: resultData.id,
           role_specifique: 'MOE'
         });
-        console.log(`Rôle MOE attribué à ${marcheData.user_id} pour le marché ${data.id}`);
+        console.log(`Rôle MOE attribué à ${marcheData.user_id} pour le marché ${resultData.id}`);
       } catch (roleError) {
         console.error('Erreur lors de l\'attribution du rôle MOE au créateur:', roleError);
         // On continue même en cas d'erreur d'attribution de rôle
       }
     }
     
-    return data as Marche;
+    return resultData;
     
   } catch (error: any) {
     console.error('Exception lors de la création du marché:', error);
