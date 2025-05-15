@@ -16,8 +16,7 @@ export const fetchMarches = async (): Promise<Marche[]> => {
       throw new Error("Client Supabase non initialisé");
     }
     
-    // Utiliser la fonction RPC sécurisée pour récupérer uniquement les marchés 
-    // auxquels l'utilisateur a accès (via ses droits ou en tant qu'admin)
+    // Use our dedicated RPC function that avoids RLS infinite recursion
     const { data, error } = await supabase.rpc('get_accessible_marches_for_user');
     
     if (error) {

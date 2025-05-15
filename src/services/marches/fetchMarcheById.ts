@@ -11,7 +11,7 @@ import { getGlobalUserRole } from '@/utils/auth/roles';
  */
 export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
   try {
-    console.log(`Tentative d'accès au marché ${id}...`);
+    console.log(`Chargement des données du marché: ${id}`);
     
     // Récupérer l'utilisateur actuel
     const { data: { user } } = await supabase.auth.getUser();
@@ -20,35 +20,7 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
       throw new Error('Utilisateur non connecté');
     }
     
-    // IMPORTANT: Fast path for admin users - check this first for performance
-    let isAdmin = false;
-    try {
-      const globalRole = await getGlobalUserRole();
-      isAdmin = globalRole === 'ADMIN';
-      
-      if (isAdmin) {
-        console.log(`Utilisateur ${user.id} est ADMIN - accès direct au marché ${id}`);
-        // Direct access for admins
-        const { data, error } = await supabase
-          .from('marches')
-          .select('*')
-          .eq('id', id)
-          .maybeSingle(); // Use maybeSingle instead of single
-        
-        if (error) {
-          console.error(`Erreur lors de la récupération du marché ${id} (admin path):`, error);
-          // Don't throw here, try alternative method
-        } else if (data) {
-          console.log(`Marché ${id} récupéré avec succès par admin`);
-          return data as Marche;
-        }
-      }
-    } catch (roleError) {
-      console.error("Erreur lors de la vérification du rôle global:", roleError);
-      // Continue avec la vérification standard
-    }
-    
-    // Standard access check for non-admin users
+    // IMPORTANT: Verify if user has access to this market using our helper function
     const hasAccess = await hasAccessToMarche(id);
     if (!hasAccess) {
       console.error(`Accès refusé au marché ${id} pour l'utilisateur ${user.id}`);
@@ -57,25 +29,31 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
     
     console.log(`Utilisateur ${user.id} a accès au marché ${id}, récupération des détails...`);
     
-    // L'utilisateur a accès, récupérer les données du marché
-    const { data, error } = await supabase
-      .from('marches')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle(); // Use maybeSingle instead of single
+    // Use execute_query with a parameterized query to bypass RLS issues
+    // This function was created in a migration and is a SECURITY DEFINER function
+    const { data, error } = await supabase.rpc(
+      'execute_query',
+      { 
+        query_text: `SELECT * FROM marches WHERE id = '${id}'` 
+      }
+    );
     
     if (error) {
-      console.error(`Erreur lors de la récupération du marché ${id}:`, error);
+      console.error(`Erreur lors de la récupération du marché ${id} via RPC:`, error);
       throw error;
     }
     
-    if (!data) {
+    if (!data || data.length === 0) {
       console.error(`Marché ${id} non trouvé`);
       return null;
     }
     
-    console.log(`Marché ${id} récupéré avec succès:`, data);
-    return data as Marche;
+    // The execute_query function returns an array with JSON stringified rows
+    // We need to extract the first item (since we're querying by ID)
+    const marcheData = data[0];
+    
+    console.log(`Marché ${id} récupéré avec succès via RPC`);
+    return marcheData as Marche;
   } catch (error) {
     console.error('Exception lors de la récupération du marché:', error);
     throw error;

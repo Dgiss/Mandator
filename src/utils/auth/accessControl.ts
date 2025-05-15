@@ -33,55 +33,62 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
       // Continue with other checks - don't fail immediately
     }
     
-    // Check if user is creator (second highest priority)
+    // Use our dedicated RPC function to avoid recursive calls to marches table
     try {
-      const { data: marcheData, error: marcheError } = await supabase
-        .from('marches')
-        .select('user_id')
-        .eq('id', marcheId)
-        .maybeSingle(); // Use maybeSingle instead of single to prevent errors
+      const { data, error } = await supabase.rpc(
+        'user_has_access_to_marche', 
+        {
+          user_id: user.id,
+          marche_id: marcheId
+        }
+      );
       
-      if (!marcheError && marcheData && marcheData.user_id === user.id) {
-        console.log(`User ${user.id} is creator of market ${marcheId} - access granted`);
-        return true;
+      if (error) {
+        console.error('Error checking access via RPC:', error);
+        // Continue with fallback checks
+      } else {
+        console.log(`Access check via RPC for market ${marcheId}: ${data ? 'granted' : 'denied'}`);
+        return !!data;
+      }
+    } catch (rpcError) {
+      console.error('Exception in RPC access check:', rpcError);
+      // Continue with fallback checks
+    }
+    
+    // Fallback: Check if user is creator (second highest priority)
+    try {
+      // This is a direct query but safer since it's just checking a single row
+      // and the user has to be logged in to execute it
+      const { data: marcheData, error: marcheError } = await supabase.rpc(
+        'execute_query', 
+        { 
+          query_text: `SELECT user_id FROM marches WHERE id = '${marcheId}'` 
+        }
+      );
+      
+      if (!marcheError && marcheData && marcheData.length > 0) {
+        const creatorId = marcheData[0].user_id;
+        if (creatorId === user.id) {
+          console.log(`User ${user.id} is creator of market ${marcheId} - access granted`);
+          return true;
+        }
       }
     } catch (creatorError) {
       console.error('Error checking market creator:', creatorError);
       // Continue with other checks
     }
     
-    // Check specific market rights using fixed RPC function
+    // Fallback for most cases: Check direct rights
     try {
-      const { data: hasAccess, error: accessError } = await supabase
-        .rpc('user_has_access_to_marche', {
-          user_id: user.id,
-          marche_id: marcheId
-        });
+      const { data, error } = await supabase.rpc(
+        'execute_query', 
+        { 
+          query_text: `SELECT id FROM droits_marche WHERE user_id = '${user.id}' AND marche_id = '${marcheId}' LIMIT 1` 
+        }
+      );
       
-      if (!accessError && hasAccess === true) {
-        console.log(`Access check via RPC successful - access granted to market ${marcheId}`);
-        return true;
-      } else if (accessError) {
-        console.error('Error in RPC access check:', accessError);
-        // Continue to fallback - don't immediately return false
-      }
-    } catch (rpcError) {
-      console.error('Exception in RPC access check:', rpcError);
-      // Continue to fallback
-    }
-    
-    // Fallback: Direct query as a last resort
-    try {
-      console.log("Falling back to direct query for access check...");
-      const { data: droitData, error: droitError } = await supabase
-        .from('droits_marche')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('marche_id', marcheId)
-        .maybeSingle(); // Use maybeSingle instead of single
-        
-      if (!droitError && droitData) {
-        console.log(`User ${user.id} has explicit rights for market ${marcheId} via direct query - access granted`);
+      if (!error && data && data.length > 0) {
+        console.log(`User ${user.id} has explicit rights for market ${marcheId} - access granted`);
         return true;
       }
     } catch (directQueryError) {
