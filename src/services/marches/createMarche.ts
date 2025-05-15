@@ -33,42 +33,50 @@ export const createMarche = async (marcheData: MarcheCreateData): Promise<Marche
       await fileStorage.ensureBucketExists('marches', true);
     }
     
-    // Utiliser un try/catch spécifique pour l'insertion pour capturer les erreurs précises
-    try {
-      const { data, error } = await supabase
-        .from('marches')
-        .insert(marcheData)
-        .select()
-        .single();
-      
-      if (error) {
+    // Insérer le marché dans la base de données
+    const { data, error } = await supabase
+      .from('marches')
+      .insert(marcheData)
+      .select()
+      .single();
+    
+    if (error) {
+      // Gestion spécifique selon le type d'erreur
+      if (error.code === '42P17') {
+        console.error('Erreur RLS détectée:', error);
+        throw new Error('Problème d\'accès à la base de données - Contactez l\'administrateur');
+      } else if (error.code === '23505') {
+        console.error('Conflit de données:', error);
+        throw new Error('Un marché avec ces informations existe déjà');
+      } else {
         console.error('Erreur lors de la création du marché:', error);
-        throw error;
+        throw new Error(`Impossible de créer le marché: ${error.message}`);
       }
-      
-      console.log("Marché créé avec succès:", data);
-      
-      // Après la création réussie, attribuer automatiquement les droits de MOE au créateur
-      if (data && data.id && marcheData.user_id) {
-        try {
-          await supabase.rpc('assign_role_to_user', {
-            user_id: marcheData.user_id,
-            marche_id: data.id,
-            role_specifique: 'MOE'
-          });
-          console.log(`Rôle MOE attribué à ${marcheData.user_id} pour le marché ${data.id}`);
-        } catch (roleError) {
-          console.error('Erreur lors de l\'attribution du rôle MOE au créateur:', roleError);
-          // On continue même en cas d'erreur d'attribution de rôle
-        }
-      }
-      
-      return data as Marche;
-    } catch (insertError: any) {
-      // Capture spécifique de l'erreur d'insertion
-      console.error('Exception lors de l\'insertion du marché:', insertError);
-      throw insertError;
     }
+    
+    if (!data) {
+      throw new Error('Aucune donnée retournée après la création du marché');
+    }
+    
+    console.log("Marché créé avec succès:", data);
+    
+    // Après la création réussie, attribuer automatiquement les droits de MOE au créateur
+    if (data.id && marcheData.user_id) {
+      try {
+        await supabase.rpc('assign_role_to_user', {
+          user_id: marcheData.user_id,
+          marche_id: data.id,
+          role_specifique: 'MOE'
+        });
+        console.log(`Rôle MOE attribué à ${marcheData.user_id} pour le marché ${data.id}`);
+      } catch (roleError) {
+        console.error('Erreur lors de l\'attribution du rôle MOE au créateur:', roleError);
+        // On continue même en cas d'erreur d'attribution de rôle
+      }
+    }
+    
+    return data as Marche;
+    
   } catch (error: any) {
     console.error('Exception lors de la création du marché:', error);
     
