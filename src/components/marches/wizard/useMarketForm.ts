@@ -61,7 +61,7 @@ export const useMarketForm = (onCancel: () => void) => {
       setError(null);
       
       // Préparer les données du marché
-      const marcheData = {
+      const marcheData: any = {
         titre: formData.titre,
         description: formData.description,
         client: formData.client,

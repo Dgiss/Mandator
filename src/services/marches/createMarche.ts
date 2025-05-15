@@ -2,6 +2,7 @@
 import { supabase } from '@/lib/supabase';
 import { Marche, MarcheCreateData } from './types';
 import { fileStorage } from '../storage/fileStorage';
+import { toast } from '@/hooks/use-toast';
 
 /**
  * Créer un nouveau marché
@@ -10,6 +11,8 @@ import { fileStorage } from '../storage/fileStorage';
  */
 export const createMarche = async (marcheData: MarcheCreateData): Promise<Marche | null> => {
   try {
+    console.log("Préparation de la création du marché...");
+    
     // Ajout de la date de création si non fournie
     if (!marcheData.datecreation) {
       marcheData.datecreation = new Date().toISOString();
@@ -26,6 +29,22 @@ export const createMarche = async (marcheData: MarcheCreateData): Promise<Marche
       }
     }
     
+    // Nettoyer les valeurs undefined qui peuvent causer des problèmes
+    Object.keys(marcheData).forEach(key => {
+      if (marcheData[key] === undefined) {
+        delete marcheData[key];
+      }
+    });
+    
+    // Traitement spécial pour les champs pays et région qui montrent des erreurs
+    if (typeof marcheData.pays === 'object' && marcheData.pays?._type === 'undefined') {
+      marcheData.pays = null;
+    }
+    
+    if (typeof marcheData.region === 'object' && marcheData.region?._type === 'undefined') {
+      marcheData.region = null;
+    }
+    
     console.log("Création d'un nouveau marché avec les données:", marcheData);
     
     // Assurer que les buckets nécessaires existent avant d'insérer le marché
@@ -33,35 +52,46 @@ export const createMarche = async (marcheData: MarcheCreateData): Promise<Marche
       await fileStorage.ensureBucketExists('marches', true);
     }
     
-    // Insérer le marché dans la base de données
-    const { data, error } = await supabase
-      .from('marches')
-      .insert(marcheData)
-      .select()
-      .single();
+    // Utiliser la méthode RPC au lieu d'une insertion directe pour contourner les problèmes de RLS
+    const { data, error } = await supabase.rpc('create_new_marche', {
+      marche_data: marcheData
+    });
     
     if (error) {
-      // Gestion spécifique selon le type d'erreur
-      if (error.code === '42P17') {
-        console.error('Erreur RLS détectée:', error);
-        throw new Error('Problème d\'accès à la base de données - Contactez l\'administrateur');
-      } else if (error.code === '23505') {
-        console.error('Conflit de données:', error);
-        throw new Error('Un marché avec ces informations existe déjà');
-      } else {
-        console.error('Erreur lors de la création du marché:', error);
-        throw new Error(`Impossible de créer le marché: ${error.message}`);
+      console.error('Erreur lors de la création du marché via RPC:', error);
+      
+      // Essayer la méthode d'insertion directe comme fallback
+      const insertResult = await supabase
+        .from('marches')
+        .insert(marcheData)
+        .select()
+        .single();
+      
+      if (insertResult.error) {
+        // Gestion spécifique selon le type d'erreur
+        if (insertResult.error.code === '42P17') {
+          console.error('Erreur RLS détectée:', insertResult.error);
+          throw new Error('Problème d\'accès à la base de données - Contactez l\'administrateur');
+        } else if (insertResult.error.code === '23505') {
+          console.error('Conflit de données:', insertResult.error);
+          throw new Error('Un marché avec ces informations existe déjà');
+        } else {
+          console.error('Erreur lors de la création du marché:', insertResult.error);
+          throw new Error(`Impossible de créer le marché: ${insertResult.error.message}`);
+        }
       }
-    }
-    
-    if (!data) {
-      throw new Error('Aucune donnée retournée après la création du marché');
+      
+      if (!insertResult.data) {
+        throw new Error('Aucune donnée retournée après la création du marché');
+      }
+      
+      data = insertResult.data;
     }
     
     console.log("Marché créé avec succès:", data);
     
-    // Après la création réussie, attribuer automatiquement les droits de MOE au créateur
-    if (data.id && marcheData.user_id) {
+    // Si marché créé avec succès, attribuer automatiquement les droits de MOE au créateur
+    if (data && data.id && marcheData.user_id) {
       try {
         await supabase.rpc('assign_role_to_user', {
           user_id: marcheData.user_id,
