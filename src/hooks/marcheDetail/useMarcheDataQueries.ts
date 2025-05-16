@@ -4,6 +4,7 @@ import { fetchMarcheById } from '@/services/marches';
 import { marcheExists } from '@/utils/auth/accessControl';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { useRef } from 'react';
 
 /**
  * Hook optimisé qui gère les requêtes pour les données d'un marché
@@ -11,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
  */
 export const useMarcheDataQueries = (id: string | undefined) => {
   const { toast } = useToast();
+  const queriesRunning = useRef<boolean>(false);
 
   // Vérifie d'abord si le marché existe réellement - version optimisée
   const existsQuery = useQuery({
@@ -27,9 +29,9 @@ export const useMarcheDataQueries = (id: string | undefined) => {
         return import.meta.env.DEV ? true : false;
       }
     },
-    enabled: !!id,
+    enabled: !!id && !queriesRunning.current,
     staleTime: 5 * 60 * 1000, // 5 minutes de cache
-    retry: 2, // Augmenter les tentatives
+    retry: 1, // Réduire le nombre de tentatives
     gcTime: 10 * 60 * 1000, // Garder en cache 10 minutes
   });
 
@@ -57,8 +59,9 @@ export const useMarcheDataQueries = (id: string | undefined) => {
         return import.meta.env.DEV ? true : false;
       }
     },
-    enabled: !!id && existsQuery.isSuccess && existsQuery.data === true,
+    enabled: !!id && existsQuery.isSuccess && existsQuery.data === true && !queriesRunning.current,
     staleTime: 10 * 60 * 1000, // 10 minutes
+    retry: 1, // Réduire le nombre de tentatives
     gcTime: 15 * 60 * 1000, // Garder en cache 15 minutes
   });
 
@@ -68,6 +71,7 @@ export const useMarcheDataQueries = (id: string | undefined) => {
     queryFn: async () => {
       if (!id) return null;
       console.log("Chargement des données du marché:", id);
+      queriesRunning.current = true;
       
       try {
         const marche = await fetchMarcheById(id);
@@ -90,11 +94,13 @@ export const useMarcheDataQueries = (id: string | undefined) => {
           variant: "destructive",
         });
         return null;
+      } finally {
+        queriesRunning.current = false;
       }
     },
-    enabled: !!id && existsQuery.isSuccess && existsQuery.data === true,
+    enabled: !!id && existsQuery.isSuccess && existsQuery.data === true && accessCheckQuery.isSuccess && accessCheckQuery.data === true,
     staleTime: 5 * 60 * 1000,
-    retry: 2, // Augmenter les tentatives
+    retry: 1, // Réduire le nombre de tentatives
     gcTime: 10 * 60 * 1000,
   });
 
@@ -122,9 +128,9 @@ export const useMarcheDataQueries = (id: string | undefined) => {
         return [];
       }
     },
-    enabled: !!id && marcheQuery.isSuccess && !!marcheQuery.data,
+    enabled: !!id && marcheQuery.isSuccess && !!marcheQuery.data && !queriesRunning.current,
     staleTime: 5 * 60 * 1000,
-    retry: 1,
+    retry: 0, // Pas de tentatives supplémentaires
     gcTime: 10 * 60 * 1000,
   });
 
@@ -153,24 +159,22 @@ export const useMarcheDataQueries = (id: string | undefined) => {
         return [];
       }
     },
-    enabled: !!id && marcheQuery.isSuccess && !!marcheQuery.data,
+    enabled: !!id && marcheQuery.isSuccess && !!marcheQuery.data && !queriesRunning.current,
     staleTime: 5 * 60 * 1000,
-    retry: 1,
+    retry: 0, // Pas de tentatives supplémentaires
     gcTime: 10 * 60 * 1000,
   });
 
-  // Récupération des fascicules - version optimisée
+  // Récupération des fascicules - version optimisée avec RPC
   const fasciculesQuery = useQuery({
     queryKey: ['fascicules', id],
     queryFn: async () => {
       if (!id) return [];
       
       try {
+        // Utiliser la fonction RPC sécurisée pour éviter les problèmes de récursion
         const { data, error } = await supabase
-          .from('fascicules')
-          .select('*')
-          .eq('marche_id', id)
-          .order('nom', { ascending: true });
+          .rpc('get_fascicules_for_marche', { marche_id_param: id });
         
         if (error) {
           console.error("Erreur lors de la récupération des fascicules:", error);
@@ -183,9 +187,9 @@ export const useMarcheDataQueries = (id: string | undefined) => {
         return [];
       }
     },
-    enabled: !!id && marcheQuery.isSuccess && !!marcheQuery.data,
+    enabled: !!id && marcheQuery.isSuccess && !!marcheQuery.data && !queriesRunning.current,
     staleTime: 5 * 60 * 1000,
-    retry: 1,
+    retry: 0, // Pas de tentatives supplémentaires
     gcTime: 10 * 60 * 1000,
   });
 

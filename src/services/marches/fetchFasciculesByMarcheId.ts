@@ -24,20 +24,24 @@ export const fetchFasciculesByMarcheId = async (marcheId: string): Promise<any[]
       if (globalRole === 'ADMIN') {
         console.log(`Utilisateur est ADMIN - tentative alternative pour le marché ${marcheId}`);
         
-        // Les admins peuvent faire une requête directe
-        const { data: fascicules, error: fascError } = await supabase
-          .from('fascicules')
-          .select('*')
-          .eq('marche_id', marcheId)
-          .order('nom', { ascending: true });
-        
-        if (fascError) {
-          console.error(`Erreur lors de la récupération directe des fascicules:`, fascError);
+        try {
+          // Les admins peuvent faire une requête directe avec SECURITY DEFINER
+          const { data: adminData, error: adminError } = await supabase.rpc(
+            'get_fascicules_for_marche_admin', 
+            { marche_id_param: marcheId }
+          );
+          
+          if (adminError) {
+            console.error(`Erreur lors de la récupération admin des fascicules:`, adminError);
+            return [];
+          }
+          
+          console.log(`${adminData?.length || 0} fascicules récupérés pour le marché ${marcheId} (voie ADMIN)`);
+          return adminData || [];
+        } catch (directError) {
+          console.error(`Exception lors de la tentative admin:`, directError);
           return [];
         }
-        
-        console.log(`${fascicules?.length || 0} fascicules récupérés pour le marché ${marcheId} (voie ADMIN)`);
-        return fascicules || [];
       }
       
       // En mode développement, retourner un tableau vide mais ne pas bloquer l'application

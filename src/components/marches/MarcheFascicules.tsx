@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Plus, FolderPlus, Loader2, AlertTriangle } from 'lucide-react';
@@ -21,18 +21,25 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
   const { toast } = useToast();
   const { canCreateFascicule, isAdmin } = useUserRole(marcheId);
   const [loadAttempt, setLoadAttempt] = useState<number>(0);
+  const loadingRef = useRef<boolean>(false);
 
   // Fonction mémorisée pour éviter des rendus en cascade
   const loadFascicules = useCallback(async () => {
-    if (!marcheId) return;
+    if (!marcheId || loadingRef.current) return;
     
+    loadingRef.current = true;
     setLoading(true);
     setError(null);
+    
     try {
       console.log(`Chargement des fascicules pour le marché ${marcheId}...`);
       const data = await fetchFasciculesByMarcheId(marcheId);
       console.log(`${data.length} fascicules chargés`);
-      setFascicules(data || []);
+      
+      // Ne mettre à jour l'état que si les données ont changé
+      if (JSON.stringify(data) !== JSON.stringify(fascicules)) {
+        setFascicules(data || []);
+      }
     } catch (error) {
       console.error('Error fetching fascicules:', error);
       setError("Impossible de charger les fascicules. Veuillez réessayer plus tard.");
@@ -43,17 +50,22 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
       });
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
   }, [marcheId, toast]);
 
   // Effet pour charger les fascicules une seule fois ou après une modification
   useEffect(() => {
-    loadFascicules();
+    // Empêcher les appels multiples
+    const timer = setTimeout(() => {
+      if (!loadingRef.current) {
+        loadFascicules();
+      }
+    }, 100);
+    
     // Effet de nettoyage pour éviter les fuites de mémoire
     return () => {
-      setFascicules([]);
-      setLoading(false);
-      setError(null);
+      clearTimeout(timer);
     };
   }, [loadFascicules, loadAttempt]);
 
