@@ -1,15 +1,28 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { fetchMarcheById } from '@/services/marches';
+import { marcheExists } from '@/utils/auth/accessControl';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
 /**
  * Hook that manages data fetching queries for a marché
- * Version contournant complètement le contrôle d'accès
+ * Version améliorée avec meilleure gestion des erreurs
  */
 export const useMarcheDataQueries = (id: string | undefined) => {
   const { toast } = useToast();
+
+  // Vérifie d'abord si le marché existe réellement
+  const existsQuery = useQuery({
+    queryKey: ['marche-exists', id],
+    queryFn: async () => {
+      if (!id) return false;
+      return await marcheExists(id);
+    },
+    enabled: !!id,
+    staleTime: 60 * 1000, // 1 minute
+    retry: 2,
+  });
 
   // ACCÈS TOUJOURS AUTORISÉ - contournement complet des vérifications
   const accessCheckQuery = useQuery({
@@ -18,7 +31,7 @@ export const useMarcheDataQueries = (id: string | undefined) => {
       console.log(`Accès systématique autorisé pour le marché ${id}`);
       return true;
     },
-    enabled: !!id,
+    enabled: !!id && existsQuery.data === true,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
@@ -30,13 +43,27 @@ export const useMarcheDataQueries = (id: string | undefined) => {
       console.log("Chargement avec contournement des données du marché:", id);
       
       try {
-        return await fetchMarcheById(id);
+        const marche = await fetchMarcheById(id);
+        if (!marche) {
+          console.error(`Marché ${id} introuvable dans fetchMarcheById`);
+          toast({
+            title: "Erreur",
+            description: "Impossible de charger les détails du marché",
+            variant: "destructive",
+          });
+        }
+        return marche;
       } catch (error) {
         console.error("Error fetching marché:", error);
+        toast({
+          title: "Erreur",
+          description: "Une erreur s'est produite lors du chargement du marché",
+          variant: "destructive",
+        });
         return null; // Retourner null au lieu de throw pour éviter les erreurs
       }
     },
-    enabled: !!id,
+    enabled: !!id && existsQuery.data === true,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 3, // Augmenter le nombre de tentatives
     retryDelay: attempt => Math.min(1000 * 2 ** attempt, 30000), // Backoff exponentiel

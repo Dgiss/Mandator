@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -26,61 +26,78 @@ export default function MarchesPage() {
   const [error, setError] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [isCreationModalOpen, setIsCreationModalOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Chargement des marchés depuis Supabase
+  // Fonction pour charger les marchés
+  const loadMarches = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      console.log("Chargement des marchés...");
+      const data = await fetchMarches();
+      
+      // Vérifier que data est un tableau valide
+      if (!data || !Array.isArray(data)) {
+        console.warn("Les données reçues ne sont pas un tableau valide:", data);
+        setMarches([]);
+        setTotalCount(0);
+        setError("Format de données invalide");
+        return;
+      }
+      
+      console.log("Marchés chargés avec succès:", data.length, "marchés");
+      setMarches(data);
+      setTotalCount(data.length);
+      
+      // Si aucun marché n'est trouvé mais pas d'erreur, afficher un toast informatif
+      if (data.length === 0) {
+        toast({
+          title: "Information",
+          description: "Aucun marché trouvé. Vous pouvez en créer un nouveau.",
+          variant: "default",
+        });
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des marchés:', error);
+      setError("Impossible de récupérer la liste des marchés. Veuillez réessayer ultérieurement.");
+      // S'assurer que marches est un tableau vide en cas d'erreur
+      setMarches([]);
+      setTotalCount(0);
+      
+      toast({
+        title: "Erreur",
+        description: "Impossible de récupérer la liste des marchés",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [toast]);
+
+  // Rafraîchir manuellement la liste
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    loadMarches();
+  }, [loadMarches]);
+
+  // Chargement initial des marchés
   useEffect(() => {
     console.log("useEffect de MarchesPage déclenché");
     let isMounted = true;
     
-    const loadMarches = async () => {
+    const initialLoad = async () => {
       if (!isMounted) return;
-      
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await fetchMarches();
-        
-        if (!isMounted) return;
-        
-        // Vérifier que data est un tableau valide
-        if (!data || !Array.isArray(data)) {
-          console.warn("Les données reçues ne sont pas un tableau valide:", data);
-          setMarches([]);
-          setTotalCount(0);
-          setError("Format de données invalide");
-          return;
-        }
-        
-        console.log("Marchés chargés:", data);
-        setMarches(data);
-        setTotalCount(data.length);
-      } catch (error) {
-        if (!isMounted) return;
-        
-        console.error('Erreur lors du chargement des marchés:', error);
-        setError("Impossible de récupérer la liste des marchés. Veuillez réessayer ultérieurement.");
-        // S'assurer que marches est un tableau vide en cas d'erreur
-        setMarches([]);
-        setTotalCount(0);
-        
-        toast({
-          title: "Erreur",
-          description: "Impossible de récupérer la liste des marchés",
-          variant: "destructive",
-        });
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
+      await loadMarches();
     };
 
-    loadMarches();
+    initialLoad();
     
     return () => {
       isMounted = false;
     };
-  }, []); // Dépendances vides pour n'exécuter qu'au montage
+  }, [loadMarches]);
 
   // Mémoisation de la liste filtrée avec gestion des valeurs null/undefined
   const filteredMarches = useMemo(() => {
@@ -101,6 +118,7 @@ export default function MarchesPage() {
       console.warn("ID de marché invalide:", marcheId);
       return;
     }
+    console.log("Navigation vers le marché:", marcheId);
     navigate(`/marches/${marcheId}`);
   }, [navigate]);
 
@@ -110,22 +128,38 @@ export default function MarchesPage() {
 
   const handleCloseModal = useCallback(() => {
     setIsCreationModalOpen(false);
-  }, []);
+    // Raffraîchir la liste des marchés après la création
+    loadMarches();
+  }, [loadMarches]);
 
   const handleSearchChange = useCallback((value: string) => {
     setSearchTerm(value);
   }, []);
 
   // Actions pour la page
-  const pageActions = canCreateMarche ? (
-    <Button 
-      variant="btpPrimary" 
-      onClick={handleCreateMarche} 
-      className="flex items-center"
-    >
-      <Plus className="mr-2 h-4 w-4" /> Nouveau marché
-    </Button>
-  ) : null;
+  const pageActions = (
+    <div className="flex gap-2">
+      <Button
+        variant="outline"
+        onClick={handleRefresh}
+        disabled={isRefreshing}
+        className="flex items-center"
+      >
+        <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+        Actualiser
+      </Button>
+      
+      {canCreateMarche && (
+        <Button 
+          variant="btpPrimary" 
+          onClick={handleCreateMarche} 
+          className="flex items-center"
+        >
+          <Plus className="mr-2 h-4 w-4" /> Nouveau marché
+        </Button>
+      )}
+    </div>
+  );
 
   return (
     <PageLayout 

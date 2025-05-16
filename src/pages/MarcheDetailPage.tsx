@@ -1,14 +1,18 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import PageLayout from '@/components/layout/PageLayout';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 // Custom hook pour la logique du marché
 import { useMarcheDetail } from '@/hooks/marcheDetail';
+
+// Fonction pour vérifier l'existence d'un marché
+import { marcheExists } from '@/utils/auth/accessControl';
 
 // Composants pour la page de détail
 import MarcheHeader from '@/components/marches/detail/MarcheHeader';
@@ -30,12 +34,51 @@ export default function MarcheDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("apercu");
+  const [marketExists, setMarketExists] = useState<boolean | null>(null);
+  
+  // Vérifier directement si le marché existe en base
+  useEffect(() => {
+    if (!id) {
+      setMarketExists(false);
+      return;
+    }
+
+    let isMounted = true;
+    
+    const checkMarketExists = async () => {
+      try {
+        const exists = await marcheExists(id);
+        if (isMounted) {
+          console.log(`MarcheDetailPage: Marché ${id} existe: ${exists}`);
+          setMarketExists(exists);
+          
+          if (!exists) {
+            toast.error("Ce marché n'existe pas ou a été supprimé", {
+              description: "Veuillez retourner à la liste des marchés",
+              duration: 5000,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Erreur lors de la vérification de l'existence du marché:", error);
+        if (isMounted) {
+          setMarketExists(false);
+        }
+      }
+    };
+    
+    checkMarketExists();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
   
   const { 
     marche, 
     loading, 
     error,
-    accessDenied: accessDeniedOriginal, // Ignoré pour contourner les vérifications
+    accessDenied, 
     visasEnAttente, 
     documentStats, 
     fasciculeProgress, 
@@ -44,14 +87,49 @@ export default function MarcheDetailPage() {
     formatDate
   } = useMarcheDetail(id);
 
-  // Désactiver complètement la vérification d'accès
-  const accessDenied = false;
+  // Si nous vérifions toujours l'existence du marché
+  if (marketExists === null) {
+    return (
+      <PageLayout>
+        <div className="flex flex-col items-center justify-center h-64">
+          <Loader2 className="h-12 w-12 text-btp-blue animate-spin" />
+          <p className="text-lg text-gray-500 mt-4">Vérification de l'existence du marché...</p>
+        </div>
+      </PageLayout>
+    );
+  }
 
+  // Si le marché n'existe pas en base
+  if (marketExists === false) {
+    return (
+      <PageLayout>
+        <div className="flex flex-col items-center justify-center h-64">
+          <Alert variant="destructive" className="max-w-md">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Marché introuvable</AlertTitle>
+            <AlertDescription>
+              Ce marché n'existe pas ou a été supprimé.
+            </AlertDescription>
+          </Alert>
+          <Button 
+            variant="btpPrimary" 
+            onClick={() => navigate('/marches')}
+            className="mt-6"
+          >
+            Retour à la liste des marchés
+          </Button>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  // Si le marché existe mais est en cours de chargement
   if (loading) {
     return (
       <PageLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-btp-blue"></div>
+        <div className="flex flex-col items-center justify-center h-64">
+          <Loader2 className="h-12 w-12 text-btp-blue animate-spin" />
+          <p className="text-lg text-gray-500 mt-4">Chargement des données du marché...</p>
         </div>
       </PageLayout>
     );
@@ -86,8 +164,14 @@ export default function MarcheDetailPage() {
     return (
       <PageLayout>
         <div className="flex flex-col items-center justify-center h-64">
-          <p className="text-xl text-gray-600 mb-4">Ce marché n'existe pas ou a été supprimé</p>
-          <Button variant="btpPrimary" onClick={() => navigate('/marches')}>
+          <Alert variant="destructive" className="max-w-md">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Données incomplètes</AlertTitle>
+            <AlertDescription>
+              Les données du marché sont incomplètes ou n'ont pas pu être chargées correctement.
+            </AlertDescription>
+          </Alert>
+          <Button variant="btpPrimary" onClick={() => navigate('/marches')} className="mt-6">
             Retour à la liste des marchés
           </Button>
         </div>
