@@ -15,15 +15,15 @@ export default function Footer() {
               <div className="w-8 h-8 bg-white rounded flex items-center justify-center text-btp-blue font-bold">
                 MP
               </div>
-              <span className="text-xl font-heading font-bold text-white">MarchésPublics<span className="text-btp-blue">BTP</span></span>
+              <span className="text-xl font-heading font-bold text-white">Mandator<span className="text-btp-blue">BTP</span></span>
             </Link>
             <p className="text-sm text-gray-300">
               La plateforme complète pour la gestion des marchés publics dans le secteur du BTP. Conforme au CCAG Travaux 2021.
             </p>
             <div className="space-y-2">
-              <a href="mailto:contact@marchespublicsbtp.fr" className="flex items-center space-x-2 text-sm text-gray-300 hover:text-white transition-colors">
+              <a href="mailto:contact@mandator.fr" className="flex items-center space-x-2 text-sm text-gray-300 hover:text-white transition-colors">
                 <Mail className="h-4 w-4" />
-                <span>contact@marchespublicsbtp.fr</span>
+                <span>contact@mandator.fr</span>
               </a>
               <a href="tel:+33123456789" className="flex items-center space-x-2 text-sm text-gray-300 hover:text-white transition-colors">
                 <Phone className="h-4 w-4" />
@@ -120,7 +120,7 @@ export default function Footer() {
         
         <div className="border-t border-gray-700 pt-6 flex flex-col md:flex-row justify-between items-center">
           <p className="text-sm text-gray-400 mb-4 md:mb-0">
-            © {new Date().getFullYear()} MarchésPublicsBTP. Tous droits réservés.
+            © {new Date().getFullYear()} Mandator. Tous droits réservés.
           </p>
           <div className="flex space-x-6">
             <Link to="/mentions-legales" className="text-sm text-gray-400 hover:text-white transition-colors">Mentions légales</Link>

@@ -168,7 +168,7 @@ export default function AuthPage() {
       <header className="bg-white shadow-sm py-4 px-6">
         <div className="container mx-auto flex items-center">
           <FileText className="h-8 w-8 text-btp-blue mr-3" />
-          <h1 className="text-2xl font-bold">MandataireBTP</h1>
+          <h1 className="text-2xl font-bold">Mandator</h1>
         </div>
       </header>
       
@@ -184,7 +184,7 @@ export default function AuthPage() {
           <div className="relative z-10 flex flex-col justify-center items-start h-full p-12">
             <h2 className="text-white text-4xl font-bold mb-6">Simplifiez la gestion<br />de vos marchés publics</h2>
             <p className="text-white/90 text-lg max-w-md">
-              MandataireBTP vous accompagne dans chaque étape de vos projets, 
+              Mandator vous accompagne dans chaque étape de vos projets, 
               de l'appel d'offres jusqu'à la livraison finale.
             </p>
           </div>
@@ -194,7 +194,7 @@ export default function AuthPage() {
         <div className="w-full md:w-1/2 flex justify-center items-center p-6 bg-gray-50">
           <div className="w-full max-w-md">
             <div className="text-center mb-8 md:hidden">
-              <h2 className="text-2xl font-bold text-gray-800">Bienvenue sur MandataireBTP</h2>
+              <h2 className="text-2xl font-bold text-gray-800">Bienvenue sur Mandator</h2>
               <p className="text-gray-600 mt-2">
                 Connectez-vous pour accéder à votre espace personnel
               </p>
@@ -218,7 +218,7 @@ export default function AuthPage() {
                   <CardHeader className="pb-4">
                     <CardTitle>Connexion</CardTitle>
                     <CardDescription>
-                      Accédez à votre compte MandataireBTP
+                      Accédez à votre compte Mandator
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -310,7 +310,7 @@ export default function AuthPage() {
                   <CardHeader className="pb-4">
                     <CardTitle>Créer un compte</CardTitle>
                     <CardDescription>
-                      Inscrivez-vous pour accéder à MandataireBTP
+                      Inscrivez-vous pour accéder à Mandator
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -427,7 +427,7 @@ export default function AuthPage() {
       </main>
       
       <footer className="py-4 text-center text-gray-500 text-sm bg-white shadow-inner">
-        &copy; {new Date().getFullYear()} MandataireBTP - Tous droits réservés
+        &copy; {new Date().getFullYear()} Mandator - Tous droits réservés
       </footer>
     </div>
   );
