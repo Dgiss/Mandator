@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Plus, FolderPlus, Loader2, AlertTriangle } from 'lucide-react';
@@ -20,12 +20,12 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { canCreateFascicule, isAdmin } = useUserRole(marcheId);
+  const [loadAttempt, setLoadAttempt] = useState<number>(0);
 
-  useEffect(() => {
-    loadFascicules();
-  }, [marcheId]);
-
-  const loadFascicules = async () => {
+  // Fonction mémorisée pour éviter des rendus en cascade
+  const loadFascicules = useCallback(async () => {
+    if (!marcheId) return;
+    
     setLoading(true);
     setError(null);
     try {
@@ -44,7 +44,18 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [marcheId, toast]);
+
+  // Effet pour charger les fascicules une seule fois ou après une modification
+  useEffect(() => {
+    loadFascicules();
+    // Effet de nettoyage pour éviter les fuites de mémoire
+    return () => {
+      setFascicules([]);
+      setLoading(false);
+      setError(null);
+    };
+  }, [loadFascicules, loadAttempt]);
 
   const handleCreateClick = () => {
     setSelectedFascicule(null);
@@ -59,12 +70,12 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
   const handleFormClose = (refreshNeeded: boolean = false) => {
     setShowForm(false);
     if (refreshNeeded) {
-      loadFascicules();
+      setLoadAttempt(prev => prev + 1); // Forcer un rechargement sans boucle infinie
     }
   };
 
   const handleRetry = () => {
-    loadFascicules();
+    setLoadAttempt(prev => prev + 1); // Incrémenter pour déclencher un nouveau chargement
   };
 
   // Determine if user can create or modify fascicules
