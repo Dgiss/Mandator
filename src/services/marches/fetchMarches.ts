@@ -4,6 +4,7 @@ import { Marche } from './types';
 
 /**
  * Récupérer tous les marchés depuis Supabase
+ * Version simplifiée pour contourner les problèmes de RLS
  * @returns {Promise<Marche[]>} Liste des marchés
  */
 export const fetchMarches = async (): Promise<Marche[]> => {
@@ -16,7 +17,7 @@ export const fetchMarches = async (): Promise<Marche[]> => {
       throw new Error("Client Supabase non initialisé");
     }
     
-    // Requête directe sans RPC problématique
+    // Utiliser une requête directe à la table des marchés
     const { data, error } = await supabase
       .from('marches')
       .select('*')
@@ -27,12 +28,10 @@ export const fetchMarches = async (): Promise<Marche[]> => {
       return [];
     }
     
-    // Vérifier que data est bien un tableau
-    const marchesArray = Array.isArray(data) ? data : [];
-    console.log("Marchés récupérés:", marchesArray.length);
+    console.log("Marchés récupérés:", data?.length || 0);
     
     // S'assurer que les données sont bien formatées avant de les retourner
-    const formattedMarches = marchesArray.map((marche: any) => ({
+    const formattedMarches = Array.isArray(data) ? data.map((marche: any) => ({
       id: marche.id || '',
       titre: marche.titre || 'Sans titre',
       description: marche.description || '',
@@ -44,7 +43,7 @@ export const fetchMarches = async (): Promise<Marche[]> => {
       logo: marche.logo || null,
       user_id: marche.user_id || null,
       created_at: marche.created_at || null
-    }));
+    })) : [];
     
     console.log("Marchés formatés:", formattedMarches.length);
     return formattedMarches as Marche[];

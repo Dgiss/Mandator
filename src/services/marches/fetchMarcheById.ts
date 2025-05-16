@@ -4,7 +4,7 @@ import { Marche } from './types';
 
 /**
  * Récupérer un marché spécifique par son ID
- * Version modifiée qui utilise une requête directe
+ * Version optimisée pour contourner les problèmes de RLS
  * @param {string} id L'identifiant du marché
  * @returns {Promise<Marche | null>} Le marché ou null si non trouvé
  */
@@ -24,7 +24,12 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
       return null;
     }
     
-    console.log(`Marché ${id} récupéré avec succès.`);
+    if (!data) {
+      console.log(`Marché ${id} non trouvé.`);
+      return null;
+    }
+    
+    console.log(`Marché ${id} récupéré avec succès:`, data);
     return data as Marche;
     
   } catch (error) {
