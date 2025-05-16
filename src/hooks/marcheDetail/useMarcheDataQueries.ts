@@ -6,28 +6,28 @@ import { useToast } from '@/hooks/use-toast';
 
 /**
  * Hook that manages data fetching queries for a marché
- * Accès autorisé pour tous
+ * Version simplifiée qui autorise l'accès pour tous
  */
 export const useMarcheDataQueries = (id: string | undefined) => {
   const { toast } = useToast();
 
-  // Access check is bypassed - always true
+  // Accès autorisé pour tous - bypasse la vérification
   const accessCheckQuery = useQuery({
     queryKey: ['marche-access', id],
     queryFn: async () => {
-      console.log(`Accès autorisé pour tous au marché ${id}`);
+      console.log(`Accès simplifié autorisé pour tous au marché ${id}`);
       return true;
     },
     enabled: !!id,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Fetch marché details - no longer checks access
+  // Fetch marché details - sans vérification d'accès
   const marcheQuery = useQuery({
     queryKey: ['marche', id],
     queryFn: async () => {
       if (!id) return null;
-      console.log("Chargement des données du marché:", id);
+      console.log("Chargement simplifié des données du marché:", id);
       
       try {
         return await fetchMarcheById(id);
@@ -127,7 +127,7 @@ export const useMarcheDataQueries = (id: string | undefined) => {
     retry: 1
   });
 
-  // Return all the queries for processing
+  // Return all the queries for processing avec shouldContinue toujours à true
   return {
     accessCheckQuery,
     marcheQuery,

@@ -4,15 +4,15 @@ import { Marche } from './types';
 
 /**
  * Récupérer un marché spécifique par son ID
+ * Version simplifiée qui ne vérifie pas les accès
  * @param {string} id L'identifiant du marché
  * @returns {Promise<Marche | null>} Le marché ou null si non trouvé
  */
 export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
   try {
-    console.log(`Tentative d'accès au marché ${id}...`);
+    console.log(`Tentative d'accès simplifié au marché ${id}...`);
     
-    // Récupérer directement les données du marché sans vérification d'accès
-    // La politique RLS a été modifiée pour permettre SELECT à tous
+    // Récupération directe sans vérification d'accès
     const { data: marcheData, error: marcheError } = await supabase
       .from('marches')
       .select('*')
