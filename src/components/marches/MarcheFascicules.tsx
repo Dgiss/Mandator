@@ -114,6 +114,7 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
             variant="default" 
             onClick={handleCreateClick}
             className="flex items-center gap-2"
+            aria-label="Créer un nouveau fascicule"
           >
             <Plus size={16} />
             Nouveau fascicule

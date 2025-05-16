@@ -103,12 +103,16 @@ const MarcheFasciculeForm: React.FC<MarcheFasciculeFormProps> = ({
 
   return (
     <Dialog open={true} onOpenChange={() => onClose()}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px]" aria-describedby="fascicule-form-description">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? `Modifier le fascicule: ${fascicule.nom}` : 'Créer un nouveau fascicule'}
           </DialogTitle>
         </DialogHeader>
+        
+        <div id="fascicule-form-description" className="sr-only">
+          Formulaire pour {isEditing ? 'modifier' : 'créer'} un fascicule
+        </div>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
