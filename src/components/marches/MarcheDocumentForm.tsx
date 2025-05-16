@@ -352,10 +352,21 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
       
       // Mettre à jour le nombre de documents dans le fascicule si nécessaire
       if (values.fascicule_id && values.fascicule_id !== 'none') {
-        const { error: countError } = await supabase.rpc('update_fascicule_document_count');
-        if (countError) {
-          console.error("Erreur lors de la mise à jour du nombre de documents:", countError);
-        }
+        // Instead of using RPC, update the fascicule directly
+        const { data: fasciculeData } = await supabase
+          .from('documents')
+          .select('id')
+          .eq('fascicule_id', values.fascicule_id);
+          
+        const documentCount = fasciculeData?.length || 0;
+        
+        await supabase
+          .from('fascicules')
+          .update({ 
+            nombredocuments: documentCount,
+            datemaj: new Date().toISOString()
+          })
+          .eq('id', values.fascicule_id);
       }
       
       // Upload any attachments if we have a valid document ID
