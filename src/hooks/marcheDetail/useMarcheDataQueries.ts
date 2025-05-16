@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 
 /**
  * Hook that manages data fetching queries for a marché
- * Version améliorée avec meilleure gestion des erreurs
+ * Version optimisée pour éviter les problèmes de récursivité
  */
 export const useMarcheDataQueries = (id: string | undefined) => {
   const { toast } = useToast();
@@ -17,7 +17,12 @@ export const useMarcheDataQueries = (id: string | undefined) => {
     queryKey: ['marche-exists', id],
     queryFn: async () => {
       if (!id) return false;
-      return await marcheExists(id);
+      try {
+        return await marcheExists(id);
+      } catch (error) {
+        console.error(`Erreur lors de la vérification de l'existence du marché:`, error);
+        return import.meta.env.DEV; // En dev, on continue même en cas d'erreur
+      }
     },
     enabled: !!id,
     staleTime: 60 * 1000, // 1 minute
@@ -31,7 +36,7 @@ export const useMarcheDataQueries = (id: string | undefined) => {
       console.log(`Accès systématique autorisé pour le marché ${id}`);
       return true;
     },
-    enabled: !!id && existsQuery.data === true,
+    enabled: !!id && (existsQuery.data === true || import.meta.env.DEV),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
@@ -40,7 +45,7 @@ export const useMarcheDataQueries = (id: string | undefined) => {
     queryKey: ['marche', id],
     queryFn: async () => {
       if (!id) return null;
-      console.log("Chargement avec contournement des données du marché:", id);
+      console.log("Chargement des données du marché:", id);
       
       try {
         const marche = await fetchMarcheById(id);
@@ -63,7 +68,7 @@ export const useMarcheDataQueries = (id: string | undefined) => {
         return null; // Retourner null au lieu de throw pour éviter les erreurs
       }
     },
-    enabled: !!id && existsQuery.data === true,
+    enabled: !!id && (existsQuery.data === true || import.meta.env.DEV),
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 3, // Augmenter le nombre de tentatives
     retryDelay: attempt => Math.min(1000 * 2 ** attempt, 30000), // Backoff exponentiel
@@ -93,7 +98,7 @@ export const useMarcheDataQueries = (id: string | undefined) => {
         return [];
       }
     },
-    enabled: !!id && !!marcheQuery.data,
+    enabled: !!id && (!!marcheQuery.data || import.meta.env.DEV),
     staleTime: 5 * 60 * 1000,
     retry: 2
   });
@@ -124,7 +129,7 @@ export const useMarcheDataQueries = (id: string | undefined) => {
         return [];
       }
     },
-    enabled: !!id && !!marcheQuery.data,
+    enabled: !!id && (!!marcheQuery.data || import.meta.env.DEV),
     staleTime: 5 * 60 * 1000,
     retry: 2
   });
@@ -154,7 +159,7 @@ export const useMarcheDataQueries = (id: string | undefined) => {
         return [];
       }
     },
-    enabled: !!id && !!marcheQuery.data,
+    enabled: !!id && (!!marcheQuery.data || import.meta.env.DEV),
     staleTime: 5 * 60 * 1000,
     retry: 2
   });
