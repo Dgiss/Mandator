@@ -22,23 +22,35 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
   const { canCreateFascicule, isAdmin } = useUserRole(marcheId);
   const [loadAttempt, setLoadAttempt] = useState<number>(0);
   const loadingRef = useRef<boolean>(false);
+  const lastFetched = useRef<number>(0);
+  const minFetchInterval = 2000; // Minimum 2 seconds between fetches
 
   // Fonction mémorisée pour éviter des rendus en cascade
   const loadFascicules = useCallback(async () => {
+    // Prevent fetching if ID is missing or already loading
     if (!marcheId || loadingRef.current) return;
     
+    // Prevent excessive fetching within short time intervals
+    const now = Date.now();
+    if (now - lastFetched.current < minFetchInterval) {
+      return;
+    }
+    
     loadingRef.current = true;
+    lastFetched.current = now;
     setLoading(true);
     setError(null);
     
     try {
       console.log(`Chargement des fascicules pour le marché ${marcheId}...`);
       const data = await fetchFasciculesByMarcheId(marcheId);
-      console.log(`${data.length} fascicules chargés`);
       
       // Ne mettre à jour l'état que si les données ont changé
-      if (JSON.stringify(data) !== JSON.stringify(fascicules)) {
-        setFascicules(data || []);
+      const currentJSON = JSON.stringify(fascicules);
+      const newJSON = JSON.stringify(data);
+      
+      if (currentJSON !== newJSON) {
+        setFascicules(data);
       }
     } catch (error) {
       console.error('Error fetching fascicules:', error);
@@ -49,24 +61,21 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
-      loadingRef.current = false;
+      // Use a slight delay to prevent immediate re-fetches
+      setTimeout(() => {
+        setLoading(false);
+        loadingRef.current = false;
+      }, 100);
     }
-  }, [marcheId, toast]);
+  }, [marcheId, toast, fascicules]);
 
   // Effet pour charger les fascicules une seule fois ou après une modification
   useEffect(() => {
-    // Empêcher les appels multiples
     const timer = setTimeout(() => {
-      if (!loadingRef.current) {
-        loadFascicules();
-      }
-    }, 100);
+      loadFascicules();
+    }, 200);
     
-    // Effet de nettoyage pour éviter les fuites de mémoire
-    return () => {
-      clearTimeout(timer);
-    };
+    return () => clearTimeout(timer);
   }, [loadFascicules, loadAttempt]);
 
   const handleCreateClick = () => {

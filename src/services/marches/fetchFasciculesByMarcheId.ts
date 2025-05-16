@@ -25,19 +25,23 @@ export const fetchFasciculesByMarcheId = async (marcheId: string): Promise<any[]
         console.log(`Utilisateur est ADMIN - tentative alternative pour le marché ${marcheId}`);
         
         try {
-          // Les admins peuvent faire une requête directe avec SECURITY DEFINER
-          const { data: adminData, error: adminError } = await supabase.rpc(
-            'get_fascicules_for_marche_admin', 
-            { marche_id_param: marcheId }
-          );
+          // Les admins peuvent faire une requête directe sans RPC
+          const { data: adminData, error: adminError } = await supabase
+            .from('fascicules')
+            .select('*')
+            .eq('marche_id', marcheId);
           
           if (adminError) {
             console.error(`Erreur lors de la récupération admin des fascicules:`, adminError);
             return [];
           }
           
-          console.log(`${adminData?.length || 0} fascicules récupérés pour le marché ${marcheId} (voie ADMIN)`);
-          return adminData || [];
+          if (adminData) {
+            console.log(`${adminData.length || 0} fascicules récupérés pour le marché ${marcheId} (voie ADMIN)`);
+            return adminData || [];
+          } else {
+            return [];
+          }
         } catch (directError) {
           console.error(`Exception lors de la tentative admin:`, directError);
           return [];
@@ -49,8 +53,14 @@ export const fetchFasciculesByMarcheId = async (marcheId: string): Promise<any[]
       return [];
     }
     
-    console.log(`${data?.length || 0} fascicules récupérés pour le marché ${marcheId}`);
-    return data || [];
+    // Vérifier que data est bien un tableau avant d'accéder à sa propriété length
+    if (Array.isArray(data)) {
+      console.log(`${data.length || 0} fascicules récupérés pour le marché ${marcheId}`);
+      return data;
+    } else {
+      console.log(`Aucun fascicule récupéré ou format de données incorrect pour le marché ${marcheId}`);
+      return [];
+    }
   } catch (error) {
     console.error('Exception lors de la récupération des fascicules:', error);
     return [];
