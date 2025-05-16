@@ -72,6 +72,7 @@ export interface Fascicule {
   progression: number;
   description?: string;
   marche_id: string;
+  created_at?: string;
 }
 
 // Nouveau type pour les pièces jointes

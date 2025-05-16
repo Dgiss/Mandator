@@ -7,16 +7,17 @@ import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/userRole';
 import { fetchFasciculesByMarcheId } from '@/services/marches/fetchFasciculesByMarcheId';
 import MarcheFasciculeForm from './MarcheFasciculeForm';
+import type { Fascicule } from '@/services/types';
 
 interface MarcheFasciculesProps {
   marcheId: string;
 }
 
 const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
-  const [fascicules, setFascicules] = useState<any[]>([]);
+  const [fascicules, setFascicules] = useState<Fascicule[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [showForm, setShowForm] = useState<boolean>(false);
-  const [selectedFascicule, setSelectedFascicule] = useState<any>(null);
+  const [selectedFascicule, setSelectedFascicule] = useState<Fascicule | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { canCreateFascicule, isAdmin } = useUserRole(marcheId);
@@ -45,12 +46,11 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
       console.log(`Chargement des fascicules pour le marché ${marcheId}...`);
       const data = await fetchFasciculesByMarcheId(marcheId);
       
-      // Ne mettre à jour l'état que si les données ont changé
-      const currentJSON = JSON.stringify(fascicules);
-      const newJSON = JSON.stringify(data);
-      
-      if (currentJSON !== newJSON) {
+      if (Array.isArray(data)) {
         setFascicules(data);
+      } else {
+        console.error('Format de données incorrect:', data);
+        setFascicules([]);
       }
     } catch (error) {
       console.error('Error fetching fascicules:', error);
@@ -67,7 +67,7 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
         loadingRef.current = false;
       }, 100);
     }
-  }, [marcheId, toast, fascicules]);
+  }, [marcheId, toast]);
 
   // Effet pour charger les fascicules une seule fois ou après une modification
   useEffect(() => {
@@ -83,7 +83,7 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
     setShowForm(true);
   };
 
-  const handleEditClick = (fascicule: any) => {
+  const handleEditClick = (fascicule: Fascicule) => {
     setSelectedFascicule(fascicule);
     setShowForm(true);
   };
@@ -91,7 +91,10 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
   const handleFormClose = (refreshNeeded: boolean = false) => {
     setShowForm(false);
     if (refreshNeeded) {
-      setLoadAttempt(prev => prev + 1); // Forcer un rechargement sans boucle infinie
+      // Forcer un rechargement sans boucle infinie
+      setTimeout(() => {
+        setLoadAttempt(prev => prev + 1);
+      }, 500);
     }
   };
 

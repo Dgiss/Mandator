@@ -1,14 +1,15 @@
 
 import { supabase } from '@/lib/supabase';
 import { getGlobalUserRole } from '@/utils/auth/roles';
+import { Fascicule } from '@/services/types';
 
 /**
  * Récupérer les fascicules d'un marché spécifique de manière sécurisée
  * en utilisant notre fonction RPC optimisée qui évite la récursion infinie
  * @param {string} marcheId L'identifiant du marché
- * @returns {Promise<any[]>} Liste des fascicules
+ * @returns {Promise<Fascicule[]>} Liste des fascicules
  */
-export const fetchFasciculesByMarcheId = async (marcheId: string): Promise<any[]> => {
+export const fetchFasciculesByMarcheId = async (marcheId: string): Promise<Fascicule[]> => {
   try {
     console.log(`Récupération des fascicules pour le marché ${marcheId}...`);
     
@@ -38,7 +39,7 @@ export const fetchFasciculesByMarcheId = async (marcheId: string): Promise<any[]
           
           if (adminData) {
             console.log(`${adminData.length || 0} fascicules récupérés pour le marché ${marcheId} (voie ADMIN)`);
-            return adminData || [];
+            return adminData as Fascicule[];
           } else {
             return [];
           }
@@ -56,7 +57,7 @@ export const fetchFasciculesByMarcheId = async (marcheId: string): Promise<any[]
     // Vérifier que data est bien un tableau avant d'accéder à sa propriété length
     if (Array.isArray(data)) {
       console.log(`${data.length || 0} fascicules récupérés pour le marché ${marcheId}`);
-      return data;
+      return data as Fascicule[];
     } else {
       console.log(`Aucun fascicule récupéré ou format de données incorrect pour le marché ${marcheId}`);
       return [];

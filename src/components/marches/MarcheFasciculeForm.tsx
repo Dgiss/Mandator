@@ -7,11 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
+import { Fascicule } from '@/services/types';
+import { Loader2 } from 'lucide-react';
 
 interface MarcheFasciculeFormProps {
   onClose: (refreshNeeded?: boolean) => void;
   marcheId: string;
-  fascicule?: any;
+  fascicule?: Fascicule;
 }
 
 const MarcheFasciculeForm: React.FC<MarcheFasciculeFormProps> = ({
@@ -23,11 +25,13 @@ const MarcheFasciculeForm: React.FC<MarcheFasciculeFormProps> = ({
   const [nom, setNom] = useState(fascicule?.nom || '');
   const [description, setDescription] = useState(fascicule?.description || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setError('');
 
     try {
       // Validation
@@ -41,19 +45,21 @@ const MarcheFasciculeForm: React.FC<MarcheFasciculeFormProps> = ({
         return;
       }
 
+      const currentDate = new Date().toISOString();
+
       if (isEditing) {
         // Update existing fascicule
-        const { error } = await supabase
+        const { error: updateError } = await supabase
           .from('fascicules')
           .update({
             nom,
             description: description || null,
-            datemaj: new Date().toISOString()
+            datemaj: currentDate
           })
           .eq('id', fascicule.id);
 
-        if (error) {
-          throw error;
+        if (updateError) {
+          throw updateError;
         }
         
         toast({
@@ -61,20 +67,20 @@ const MarcheFasciculeForm: React.FC<MarcheFasciculeFormProps> = ({
           description: "Le fascicule a été mis à jour avec succès",
         });
       } else {
-        // Create new fascicule
-        const { error } = await supabase
+        // Create new fascicule with the correct structure
+        const { error: insertError } = await supabase
           .from('fascicules')
           .insert({
             marche_id: marcheId,
             nom,
             description: description || null,
-            datemaj: new Date().toISOString(),
+            datemaj: currentDate,
             nombredocuments: 0,
             progression: 0
           });
 
-        if (error) {
-          throw error;
+        if (insertError) {
+          throw insertError;
         }
         
         toast({
@@ -87,6 +93,7 @@ const MarcheFasciculeForm: React.FC<MarcheFasciculeFormProps> = ({
       onClose(true);
     } catch (error: any) {
       console.error('Erreur lors de la sauvegarde du fascicule:', error);
+      setError(error.message || "Une erreur est survenue lors de la sauvegarde du fascicule");
       toast({
         title: "Erreur",
         description: error.message || "Une erreur est survenue lors de la sauvegarde du fascicule",
@@ -107,6 +114,12 @@ const MarcheFasciculeForm: React.FC<MarcheFasciculeFormProps> = ({
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="bg-red-50 p-4 rounded-md border border-red-200 text-red-700 text-sm mb-4">
+              {error}
+            </div>
+          )}
+          
           <div className="space-y-2">
             <Label htmlFor="nom">Nom du fascicule *</Label>
             <Input
@@ -114,6 +127,7 @@ const MarcheFasciculeForm: React.FC<MarcheFasciculeFormProps> = ({
               value={nom}
               onChange={(e) => setNom(e.target.value)}
               placeholder="Nom du fascicule"
+              disabled={isSubmitting}
               required
             />
           </div>
@@ -126,6 +140,7 @@ const MarcheFasciculeForm: React.FC<MarcheFasciculeFormProps> = ({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Description du fascicule (optionnel)"
               rows={4}
+              disabled={isSubmitting}
             />
           </div>
           
@@ -142,12 +157,14 @@ const MarcheFasciculeForm: React.FC<MarcheFasciculeFormProps> = ({
               type="submit"
               disabled={isSubmitting}
             >
-              {isSubmitting 
-                ? 'Enregistrement...' 
-                : isEditing 
-                  ? 'Mettre à jour' 
-                  : 'Créer'
-              }
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {isEditing ? 'Mise à jour...' : 'Création...'}
+                </>
+              ) : (
+                isEditing ? 'Mettre à jour' : 'Créer'
+              )}
             </Button>
           </div>
         </form>
