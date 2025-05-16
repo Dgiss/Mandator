@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
@@ -27,10 +27,11 @@ export default function MarchesPage() {
   const [totalCount, setTotalCount] = useState<number>(0);
   const [isCreationModalOpen, setIsCreationModalOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  // Ajout d'un drapeau pour éviter les chargements multiples
-  const [hasLoaded, setHasLoaded] = useState(false);
+  
+  // Utiliser useRef pour éviter les rechargements inutiles
+  const initialLoadDone = useRef(false);
 
-  // Fonction pour charger les marchés
+  // Fonction pour charger les marchés - optimisée pour éviter la récursion
   const loadMarches = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -39,7 +40,6 @@ export default function MarchesPage() {
       console.log("Chargement des marchés...");
       const data = await fetchMarches();
       
-      // Vérifier que data est un tableau valide
       if (!data || !Array.isArray(data)) {
         console.warn("Les données reçues ne sont pas un tableau valide:", data);
         setMarches([]);
@@ -52,7 +52,6 @@ export default function MarchesPage() {
       setMarches(data);
       setTotalCount(data.length);
       
-      // Si aucun marché n'est trouvé mais pas d'erreur, afficher un toast informatif
       if (data.length === 0) {
         toast({
           title: "Information",
@@ -63,7 +62,6 @@ export default function MarchesPage() {
     } catch (error) {
       console.error('Erreur lors du chargement des marchés:', error);
       setError("Impossible de récupérer la liste des marchés. Veuillez réessayer ultérieurement.");
-      // S'assurer que marches est un tableau vide en cas d'erreur
       setMarches([]);
       setTotalCount(0);
       
@@ -75,38 +73,34 @@ export default function MarchesPage() {
     } finally {
       setLoading(false);
       setIsRefreshing(false);
-      setHasLoaded(true); // Marquer que le chargement initial a été effectué
+      initialLoadDone.current = true; // Marquer le chargement initial comme terminé
     }
-  }, [toast]);
+  }, [toast]); // toast comme seule dépendance
 
   // Rafraîchir manuellement la liste
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
-    setHasLoaded(false); // Réinitialiser pour permettre un nouveau chargement complet
+    initialLoadDone.current = false; // Réinitialiser pour un rechargement complet
     loadMarches();
   }, [loadMarches]);
 
-  // Chargement initial des marchés - CORRIGÉ pour éviter la boucle infinie
+  // Chargement initial - utilise useRef pour éviter les boucles infinies
   useEffect(() => {
-    console.log("useEffect de MarchesPage déclenché, hasLoaded:", hasLoaded);
-    
-    // Ne charger que si ce n'est pas déjà fait ou explicitement demandé via refresh
-    if (!hasLoaded) {
+    if (!initialLoadDone.current) {
       loadMarches();
     }
-    
-    // Ne pas inclure hasLoaded dans les dépendances pour éviter les rechargements
-  }, [loadMarches]);
+  }, [loadMarches]); // Gardons loadMarches comme dépendance car elle est memoizée correctement
 
-  // Le reste du code reste inchangé
-  // Mémoisation de la liste filtrée avec gestion des valeurs null/undefined
+  // Filtrage des marchés - mémoisation pour éviter les recalculs inutiles
   const filteredMarches = useMemo(() => {
     if (!marches || !Array.isArray(marches)) return [];
     
+    if (!searchTerm.trim()) return marches; // Optimisation: pas de filtrage si recherche vide
+    
+    const term = searchTerm.toLowerCase();
     return marches.filter(marche => {
       const titre = (marche.titre || '').toLowerCase();
       const client = (marche.client || '').toLowerCase();
-      const term = searchTerm.toLowerCase();
       
       return titre.includes(term) || client.includes(term);
     });
@@ -128,7 +122,6 @@ export default function MarchesPage() {
 
   const handleCloseModal = useCallback(() => {
     setIsCreationModalOpen(false);
-    // Raffraîchir la liste des marchés après la création
     handleRefresh();
   }, [handleRefresh]);
 

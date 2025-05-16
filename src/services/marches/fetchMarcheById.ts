@@ -4,7 +4,7 @@ import { Marche } from './types';
 
 /**
  * Récupérer un marché spécifique par son ID
- * Version optimisée pour contourner les problèmes de RLS
+ * Version optimisée pour éviter les problèmes de récursion RLS
  * @param {string} id L'identifiant du marché
  * @returns {Promise<Marche | null>} Le marché ou null si non trouvé
  */
@@ -15,9 +15,9 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
       return null;
     }
     
-    console.log(`Tentative d'accès au marché ${id}...`);
+    console.log(`Récupération du marché ${id}...`);
     
-    // Requête directe sans RPC problématique
+    // Requête directe qui évite les problèmes de récursion
     const { data, error } = await supabase
       .from('marches')
       .select('*')
@@ -25,7 +25,40 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
       .maybeSingle();
       
     if (error) {
-      console.error(`Erreur lors de l'exécution de la requête pour le marché ${id}:`, error);
+      console.error(`Erreur lors de la récupération du marché ${id}:`, error);
+      
+      // En mode développement, essayer une requête simplifiée
+      if (import.meta.env.DEV) {
+        console.warn("Mode développement: tentative de récupération simplifiée");
+        
+        // Tentative avec une requête simplifiée
+        const { data: simpleData, error: simpleError } = await supabase
+          .from('marches')
+          .select('id, titre, description')
+          .eq('id', id)
+          .maybeSingle();
+          
+        if (simpleError || !simpleData) {
+          console.error('Échec de la récupération simplifiée:', simpleError);
+          return null;
+        }
+        
+        // Construire un objet Marche minimal
+        return {
+          id: simpleData.id,
+          titre: simpleData.titre || 'Sans titre',
+          description: simpleData.description || '',
+          client: 'Non spécifié',
+          statut: 'Non défini',
+          datecreation: null,
+          budget: 'Non défini',
+          image: null,
+          logo: null,
+          user_id: null,
+          created_at: null
+        };
+      }
+      
       return null;
     }
     
@@ -34,10 +67,10 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
       return null;
     }
     
-    console.log(`Marché ${id} récupéré avec succès:`, data);
+    console.log(`Marché ${id} récupéré avec succès`);
     
     // Format the data to ensure it matches the expected Marche type
-    const formattedMarche: Marche = {
+    return {
       id: data.id || '',
       titre: data.titre || 'Sans titre',
       description: data.description || '',
@@ -50,8 +83,6 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
       user_id: data.user_id || null,
       created_at: data.created_at || null
     };
-    
-    return formattedMarche;
     
   } catch (error) {
     console.error('Exception lors de la récupération du marché:', error);

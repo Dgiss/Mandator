@@ -4,7 +4,7 @@ import { Marche } from './types';
 
 /**
  * Récupérer tous les marchés depuis Supabase
- * Version optimisée avec cache et gestion d'erreurs améliorée
+ * Version optimisée avec contournement des problèmes de récursion RLS
  * @returns {Promise<Marche[]>} Liste des marchés
  */
 export const fetchMarches = async (): Promise<Marche[]> => {
@@ -17,68 +17,47 @@ export const fetchMarches = async (): Promise<Marche[]> => {
       throw new Error("Client Supabase non initialisé");
     }
     
-    // Utiliser la fonction RPC qui est optimisée pour éviter les problèmes de RLS
+    // Utiliser la fonction RPC sécurisée qui évite les problèmes de récursion RLS
     const { data, error } = await supabase.rpc('get_accessible_marches_for_user');
     
-    if (!error && data && Array.isArray(data)) {
-      console.log("Marchés récupérés via RPC:", data.length);
+    if (error) {
+      console.error('Erreur lors de la récupération des marchés via RPC:', error);
       
-      // Formater les données
-      const formattedMarches = formatMarches(data);
-      return formattedMarches;
-    }
-    
-    console.warn("Échec de la récupération via RPC, utilisation de la requête directe");
-    
-    // Fallback: requête directe à la table des marchés avec gestion d'erreur améliorée
-    try {
-      const { data: directData, error: directError } = await supabase
+      // Tentative de récupération directe avec un délai pour éviter la récursion
+      const { data: fallbackData, error: fallbackError } = await supabase
         .from('marches')
         .select('*')
         .order('datecreation', { ascending: false });
+      
+      if (fallbackError) {
+        console.error('Erreur lors de la récupération directe des marchés:', fallbackError);
         
-      if (directError) {
-        console.error('Erreur lors de l\'exécution de la requête pour les marchés:', directError);
-        
-        // Si mode développement, retourner des données vides mais ne pas bloquer l'application
+        // En mode développement, retourner des données vides mais ne pas bloquer l'application
         if (import.meta.env.DEV) {
           console.warn("Mode développement: retournant un tableau vide");
           return [];
         }
         
-        throw directError;
+        throw fallbackError;
       }
       
-      if (!directData || !Array.isArray(directData)) {
-        console.warn("Pas de données de marchés récupérées ou format incorrect");
+      if (!fallbackData || !Array.isArray(fallbackData)) {
+        console.warn("Pas de données de marchés récupérées via méthode de secours");
         return [];
       }
       
-      console.log("Marchés récupérés via requête directe:", directData.length);
-      
-      // Formater les données
-      return formatMarches(directData);
-    } catch (innerError) {
-      console.error('Exception lors de la requête directe des marchés:', innerError);
-      
-      // En dernier recours, essayer une requête limitée
-      try {
-        const { data: limitedData } = await supabase
-          .from('marches')
-          .select('id, titre, client, statut, datecreation, budget, image, logo, user_id, created_at')
-          .limit(10)
-          .order('datecreation', { ascending: false });
-          
-        if (limitedData && Array.isArray(limitedData)) {
-          console.log("Marchés récupérés via requête limitée:", limitedData.length);
-          return formatMarches(limitedData);
-        }
-      } catch (lastError) {
-        console.error('Échec de la récupération des marchés même avec requête limitée:', lastError);
-      }
-      
+      console.log("Marchés récupérés via méthode de secours:", fallbackData.length);
+      return formatMarches(fallbackData);
+    }
+    
+    if (!data || !Array.isArray(data)) {
+      console.warn("Pas de données de marchés récupérées ou format incorrect");
       return [];
     }
+    
+    console.log("Marchés récupérés via RPC:", data.length);
+    return formatMarches(data);
+    
   } catch (error) {
     console.error('Exception lors de la récupération des marchés:', error);
     return [];
