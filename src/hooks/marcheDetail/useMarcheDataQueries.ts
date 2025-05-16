@@ -7,12 +7,12 @@ import { useToast } from '@/hooks/use-toast';
 
 /**
  * Hook that manages data fetching queries for a marché
- * Version optimisée pour éviter les problèmes de récursivité
+ * Version optimisée pour éviter les problèmes de récursivité et les requêtes multiples
  */
 export const useMarcheDataQueries = (id: string | undefined) => {
   const { toast } = useToast();
 
-  // Vérifie d'abord si le marché existe réellement
+  // Vérifie d'abord si le marché existe réellement avec un long staleTime pour éviter les requêtes excessives
   const existsQuery = useQuery({
     queryKey: ['marche-exists', id],
     queryFn: async () => {
@@ -25,8 +25,9 @@ export const useMarcheDataQueries = (id: string | undefined) => {
       }
     },
     enabled: !!id,
-    staleTime: 60 * 1000, // 1 minute
-    retry: 2,
+    staleTime: 5 * 60 * 1000, // 5 minutes de cache
+    retry: 1, // Limiter les tentatives
+    gcTime: 10 * 60 * 1000, // Garder en cache 10 minutes
   });
 
   // ACCÈS TOUJOURS AUTORISÉ - contournement complet des vérifications
@@ -37,7 +38,8 @@ export const useMarcheDataQueries = (id: string | undefined) => {
       return true;
     },
     enabled: !!id && (existsQuery.data === true || import.meta.env.DEV),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 15 * 60 * 1000, // Garder en cache 15 minutes
   });
 
   // Récupération des détails du marché sans vérification d'accès
@@ -70,11 +72,11 @@ export const useMarcheDataQueries = (id: string | undefined) => {
     },
     enabled: !!id && (existsQuery.data === true || import.meta.env.DEV),
     staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 3, // Augmenter le nombre de tentatives
-    retryDelay: attempt => Math.min(1000 * 2 ** attempt, 30000), // Backoff exponentiel
+    retry: 1, // Limiter le nombre de tentatives
+    gcTime: 10 * 60 * 1000, // Garder en cache 10 minutes
   });
 
-  // Récupération des visas avec requête directe
+  // Récupération des visas avec requête directe - optimisée pour le cache
   const visasQuery = useQuery({
     queryKey: ['visas', id],
     queryFn: async () => {
@@ -100,10 +102,11 @@ export const useMarcheDataQueries = (id: string | undefined) => {
     },
     enabled: !!id && (!!marcheQuery.data || import.meta.env.DEV),
     staleTime: 5 * 60 * 1000,
-    retry: 2
+    retry: 1,
+    gcTime: 10 * 60 * 1000,
   });
 
-  // Récupération des documents récents avec requête directe
+  // Récupération des documents récents avec requête directe - optimisée pour le cache
   const documentsQuery = useQuery({
     queryKey: ['documents-recents', id],
     queryFn: async () => {
@@ -131,10 +134,11 @@ export const useMarcheDataQueries = (id: string | undefined) => {
     },
     enabled: !!id && (!!marcheQuery.data || import.meta.env.DEV),
     staleTime: 5 * 60 * 1000,
-    retry: 2
+    retry: 1,
+    gcTime: 10 * 60 * 1000,
   });
 
-  // Récupération des fascicules avec requête directe
+  // Récupération des fascicules avec requête directe - optimisée pour le cache
   const fasciculesQuery = useQuery({
     queryKey: ['fascicules', id],
     queryFn: async () => {
@@ -161,7 +165,8 @@ export const useMarcheDataQueries = (id: string | undefined) => {
     },
     enabled: !!id && (!!marcheQuery.data || import.meta.env.DEV),
     staleTime: 5 * 60 * 1000,
-    retry: 2
+    retry: 1,
+    gcTime: 10 * 60 * 1000,
   });
 
   // Toujours continuer l'affichage, même en cas d'erreur

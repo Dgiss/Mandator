@@ -27,6 +27,8 @@ export default function MarchesPage() {
   const [totalCount, setTotalCount] = useState<number>(0);
   const [isCreationModalOpen, setIsCreationModalOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  // Ajout d'un drapeau pour éviter les chargements multiples
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   // Fonction pour charger les marchés
   const loadMarches = useCallback(async () => {
@@ -73,32 +75,30 @@ export default function MarchesPage() {
     } finally {
       setLoading(false);
       setIsRefreshing(false);
+      setHasLoaded(true); // Marquer que le chargement initial a été effectué
     }
   }, [toast]);
 
   // Rafraîchir manuellement la liste
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
+    setHasLoaded(false); // Réinitialiser pour permettre un nouveau chargement complet
     loadMarches();
   }, [loadMarches]);
 
-  // Chargement initial des marchés
+  // Chargement initial des marchés - CORRIGÉ pour éviter la boucle infinie
   useEffect(() => {
-    console.log("useEffect de MarchesPage déclenché");
-    let isMounted = true;
+    console.log("useEffect de MarchesPage déclenché, hasLoaded:", hasLoaded);
     
-    const initialLoad = async () => {
-      if (!isMounted) return;
-      await loadMarches();
-    };
-
-    initialLoad();
+    // Ne charger que si ce n'est pas déjà fait ou explicitement demandé via refresh
+    if (!hasLoaded) {
+      loadMarches();
+    }
     
-    return () => {
-      isMounted = false;
-    };
+    // Ne pas inclure hasLoaded dans les dépendances pour éviter les rechargements
   }, [loadMarches]);
 
+  // Le reste du code reste inchangé
   // Mémoisation de la liste filtrée avec gestion des valeurs null/undefined
   const filteredMarches = useMemo(() => {
     if (!marches || !Array.isArray(marches)) return [];
@@ -129,8 +129,8 @@ export default function MarchesPage() {
   const handleCloseModal = useCallback(() => {
     setIsCreationModalOpen(false);
     // Raffraîchir la liste des marchés après la création
-    loadMarches();
-  }, [loadMarches]);
+    handleRefresh();
+  }, [handleRefresh]);
 
   const handleSearchChange = useCallback((value: string) => {
     setSearchTerm(value);
