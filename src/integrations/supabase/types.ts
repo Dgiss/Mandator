@@ -847,6 +847,35 @@ export type Database = {
           ville: string | null
         }
       }
+      get_accessible_marches: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          adresse: string | null
+          budget: string | null
+          client: string | null
+          code_postal: string | null
+          commentaire: string | null
+          created_at: string | null
+          date_debut: string | null
+          date_fin: string | null
+          date_fin_gpa: string | null
+          date_notification: string | null
+          datecreation: string | null
+          description: string | null
+          id: string
+          image: string | null
+          logo: string | null
+          pays: string | null
+          periode_chantier: string | null
+          periode_preparation: string | null
+          region: string | null
+          statut: string
+          titre: string
+          type_marche: string | null
+          user_id: string | null
+          ville: string | null
+        }[]
+      }
       get_accessible_marches_for_user: {
         Args: Record<PropertyKey, never>
         Returns: {

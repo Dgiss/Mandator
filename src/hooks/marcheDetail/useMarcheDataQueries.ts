@@ -6,42 +6,58 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * Hook that manages data fetching queries for a marché
- * Optimisé pour éliminer les problèmes de récursion
+ * Hook optimisé qui gère les requêtes pour les données d'un marché
+ * Utilise notre nouvelle fonction check_market_access
  */
 export const useMarcheDataQueries = (id: string | undefined) => {
   const { toast } = useToast();
 
-  // Vérifie d'abord si le marché existe réellement
+  // Vérifie d'abord si le marché existe réellement - version optimisée
   const existsQuery = useQuery({
     queryKey: ['marche-exists', id],
     queryFn: async () => {
       if (!id) return false;
       
-      // Court-circuit pour le développement
-      if (import.meta.env.DEV) return true;
-      
       try {
+        // Utiliser notre fonction optimisée qui gère les cas d'erreur de récursion
         return await marcheExists(id);
       } catch (error) {
         console.error(`Erreur lors de la vérification de l'existence du marché:`, error);
-        return true; // Par défaut, permettre l'accès en cas d'erreur
+        // Par défaut, permettre l'accès en cas d'erreur en mode développement
+        return import.meta.env.DEV ? true : false;
       }
     },
     enabled: !!id,
     staleTime: 5 * 60 * 1000, // 5 minutes de cache
-    retry: 1, // Limiter les tentatives
+    retry: 2, // Augmenter les tentatives
     gcTime: 10 * 60 * 1000, // Garder en cache 10 minutes
   });
 
-  // Contrôle d'accès - bypassé pour résoudre les problèmes de récursion
+  // Contrôle d'accès utilisant notre fonction RPC optimisée
   const accessCheckQuery = useQuery({
     queryKey: ['marche-access', id],
     queryFn: async () => {
-      // Bypass complet des vérifications d'accès pour résoudre les problèmes de récursion
-      return true;
+      if (!id) return false;
+      
+      try {
+        // Utiliser notre fonction RPC optimisée
+        const { data, error } = await supabase.rpc('check_market_access', { 
+          market_id: id 
+        });
+        
+        if (error) {
+          console.error("Erreur lors de la vérification d'accès:", error);
+          // En mode dev, permettre l'accès en cas d'erreur
+          return import.meta.env.DEV ? true : false;
+        }
+        
+        return !!data;
+      } catch (error) {
+        console.error("Exception lors de la vérification d'accès:", error);
+        return import.meta.env.DEV ? true : false;
+      }
     },
-    enabled: !!id && existsQuery.isSuccess,
+    enabled: !!id && existsQuery.isSuccess && existsQuery.data === true,
     staleTime: 10 * 60 * 1000, // 10 minutes
     gcTime: 15 * 60 * 1000, // Garder en cache 15 minutes
   });
@@ -76,20 +92,20 @@ export const useMarcheDataQueries = (id: string | undefined) => {
         return null;
       }
     },
-    enabled: !!id && existsQuery.isSuccess,
+    enabled: !!id && existsQuery.isSuccess && existsQuery.data === true,
     staleTime: 5 * 60 * 1000,
-    retry: 1,
+    retry: 2, // Augmenter les tentatives
     gcTime: 10 * 60 * 1000,
   });
 
-  // Récupération des visas optimisée
+  // Récupération des visas - version optimisée
   const visasQuery = useQuery({
     queryKey: ['visas', id],
     queryFn: async () => {
       if (!id) return [];
       
       try {
-        // Requête directe plutôt que RPC pour éviter les problèmes de récursion
+        // Requête directe avec gestion d'erreur améliorée
         const { data, error } = await supabase
           .from('visas')
           .select('*')
@@ -106,13 +122,13 @@ export const useMarcheDataQueries = (id: string | undefined) => {
         return [];
       }
     },
-    enabled: !!id && marcheQuery.isSuccess,
+    enabled: !!id && marcheQuery.isSuccess && !!marcheQuery.data,
     staleTime: 5 * 60 * 1000,
     retry: 1,
     gcTime: 10 * 60 * 1000,
   });
 
-  // Récupération des documents récents optimisée
+  // Récupération des documents récents - version optimisée
   const documentsQuery = useQuery({
     queryKey: ['documents-recents', id],
     queryFn: async () => {
@@ -137,13 +153,13 @@ export const useMarcheDataQueries = (id: string | undefined) => {
         return [];
       }
     },
-    enabled: !!id && marcheQuery.isSuccess,
+    enabled: !!id && marcheQuery.isSuccess && !!marcheQuery.data,
     staleTime: 5 * 60 * 1000,
     retry: 1,
     gcTime: 10 * 60 * 1000,
   });
 
-  // Récupération des fascicules optimisée
+  // Récupération des fascicules - version optimisée
   const fasciculesQuery = useQuery({
     queryKey: ['fascicules', id],
     queryFn: async () => {
@@ -167,19 +183,24 @@ export const useMarcheDataQueries = (id: string | undefined) => {
         return [];
       }
     },
-    enabled: !!id && marcheQuery.isSuccess,
+    enabled: !!id && marcheQuery.isSuccess && !!marcheQuery.data,
     staleTime: 5 * 60 * 1000,
     retry: 1,
     gcTime: 10 * 60 * 1000,
   });
 
-  // Toujours continuer l'affichage, même en cas d'erreur
+  // Déterminer si l'accès devrait être accordé
+  const shouldContinue = (
+    existsQuery.isSuccess && existsQuery.data === true && 
+    (accessCheckQuery.isSuccess && accessCheckQuery.data === true || import.meta.env.DEV)
+  );
+
   return {
     accessCheckQuery,
     marcheQuery,
     visasQuery,
     documentsQuery,
     fasciculesQuery,
-    shouldContinue: true // Bypass les vérifications d'accès pour éviter les problèmes de récursion
+    shouldContinue
   };
 };

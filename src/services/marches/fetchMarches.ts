@@ -4,12 +4,12 @@ import { Marche } from './types';
 
 /**
  * Récupérer tous les marchés depuis Supabase
- * Version optimisée avec contournement des problèmes de récursion RLS
+ * Version optimisée utilisant notre nouvelle fonction RPC sécurisée
  * @returns {Promise<Marche[]>} Liste des marchés
  */
 export const fetchMarches = async (): Promise<Marche[]> => {
   try {
-    console.log("Récupération de tous les marchés via fetchMarches...");
+    console.log("Récupération des marchés via fonction RPC optimisée...");
     
     // Vérifier que le client Supabase est correctement initialisé
     if (!supabase) {
@@ -17,13 +17,14 @@ export const fetchMarches = async (): Promise<Marche[]> => {
       throw new Error("Client Supabase non initialisé");
     }
     
-    // Utiliser la fonction RPC sécurisée qui évite les problèmes de récursion RLS
-    const { data, error } = await supabase.rpc('get_accessible_marches_for_user');
+    // Utiliser la nouvelle fonction RPC sécurisée qui évite les problèmes de récursion RLS
+    const { data, error } = await supabase.rpc('get_accessible_marches');
     
     if (error) {
       console.error('Erreur lors de la récupération des marchés via RPC:', error);
       
-      // Tentative de récupération directe avec un délai pour éviter la récursion
+      // Fallback utilisant la fonction check_market_access par notre politique RLS optimisée
+      console.log("Tentative avec la méthode de secours utilisant la politique RLS optimisée...");
       const { data: fallbackData, error: fallbackError } = await supabase
         .from('marches')
         .select('*')
