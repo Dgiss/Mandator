@@ -35,7 +35,7 @@ export default function MarcheDetailPage() {
     marche, 
     loading, 
     error,
-    accessDenied: accessDeniedOld, // Renommé pour ne pas l'utiliser
+    accessDenied: accessDeniedOriginal, // Ignoré pour contourner les vérifications
     visasEnAttente, 
     documentStats, 
     fasciculeProgress, 
@@ -44,7 +44,7 @@ export default function MarcheDetailPage() {
     formatDate
   } = useMarcheDetail(id);
 
-  // Remplacé par false pour désactiver le contrôle d'accès
+  // Désactiver complètement la vérification d'accès
   const accessDenied = false;
 
   if (loading) {
@@ -57,7 +57,7 @@ export default function MarcheDetailPage() {
     );
   }
 
-  // Condition d'erreur transformée pour ignorer le contrôle d'accès
+  // N'afficher l'erreur que si c'est une vraie erreur technique, pas un problème d'accès
   if (error) {
     return (
       <PageLayout>
@@ -67,7 +67,7 @@ export default function MarcheDetailPage() {
             <AlertTitle>Erreur technique</AlertTitle>
             <AlertDescription>
               Une erreur est survenue lors du chargement du marché.
-              Veuillez réessayer ou contacter le support.
+              Veuillez réessayer ou contacter le support technique.
             </AlertDescription>
           </Alert>
           <Button 
