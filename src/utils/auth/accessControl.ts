@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 
 /**
  * Vérifie si l'utilisateur a accès à un marché spécifique
- * Cette version de contournement permet à tout le monde d'accéder aux marchés
+ * Cette version retourne toujours true pour permettre l'accès
  * @param {string} marcheId L'identifiant du marché
  * @returns {Promise<boolean>} True si l'utilisateur a accès au marché
  */

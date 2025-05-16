@@ -42,33 +42,22 @@ export const useMarcheDataQueries = (id: string | undefined) => {
     retryDelay: attempt => Math.min(1000 * 2 ** attempt, 30000), // Backoff exponentiel
   });
 
-  // Récupération des visas avec contournement RLS
+  // Récupération des visas avec requête directe
   const visasQuery = useQuery({
     queryKey: ['visas', id],
     queryFn: async () => {
       if (!id) return [];
       
       try {
-        // Utiliser la fonction RPC pour contourner RLS
-        const { data, error } = await supabase.rpc('execute_query', {
-          query_text: `SELECT * FROM public.visas WHERE marche_id = '${id}'`
-        });
+        // Requête directe pour les visas
+        const { data, error } = await supabase
+          .from('visas')
+          .select('*')
+          .eq('marche_id', id);
         
         if (error) {
           console.error("Erreur lors de la récupération des visas:", error);
-          
-          // Fallback à la requête directe
-          const directResult = await supabase
-            .from('visas')
-            .select('*')
-            .eq('marche_id', id);
-          
-          if (directResult.error) {
-            console.error("Échec de la requête directe pour visas:", directResult.error);
-            return [];
-          }
-          
-          return directResult.data || [];
+          return [];
         }
         
         return data || [];
@@ -82,35 +71,24 @@ export const useMarcheDataQueries = (id: string | undefined) => {
     retry: 2
   });
 
-  // Récupération des documents récents avec contournement RLS
+  // Récupération des documents récents avec requête directe
   const documentsQuery = useQuery({
     queryKey: ['documents-recents', id],
     queryFn: async () => {
       if (!id) return [];
       
       try {
-        // Utiliser la fonction RPC pour contourner RLS
-        const { data, error } = await supabase.rpc('execute_query', {
-          query_text: `SELECT * FROM public.documents WHERE marche_id = '${id}' ORDER BY created_at DESC LIMIT 3`
-        });
+        // Requête directe pour les documents
+        const { data, error } = await supabase
+          .from('documents')
+          .select('*')
+          .eq('marche_id', id)
+          .order('created_at', { ascending: false })
+          .limit(3);
         
         if (error) {
           console.error("Erreur lors de la récupération des documents récents:", error);
-          
-          // Fallback à la requête directe
-          const directResult = await supabase
-            .from('documents')
-            .select('*')
-            .eq('marche_id', id)
-            .order('created_at', { ascending: false })
-            .limit(3);
-          
-          if (directResult.error) {
-            console.error("Échec de la requête directe pour documents:", directResult.error);
-            return [];
-          }
-          
-          return directResult.data || [];
+          return [];
         }
         
         return data || [];
@@ -124,34 +102,23 @@ export const useMarcheDataQueries = (id: string | undefined) => {
     retry: 2
   });
 
-  // Récupération des fascicules avec contournement RLS
+  // Récupération des fascicules avec requête directe
   const fasciculesQuery = useQuery({
     queryKey: ['fascicules', id],
     queryFn: async () => {
       if (!id) return [];
       
       try {
-        // Utiliser la fonction RPC pour contourner RLS
-        const { data, error } = await supabase.rpc('execute_query', {
-          query_text: `SELECT * FROM public.fascicules WHERE marche_id = '${id}' ORDER BY nom ASC`
-        });
+        // Requête directe pour les fascicules
+        const { data, error } = await supabase
+          .from('fascicules')
+          .select('*')
+          .eq('marche_id', id)
+          .order('nom', { ascending: true });
         
         if (error) {
           console.error("Erreur lors de la récupération des fascicules:", error);
-          
-          // Fallback à la requête directe
-          const directResult = await supabase
-            .from('fascicules')
-            .select('*')
-            .eq('marche_id', id)
-            .order('nom', { ascending: true });
-          
-          if (directResult.error) {
-            console.error("Échec de la requête directe pour fascicules:", directResult.error);
-            return [];
-          }
-          
-          return directResult.data || [];
+          return [];
         }
         
         return data || [];

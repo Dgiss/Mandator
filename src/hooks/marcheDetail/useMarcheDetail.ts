@@ -19,16 +19,16 @@ export const useMarcheDetail = (id: string | undefined): UseMarcheDetailReturn =
     shouldContinue
   } = useMarcheDataQueries(id);
 
-  // Process the fetched data
+  // Process the fetched data with type safety
   const {
     visasEnAttente,
     documentStats,
     fasciculeProgress,
     documentsRecents
   } = useDataProcessors(
-    visasQuery.data,
-    documentsQuery.data,
-    fasciculesQuery.data
+    visasQuery.data || [],
+    documentsQuery.data || [],
+    fasciculesQuery.data || []
   );
 
   // Loading state

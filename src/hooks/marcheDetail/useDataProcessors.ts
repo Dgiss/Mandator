@@ -6,9 +6,9 @@ import { Visa } from '@/services/types';
  * Process and transform data from the marché detail queries
  */
 export const useDataProcessors = (
-  visasData: any[] | undefined,
-  documentsData: any[] | undefined,
-  fasciculesData: any[] | undefined
+  visasData: any[] = [],
+  documentsData: any[] = [],
+  fasciculesData: any[] = []
 ) => {
   // Filter pending visas
   const visasEnAttente = useMemo(() => {
@@ -48,7 +48,7 @@ export const useDataProcessors = (
 
   // Prepare recent documents
   const documentsRecents = useMemo(() => {
-    return documentsData || [];
+    return Array.isArray(documentsData) ? documentsData : [];
   }, [documentsData]);
 
   return {
