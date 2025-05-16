@@ -9,7 +9,7 @@ export default function Index() {
     <MainLayout>
       <div className="container mx-auto p-6">
         <div className="text-center py-12">
-          <h1 className="text-4xl font-bold text-btp-navy mb-4">Bienvenue sur MandataireBTP</h1>
+          <h1 className="text-4xl font-bold text-btp-navy mb-4">Bienvenue sur Mandator</h1>
           <p className="max-w-2xl mx-auto text-btp-gray mb-8">
             Votre plateforme de gestion des marchés publics pour le secteur du BTP.
           </p>

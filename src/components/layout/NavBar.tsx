@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import AIAssistantButton from '@/components/ai-assistant/AIAssistantButton';
@@ -13,7 +14,7 @@ const NavBar: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center justify-start">
             <Link to="/" className="text-xl font-bold flex items-center lg:ml-2.5">
-              <span className="self-center whitespace-nowrap">BTPDOCS</span>
+              <span className="self-center whitespace-nowrap">Mandator</span>
             </Link>
           </div>
           <div className="flex items-center">

@@ -1,3 +1,4 @@
+
 import React, { ReactNode, useEffect } from 'react';
 import { 
   Sidebar, 
@@ -77,7 +78,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         <SidebarHeader className="flex items-center border-b px-6 py-4">
           <Link to="/" className="flex items-center">
             <FileText className="h-6 w-6 text-btp-blue mr-3" />
-            <span className="text-xl font-bold">MandataireBTP</span>
+            <span className="text-xl font-bold">Mandator</span>
           </Link>
           
           <SidebarTrigger className="ml-auto lg:hidden">
@@ -169,7 +170,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             </Button>
             
             <div className="mt-6 text-center">
-              <p className="text-xs text-gray-500">MandataireBTP © 2025</p>
+              <p className="text-xs text-gray-500">Mandator © 2025</p>
               <p className="text-xs text-gray-400 mt-1">Les modeleurs</p>
             </div>
           </div>
@@ -189,7 +190,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               </SidebarTrigger>
               <Link to="/" className="flex items-center md:hidden">
                 <FileText className="h-5 w-5 text-btp-blue mr-2" />
-                <span className="text-lg font-bold">MandataireBTP</span>
+                <span className="text-lg font-bold">Mandator</span>
               </Link>
             </div>
           </div>
