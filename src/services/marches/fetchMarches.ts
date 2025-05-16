@@ -9,7 +9,7 @@ import { Marche } from './types';
  */
 export const fetchMarches = async (): Promise<Marche[]> => {
   try {
-    console.log("Récupération de tous les marchés...");
+    console.log("Récupération de tous les marchés via fetchMarches...");
     
     // Vérifier que le client Supabase est correctement initialisé
     if (!supabase) {
@@ -28,10 +28,15 @@ export const fetchMarches = async (): Promise<Marche[]> => {
       return [];
     }
     
-    console.log("Marchés récupérés:", data?.length || 0);
+    if (!data || !Array.isArray(data)) {
+      console.warn("Pas de données de marchés récupérées ou format incorrect");
+      return [];
+    }
+    
+    console.log("Marchés récupérés:", data.length);
     
     // S'assurer que les données sont bien formatées avant de les retourner
-    const formattedMarches = Array.isArray(data) ? data.map((marche: any) => ({
+    const formattedMarches = data.map((marche: any) => ({
       id: marche.id || '',
       titre: marche.titre || 'Sans titre',
       description: marche.description || '',
@@ -43,7 +48,7 @@ export const fetchMarches = async (): Promise<Marche[]> => {
       logo: marche.logo || null,
       user_id: marche.user_id || null,
       created_at: marche.created_at || null
-    })) : [];
+    }));
     
     console.log("Marchés formatés:", formattedMarches.length);
     return formattedMarches as Marche[];

@@ -10,6 +10,11 @@ import { Marche } from './types';
  */
 export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
   try {
+    if (!id) {
+      console.error("ID de marché non fourni");
+      return null;
+    }
+    
     console.log(`Tentative d'accès au marché ${id}...`);
     
     // Requête directe sans RPC problématique
@@ -30,7 +35,23 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
     }
     
     console.log(`Marché ${id} récupéré avec succès:`, data);
-    return data as Marche;
+    
+    // Format the data to ensure it matches the expected Marche type
+    const formattedMarche: Marche = {
+      id: data.id || '',
+      titre: data.titre || 'Sans titre',
+      description: data.description || '',
+      client: data.client || 'Non spécifié',
+      statut: data.statut || 'Non défini',
+      datecreation: data.datecreation || null,
+      budget: data.budget || 'Non défini',
+      image: data.image || null,
+      logo: data.logo || null,
+      user_id: data.user_id || null,
+      created_at: data.created_at || null
+    };
+    
+    return formattedMarche;
     
   } catch (error) {
     console.error('Exception lors de la récupération du marché:', error);

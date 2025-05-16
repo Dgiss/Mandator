@@ -26,9 +26,9 @@ export const useMarcheDetail = (id: string | undefined): UseMarcheDetailReturn =
     fasciculeProgress,
     documentsRecents
   } = useDataProcessors(
-    visasQuery.data || [],
-    documentsQuery.data || [],
-    fasciculesQuery.data || []
+    Array.isArray(visasQuery.data) ? visasQuery.data : [],
+    Array.isArray(documentsQuery.data) ? documentsQuery.data : [],
+    Array.isArray(fasciculesQuery.data) ? fasciculesQuery.data : []
   );
 
   // Loading state

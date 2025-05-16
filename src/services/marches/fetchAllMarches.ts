@@ -22,10 +22,15 @@ export const fetchAllMarches = async (): Promise<Marche[]> => {
       return [];
     }
     
-    console.log(`${data?.length || 0} marchés récupérés via fetchAllMarches`);
+    if (!data || !Array.isArray(data)) {
+      console.warn("Pas de données de marchés récupérées ou format incorrect");
+      return [];
+    }
+    
+    console.log(`${data.length} marchés récupérés via fetchAllMarches`);
     
     // S'assurer que les données sont bien formatées avant de les retourner
-    const formattedMarches = Array.isArray(data) ? data.map((marche: any) => ({
+    const formattedMarches = data.map((marche: any) => ({
       id: marche.id || '',
       titre: marche.titre || 'Sans titre',
       description: marche.description || '',
@@ -37,7 +42,7 @@ export const fetchAllMarches = async (): Promise<Marche[]> => {
       logo: marche.logo || null,
       user_id: marche.user_id || null,
       created_at: marche.created_at || null
-    })) : [];
+    }));
     
     return formattedMarches as Marche[];
   } catch (error) {

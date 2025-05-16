@@ -16,3 +16,27 @@ export const hasAccessToMarche = async (marcheId: string): Promise<boolean> => {
   console.log(`Contournement complet de la vérification d'accès pour le marché ${marcheId}`);
   return true;
 };
+
+/**
+ * Vérifie si le marché existe dans la base de données
+ * Utile pour différencier "pas d'accès" de "n'existe pas"
+ */
+export const marcheExists = async (marcheId: string): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase
+      .from('marches')
+      .select('id')
+      .eq('id', marcheId)
+      .maybeSingle();
+    
+    if (error) {
+      console.error(`Erreur lors de la vérification de l'existence du marché ${marcheId}:`, error);
+      return false;
+    }
+    
+    return !!data;
+  } catch (error) {
+    console.error('Exception lors de la vérification de l\'existence du marché:', error);
+    return false;
+  }
+};
