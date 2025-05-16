@@ -109,32 +109,55 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
     }
   };
 
-  // Récupérer la liste des marchés pour le dropdown
-  const { data: marches = [] } = useQuery({
+  // Récupérer la liste des marchés pour le dropdown en utilisant notre nouvelle fonction RPC
+  const { data: marches = [], isLoading: marchesLoading } = useQuery({
     queryKey: ['marches-for-select'],
     queryFn: async () => {
+      // Utiliser la fonction RPC sécurisée pour éviter les récursions
       const { data, error } = await supabase
-        .from('marches')
-        .select('id, titre')
-        .order('titre');
+        .rpc('get_accessible_marches_for_select');
         
-      if (error) throw error;
+      if (error) {
+        console.error("Erreur lors de la récupération des marchés:", error);
+        throw error;
+      }
+      
       return data || [];
     }
   });
 
-  // Récupérer les fascicules en fonction du marché sélectionné
-  const { data: fascicules = [], refetch: refetchFascicules } = useQuery({
+  // Récupérer les fascicules en fonction du marché sélectionné 
+  const { data: fascicules = [], isLoading: fasciculesLoading, refetch: refetchFascicules } = useQuery({
     queryKey: ['fascicules-for-marche', marcheId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('fascicules')
-        .select('id, nom')
-        .eq('marche_id', marcheId)
-        .order('nom');
+      if (!marcheId) return [];
+      
+      try {
+        // Utiliser notre fonction RPC sécurisée
+        const { data, error } = await supabase
+          .rpc('get_fascicules_for_marche', {
+            marche_id_param: marcheId
+          });
         
-      if (error) throw error;
-      return data || [];
+        if (error) throw error;
+        return data || [];
+      } catch (error) {
+        console.error("Erreur lors de la récupération des fascicules:", error);
+        
+        // Fallback pour les admins
+        try {
+          const { data: adminData } = await supabase
+            .from('fascicules')
+            .select('id, nom')
+            .eq('marche_id', marcheId)
+            .order('nom');
+            
+          return adminData || [];
+        } catch (fallbackError) {
+          console.error("Erreur lors de la récupération de fallback des fascicules:", fallbackError);
+          return [];
+        }
+      }
     },
     enabled: !!marcheId
   });
@@ -185,7 +208,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
   // Watch for marche_id changes to refetch fascicules
   const watchedMarcheId = form.watch('marche_id');
   useEffect(() => {
-    if (watchedMarcheId !== marcheId) {
+    if (watchedMarcheId && watchedMarcheId !== marcheId) {
       refetchFascicules();
     }
   }, [watchedMarcheId, marcheId, refetchFascicules]);
@@ -274,7 +297,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         const fileNameWithTimestamp = `${Date.now()}_${sanitizedFileName}`;
         const { data: fileData, error: fileError } = await supabase.storage
           .from('documents')
-          .upload(`marches/${marcheId}/${fileNameWithTimestamp}`, selectedFile);
+          .upload(`marches/${values.marche_id}/${fileNameWithTimestamp}`, selectedFile);
         
         if (fileError) {
           throw new Error(`Erreur lors du téléversement du fichier: ${fileError.message}`);
@@ -287,68 +310,32 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
       const { data: { user } } = await supabase.auth.getUser();
       const emetteur = user ? user.email || 'Utilisateur' : 'Utilisateur';
       
-      // Prepare document data
-      const documentData = {
-        nom: values.name,
-        type: values.type,
-        statut: 'En attente de diffusion', // Statut par défaut
-        version: 'A', // Version par défaut pour un nouveau document
-        description: values.description || null,
-        fascicule_id: values.fascicule_id === 'none' ? null : values.fascicule_id,
-        marche_id: values.marche_id,
-        dateupload: new Date().toISOString(),
-        taille: selectedFile ? fileSize : (isEditing ? editingDocument.taille : '0 KB'),
-        file_path: filePath || (isEditing ? editingDocument['file_path'] : null),
-        designation: values.designation || null,
-        geographie: values.geographie || null,
-        phase: values.phase || null,
-        emetteur: emetteur, // Utilisateur connecté comme émetteur
-        numero_operation: values.numero_operation || null,
-        domaine_technique: values.domaine_technique || null,
-        numero: values.numero || null,
-        date_diffusion: values.date_diffusion ? values.date_diffusion.toISOString() : null,
-        date_bpe: values.date_bpe ? values.date_bpe.toISOString() : null
-      };
-      
-      let result;
-      let documentId;
-      
-      if (isEditing) {
-        // Update existing document
-        result = await supabase
-          .from('documents')
-          .update(documentData)
-          .eq('id', editingDocument.id)
-          .select();
-          
-        documentId = editingDocument.id;
-      } else {
-        // Insert new document
-        result = await supabase
-          .from('documents')
-          .insert([documentData])
-          .select();
-          
-        if (result.data && result.data.length > 0) {
-          documentId = result.data[0].id;
-          
-          // Automatically create a version when a document is created
-          if (documentId) {
-            try {
-              console.log('Creating initial version for document:', documentId);
-              
-              await versionsService.createInitialVersion(result.data[0], filePath, fileSize);
-            } catch (versionError) {
-              console.error("Erreur lors de la création de la version:", versionError);
-              // We don't throw here to avoid interrupting the document creation flow
-              // Just log the error and continue
-            }
-          }
+      // Utiliser notre fonction RPC sécurisée pour créer ou mettre à jour le document
+      const { data: documentId, error: rpcError } = await supabase.rpc(
+        'create_or_update_document_safely',
+        {
+          p_id: isEditing ? editingDocument.id : null,
+          p_nom: values.name,
+          p_description: values.description || null,
+          p_type: values.type,
+          p_marche_id: values.marche_id,
+          p_fascicule_id: values.fascicule_id === 'none' ? null : values.fascicule_id,
+          p_file_path: filePath || null,
+          p_taille: selectedFile ? fileSize : (isEditing ? editingDocument.taille : '0 KB'),
+          p_designation: values.designation || null,
+          p_geographie: values.geographie || null,
+          p_phase: values.phase || null,
+          p_numero_operation: values.numero_operation || null,
+          p_domaine_technique: values.domaine_technique || null,
+          p_numero: values.numero || null,
+          p_emetteur: emetteur,
+          p_date_diffusion: values.date_diffusion ? values.date_diffusion.toISOString() : null,
+          p_date_bpe: values.date_bpe ? values.date_bpe.toISOString() : null
         }
-      }
+      );
       
-      if (result.error) {
-        throw new Error(result.error.message);
+      if (rpcError) {
+        throw new Error(`Erreur lors de l'opération sur le document: ${rpcError.message}`);
       }
       
       // Upload any attachments if we have a valid document ID
@@ -356,19 +343,21 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         await handleAttachmentUpload(documentId);
       }
       
-      // If document is associated with a fascicule, update the fascicule's document count
-      if (values.fascicule_id && values.fascicule_id !== 'none') {
-        // Get current document count
-        const { data: countData } = await supabase
-          .from('documents')
-          .select('id')
-          .eq('fascicule_id', values.fascicule_id);
-        
-        if (countData) {
-          await supabase
-            .from('fascicules')
-            .update({ nombredocuments: countData.length })
-            .eq('id', values.fascicule_id);
+      // Automatically create a version when a document is created
+      if (documentId && !isEditing && selectedFile) {
+        try {
+          console.log('Creating initial version for document:', documentId);
+          
+          // Construct a document object for version creation
+          const docForVersion = {
+            id: documentId,
+            nom: values.name,
+            type: values.type
+          };
+          
+          await versionsService.createInitialVersion(docForVersion, filePath, fileSize);
+        } catch (versionError) {
+          console.error("Erreur lors de la création de la version:", versionError);
         }
       }
       
@@ -483,10 +472,14 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         </Button>
       </DialogTrigger>
       
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto" aria-describedby="document-form-description">
         <DialogHeader>
           <DialogTitle>{dialogTitle}</DialogTitle>
         </DialogHeader>
+        
+        <div id="document-form-description" className="sr-only">
+          Formulaire pour {editingDocument ? "modifier un" : "ajouter un nouveau"} document
+        </div>
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -498,7 +491,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
                   <FormItem>
                     <FormLabel>Nom du document*</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ex: Plan Coffrage R+1" {...field} />
+                      <Input placeholder="Ex: Plan d'exécution niveau R+1" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -756,10 +749,11 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
                       form.setValue('fascicule_id', undefined);
                     }} 
                     value={field.value}
+                    disabled={marchesLoading}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner un marché" />
+                        <SelectValue placeholder={marchesLoading ? "Chargement..." : "Sélectionner un marché"} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -771,6 +765,9 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
                     </SelectContent>
                   </Select>
                   <FormMessage />
+                  {marchesLoading && (
+                    <p className="text-xs text-muted-foreground">Chargement des marchés...</p>
+                  )}
                 </FormItem>
               )}
             />
@@ -784,10 +781,17 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
                   <Select 
                     onValueChange={field.onChange} 
                     value={field.value || undefined}
+                    disabled={fasciculesLoading || !form.getValues('marche_id')}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Associer à un fascicule" />
+                        <SelectValue placeholder={
+                          fasciculesLoading 
+                            ? "Chargement..." 
+                            : !form.getValues('marche_id') 
+                              ? "Sélectionnez d'abord un marché" 
+                              : "Associer à un fascicule"
+                        } />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -803,6 +807,9 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
                     Vous pouvez associer ce document à un fascicule existant
                   </FormDescription>
                   <FormMessage />
+                  {fasciculesLoading && form.getValues('marche_id') && (
+                    <p className="text-xs text-muted-foreground">Chargement des fascicules...</p>
+                  )}
                 </FormItem>
               )}
             />
