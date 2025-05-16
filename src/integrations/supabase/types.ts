@@ -818,6 +818,15 @@ export type Database = {
           user_id: string
         }[]
       }
+      create_fascicule_safely: {
+        Args: {
+          p_nom: string
+          p_description: string
+          p_marche_id: string
+          p_date_maj?: string
+        }
+        Returns: string
+      }
       create_new_marche: {
         Args: { marche_data: Json }
         Returns: {

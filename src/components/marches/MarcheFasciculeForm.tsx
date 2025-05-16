@@ -67,16 +67,13 @@ const MarcheFasciculeForm: React.FC<MarcheFasciculeFormProps> = ({
           description: "Le fascicule a été mis à jour avec succès",
         });
       } else {
-        // Create new fascicule with the correct structure
-        const { error: insertError } = await supabase
-          .from('fascicules')
-          .insert({
-            marche_id: marcheId,
-            nom,
-            description: description || null,
-            datemaj: currentDate,
-            nombredocuments: 0,
-            progression: 0
+        // Use our secure function to create a fascicule without recursion issues
+        const { data: newFasciculeId, error: insertError } = await supabase
+          .rpc('create_fascicule_safely', {
+            p_nom: nom,
+            p_description: description || null,
+            p_marche_id: marcheId,
+            p_date_maj: currentDate
           });
 
         if (insertError) {
