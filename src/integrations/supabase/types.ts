@@ -925,6 +925,19 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_fascicules_for_marche: {
+        Args: { marche_id_param: string }
+        Returns: {
+          created_at: string | null
+          datemaj: string | null
+          description: string | null
+          id: string
+          marche_id: string
+          nom: string
+          nombredocuments: number | null
+          progression: number | null
+        }[]
+      }
       get_user_global_role: {
         Args: Record<PropertyKey, never>
         Returns: string

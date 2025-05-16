@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Plus, FolderPlus, Loader2 } from 'lucide-react';
+import { Plus, FolderPlus, Loader2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/userRole';
 import { fetchFasciculesByMarcheId } from '@/services/marches/fetchFasciculesByMarcheId';
@@ -17,6 +17,7 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [showForm, setShowForm] = useState<boolean>(false);
   const [selectedFascicule, setSelectedFascicule] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { canCreateFascicule, isAdmin } = useUserRole(marcheId);
 
@@ -26,6 +27,7 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
 
   const loadFascicules = async () => {
     setLoading(true);
+    setError(null);
     try {
       console.log(`Chargement des fascicules pour le marché ${marcheId}...`);
       const data = await fetchFasciculesByMarcheId(marcheId);
@@ -33,6 +35,7 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
       setFascicules(data || []);
     } catch (error) {
       console.error('Error fetching fascicules:', error);
+      setError("Impossible de charger les fascicules. Veuillez réessayer plus tard.");
       toast({
         title: "Erreur",
         description: "Impossible de charger les fascicules",
@@ -60,6 +63,10 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
     }
   };
 
+  const handleRetry = () => {
+    loadFascicules();
+  };
+
   // Determine if user can create or modify fascicules
   const userCanCreateOrEdit = isAdmin || canCreateFascicule(marcheId);
 
@@ -82,6 +89,19 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
       {loading ? (
         <div className="flex justify-center items-center h-48">
           <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center h-48 border border-dashed rounded-lg p-6 text-center">
+          <AlertTriangle className="h-12 w-12 text-amber-500 mb-3" />
+          <h3 className="text-lg font-medium text-gray-900">Erreur de chargement</h3>
+          <p className="text-sm text-gray-500 mt-1">{error}</p>
+          <Button 
+            variant="outline" 
+            className="mt-4"
+            onClick={handleRetry}
+          >
+            Réessayer
+          </Button>
         </div>
       ) : fascicules.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-48 border border-dashed rounded-lg p-6 text-center">

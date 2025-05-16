@@ -12,67 +12,59 @@ export const fetchFasciculesByMarcheId = async (marcheId: string): Promise<any[]
   try {
     console.log(`Récupération des fascicules pour le marché ${marcheId}...`);
     
-    // Vérifier si l'utilisateur est ADMIN pour optimiser le chemin d'accès
-    const globalRole = await getGlobalUserRole();
-    
-    // Si l'utilisateur est ADMIN, on utilise une requête directe
-    // Cette approche contourne les politiques RLS qui causent l'erreur de récursion
-    if (globalRole === 'ADMIN') {
-      console.log(`Utilisateur est ADMIN - accès direct aux fascicules du marché ${marcheId}`);
-      
+    // Approche 1: Utiliser notre nouvelle fonction SECURITY DEFINER
+    try {
       const { data, error } = await supabase
-        .from('fascicules')
-        .select('*')
-        .eq('marche_id', marcheId)
-        .order('nom', { ascending: true });
-        
+        .rpc('get_fascicules_for_marche', { marche_id_param: marcheId });
+      
       if (error) {
-        console.error(`Erreur lors de la récupération des fascicules (admin path):`, error);
+        console.error(`Erreur lors de l'appel à get_fascicules_for_marche:`, error);
         throw error;
       }
       
       console.log(`${data?.length || 0} fascicules récupérés pour le marché ${marcheId}`);
       return data || [];
-    }
-    
-    // Pour les non-admin, utiliser une requête directe avec gestion d'erreur
-    console.log(`Utilisateur non-ADMIN - utilisation de requête directe pour le marché ${marcheId}`);
-    
-    try {
-      // Essayer une requête directe
-      const { data, error } = await supabase
-        .from('fascicules')
-        .select('*')
-        .eq('marche_id', marcheId)
-        .order('nom', { ascending: true });
+    } catch (primaryError) {
+      console.error(`Erreur lors de l'utilisation de la méthode principale:`, primaryError);
       
-      if (error) {
-        console.error(`Erreur lors de la récupération directe des fascicules:`, error);
-        throw error;
-      }
+      // Approche 2: Vérifier si l'utilisateur est ADMIN pour optimiser le chemin d'accès
+      const globalRole = await getGlobalUserRole();
       
-      return data || [];
-    } catch (directQueryError) {
-      console.error(`Exception lors de la requête directe:`, directQueryError);
-      
-      // En cas d'erreur, faire un autre essai avec une approche alternative
-      try {
-        // Utiliser une sélection simplifiée pour minimiser les risques d'erreur RLS
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('fascicules')
-          .select('id, nom, description, nombredocuments, datemaj, progression')
-          .eq('marche_id', marcheId);
+      // Si l'utilisateur est ADMIN, on utilise une requête directe
+      if (globalRole === 'ADMIN') {
+        console.log(`Utilisateur est ADMIN - tentative alternative pour le marché ${marcheId}`);
         
-        if (fallbackError) {
-          console.error(`Requête alternative a échoué:`, fallbackError);
+        const { data: adminData, error: adminError } = await supabase
+          .rpc('get_accessible_marches');
+          
+        if (adminError) {
+          console.error(`Erreur lors de la récupération des marchés (admin path):`, adminError);
           return [];
         }
         
-        return fallbackData || [];
-      } catch (fallbackError) {
-        console.error('Erreur lors de la requête alternative:', fallbackError);
-        return [];
+        // Vérifier si le marché est accessible
+        const marcheAccessible = adminData.some((marche: any) => marche.id === marcheId);
+        
+        if (marcheAccessible) {
+          // Récupérer les fascicules directement
+          const { data: fascicules, error: fascError } = await supabase
+            .from('fascicules')
+            .select('*')
+            .eq('marche_id', marcheId)
+            .order('nom', { ascending: true });
+          
+          if (fascError) {
+            console.error(`Erreur lors de la récupération directe des fascicules:`, fascError);
+            return [];
+          }
+          
+          return fascicules || [];
+        }
       }
+      
+      // En mode développement, retourner un tableau vide mais ne pas bloquer l'application
+      console.warn("Impossible de récupérer les fascicules. Retour d'un tableau vide.");
+      return [];
     }
   } catch (error) {
     console.error('Exception lors de la récupération des fascicules:', error);
