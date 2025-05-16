@@ -135,17 +135,17 @@ export const marcheExists = async (marcheId: string): Promise<boolean> => {
         
         console.error(`Erreur lors de la vérification d'existence (tentative 2/3):`, accessError);
       } catch (rpcError) {
-        // Tentative 3: Utiliser une requête générique pour détecter l'existence
+        // Tentative 3: Utiliser notre fonction RPC get_accessible_marches
         try {
-          const { data, error } = await supabase.rpc('execute_query', {
-            query_text: `SELECT EXISTS(SELECT 1 FROM marches WHERE id = '${marcheId}') AS exists`
-          });
+          const { data: marches, error: marchesError } = await supabase.rpc('get_accessible_marches');
           
-          if (!error && data && Array.isArray(data) && data.length > 0) {
-            return data[0].exists === true;
+          if (!marchesError && marches && Array.isArray(marches)) {
+            // Vérifier si le marché recherché est dans la liste
+            const exists = marches.some(marche => marche.id === marcheId);
+            return exists;
           }
           
-          console.error(`Erreur lors de la vérification d'existence (tentative 3/3):`, error);
+          console.error(`Erreur lors de la vérification d'existence (tentative 3/3):`, marchesError);
         } catch (directError) {
           console.error("Erreur lors de la requête directe:", directError);
         }

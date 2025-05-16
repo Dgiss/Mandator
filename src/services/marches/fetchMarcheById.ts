@@ -37,16 +37,17 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
       // Si l'utilisateur a accès, récupérer le marché en contournant RLS
       if (rpcData === true) {
         try {
-          // Créer la requête SQL directe pour contourner complètement RLS
-          const { data: directData } = await supabase.rpc('execute_query', {
-            query_text: `SELECT * FROM marches WHERE id = '${id}'`
-          });
+          // Utiliser la fonction RPC sécurisée get_accessible_marches et filtrer le résultat
+          const { data: accessibleMarches } = await supabase.rpc('get_accessible_marches');
           
-          if (directData && Array.isArray(directData) && directData.length > 0) {
-            return formatMarche(directData[0]);
+          if (accessibleMarches && Array.isArray(accessibleMarches)) {
+            const filteredMarche = accessibleMarches.find(marche => marche.id === id);
+            if (filteredMarche) {
+              return formatMarche(filteredMarche);
+            }
           }
         } catch (directError) {
-          console.error("Erreur lors de la requête directe:", directError);
+          console.error("Erreur lors de la requête alternative:", directError);
         }
       }
       
