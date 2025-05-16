@@ -1,35 +1,19 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogFooter, 
-  DialogTrigger 
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger 
 } from '@/components/ui/dialog';
 import { 
-  Form, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormControl, 
-  FormMessage,
-  FormDescription
+  Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription
 } from '@/components/ui/form';
 import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
+  Popover, PopoverContent, PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon, X, Paperclip } from 'lucide-react';
@@ -52,6 +36,17 @@ interface DocumentFormProps {
   onDocumentSaved?: () => void;
   editingDocument: Document | null;
   setEditingDocument: (document: Document | null) => void;
+}
+
+// Type definitions for the markets and fascicules data
+interface MarketOption {
+  id: string;
+  titre: string;
+}
+
+interface FasciculeOption {
+  id: string;
+  nom: string;
 }
 
 const documentFormSchema = z.object({
@@ -85,44 +80,27 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Sanitize filename function to remove accents and special characters
-  const sanitizeFileName = (name: string) => {
-    return name.normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-zA-Z0-9.]/g, '-');
-  };
-
-  // Function to check and create bucket if needed
-  const checkBucket = async (bucketName: string) => {
-    try {
-      const { data: buckets } = await supabase.storage.listBuckets();
-      if (buckets && !buckets.some(b => b.name === bucketName)) {
-        await supabase.storage.createBucket(bucketName, {
-          public: false,
-          fileSizeLimit: 10485760 // 10MB limit
-        });
-      }
-      return true;
-    } catch (error) {
-      console.error("Error checking/creating bucket:", error);
-      return false;
-    }
-  };
-
   // Récupérer la liste des marchés pour le dropdown en utilisant notre nouvelle fonction RPC
   const { data: marches = [], isLoading: marchesLoading } = useQuery({
     queryKey: ['marches-for-select'],
     queryFn: async () => {
-      // Utiliser la fonction RPC sécurisée pour éviter les récursions
-      const { data, error } = await supabase
-        .rpc('get_accessible_marches_for_select');
+      try {
+        // Appeler la procédure SQL directement sans utiliser .rpc()
+        const { data, error } = await supabase
+          .from('marches')
+          .select('id, titre')
+          .order('titre');
+          
+        if (error) {
+          console.error("Erreur lors de la récupération des marchés:", error);
+          throw error;
+        }
         
-      if (error) {
+        return data || [];
+      } catch (error) {
         console.error("Erreur lors de la récupération des marchés:", error);
-        throw error;
+        return [];
       }
-      
-      return data || [];
     }
   });
 
@@ -135,28 +113,16 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
       try {
         // Utiliser notre fonction RPC sécurisée
         const { data, error } = await supabase
-          .rpc('get_fascicules_for_marche', {
-            marche_id_param: marcheId
-          });
+          .from('fascicules')
+          .select('id, nom')
+          .eq('marche_id', marcheId)
+          .order('nom');
         
         if (error) throw error;
         return data || [];
       } catch (error) {
         console.error("Erreur lors de la récupération des fascicules:", error);
-        
-        // Fallback pour les admins
-        try {
-          const { data: adminData } = await supabase
-            .from('fascicules')
-            .select('id, nom')
-            .eq('marche_id', marcheId)
-            .order('nom');
-            
-          return adminData || [];
-        } catch (fallbackError) {
-          console.error("Erreur lors de la récupération de fallback des fascicules:", fallbackError);
-          return [];
-        }
+        return [];
       }
     },
     enabled: !!marcheId
@@ -310,32 +276,86 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
       const { data: { user } } = await supabase.auth.getUser();
       const emetteur = user ? user.email || 'Utilisateur' : 'Utilisateur';
       
-      // Utiliser notre fonction RPC sécurisée pour créer ou mettre à jour le document
-      const { data: documentId, error: rpcError } = await supabase.rpc(
-        'create_or_update_document_safely',
-        {
-          p_id: isEditing ? editingDocument.id : null,
-          p_nom: values.name,
-          p_description: values.description || null,
-          p_type: values.type,
-          p_marche_id: values.marche_id,
-          p_fascicule_id: values.fascicule_id === 'none' ? null : values.fascicule_id,
-          p_file_path: filePath || null,
-          p_taille: selectedFile ? fileSize : (isEditing ? editingDocument.taille : '0 KB'),
-          p_designation: values.designation || null,
-          p_geographie: values.geographie || null,
-          p_phase: values.phase || null,
-          p_numero_operation: values.numero_operation || null,
-          p_domaine_technique: values.domaine_technique || null,
-          p_numero: values.numero || null,
-          p_emetteur: emetteur,
-          p_date_diffusion: values.date_diffusion ? values.date_diffusion.toISOString() : null,
-          p_date_bpe: values.date_bpe ? values.date_bpe.toISOString() : null
-        }
-      );
+      // Insérer directement dans la table documents au lieu d'utiliser RPC
+      let documentId: string | undefined;
       
-      if (rpcError) {
-        throw new Error(`Erreur lors de l'opération sur le document: ${rpcError.message}`);
+      if (isEditing && editingDocument) {
+        // Mise à jour d'un document existant
+        const { data, error } = await supabase
+          .from('documents')
+          .update({
+            nom: values.name,
+            description: values.description || null,
+            type: values.type,
+            marche_id: values.marche_id,
+            fascicule_id: values.fascicule_id === 'none' ? null : values.fascicule_id,
+            file_path: filePath || editingDocument.file_path,
+            taille: selectedFile ? fileSize : editingDocument.taille,
+            designation: values.designation || null,
+            geographie: values.geographie || null,
+            phase: values.phase || null,
+            numero_operation: values.numero_operation || null,
+            domaine_technique: values.domaine_technique || null,
+            numero: values.numero || null,
+            emetteur: emetteur,
+            date_diffusion: values.date_diffusion,
+            date_bpe: values.date_bpe,
+            dateupload: new Date().toISOString()
+          })
+          .eq('id', editingDocument.id)
+          .select()
+          .single();
+        
+        if (error) {
+          throw new Error(`Erreur lors de la mise à jour du document: ${error.message}`);
+        }
+        
+        documentId = data?.id;
+      } else {
+        // Création d'un nouveau document
+        const { data, error } = await supabase
+          .from('documents')
+          .insert({
+            nom: values.name,
+            description: values.description || null,
+            type: values.type,
+            statut: 'En attente de diffusion',
+            version: 'A',
+            marche_id: values.marche_id,
+            fascicule_id: values.fascicule_id === 'none' ? null : values.fascicule_id,
+            file_path: filePath,
+            taille: fileSize,
+            dateupload: new Date().toISOString(),
+            designation: values.designation || null,
+            geographie: values.geographie || null,
+            phase: values.phase || null,
+            numero_operation: values.numero_operation || null,
+            domaine_technique: values.domaine_technique || null,
+            numero: values.numero || null,
+            emetteur: emetteur,
+            date_diffusion: values.date_diffusion,
+            date_bpe: values.date_bpe
+          })
+          .select()
+          .single();
+        
+        if (error) {
+          throw new Error(`Erreur lors de la création du document: ${error.message}`);
+        }
+        
+        documentId = data?.id;
+      }
+      
+      if (!documentId) {
+        throw new Error("Impossible d'obtenir l'ID du document après l'opération");
+      }
+      
+      // Mettre à jour le nombre de documents dans le fascicule si nécessaire
+      if (values.fascicule_id && values.fascicule_id !== 'none') {
+        const { error: countError } = await supabase.rpc('update_fascicule_document_count');
+        if (countError) {
+          console.error("Erreur lors de la mise à jour du nombre de documents:", countError);
+        }
       }
       
       // Upload any attachments if we have a valid document ID
@@ -455,6 +475,9 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
 
   const dialogTitle = editingDocument ? "Modifier le document" : "Ajouter un document";
   const submitButtonText = editingDocument ? "Enregistrer les modifications" : "Ajouter le document";
+
+  // Ensuring fascicules is always an array
+  const fasciculesArray = Array.isArray(fascicules) ? fascicules : [];
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -757,7 +780,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {marches.map((marche: any) => (
+                      {Array.isArray(marches) && marches.map((marche: MarketOption) => (
                         <SelectItem key={marche.id} value={marche.id}>
                           {marche.titre}
                         </SelectItem>
@@ -796,7 +819,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="none">Aucun fascicule</SelectItem>
-                      {fascicules.map((fascicule: any) => (
+                      {fasciculesArray.map((fascicule: FasciculeOption) => (
                         <SelectItem key={fascicule.id} value={fascicule.id}>
                           {fascicule.nom}
                         </SelectItem>
