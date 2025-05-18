@@ -71,7 +71,7 @@ export const userHasAccessToMarche = async (marcheId: string): Promise<boolean> 
 /**
  * Crée un document en utilisant la fonction sécurisée
  * @param documentData Données du document à créer
- * @returns Promise<UUID> Identifiant du document créé
+ * @returns Promise<string> Identifiant du document créé
  */
 export const createDocumentSafely = async (documentData: {
   nom: string;
@@ -90,8 +90,8 @@ export const createDocumentSafely = async (documentData: {
   domaine_technique?: string;
   numero?: string;
   emetteur?: string;
-  date_diffusion?: Date;
-  date_bpe?: Date;
+  date_diffusion?: Date | null;
+  date_bpe?: Date | null;
 }): Promise<string> => {
   try {
     const { data, error } = await supabase.rpc('create_document_safely', {

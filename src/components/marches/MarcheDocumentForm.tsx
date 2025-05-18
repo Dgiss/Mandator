@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger 
@@ -276,7 +275,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
       const { data: { user } } = await supabase.auth.getUser();
       const emetteur = user ? user.email || 'Utilisateur' : 'Utilisateur';
       
-      // Insérer directement dans la table documents au lieu d'utiliser RPC
+      // Utiliser notre fonction sécurisée pour créer ou mettre à jour le document
       let documentId: string | undefined;
       
       if (isEditing && editingDocument) {
@@ -312,38 +311,62 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         
         documentId = data?.id;
       } else {
-        // Création d'un nouveau document
-        const { data, error } = await supabase
-          .from('documents')
-          .insert({
+        // Création d'un nouveau document en utilisant la fonction sécurisée
+        try {
+          documentId = await createDocumentSafely({
             nom: values.name,
-            description: values.description || null,
+            description: values.description || '',
             type: values.type,
-            statut: 'En attente de diffusion',
-            version: 'A',
             marche_id: values.marche_id,
-            fascicule_id: values.fascicule_id === 'none' ? null : values.fascicule_id,
+            fascicule_id: values.fascicule_id === 'none' ? undefined : values.fascicule_id,
             file_path: filePath,
             taille: fileSize,
-            dateupload: new Date().toISOString(),
-            designation: values.designation || null,
-            geographie: values.geographie || null,
-            phase: values.phase || null,
-            numero_operation: values.numero_operation || null,
-            domaine_technique: values.domaine_technique || null,
-            numero: values.numero || null,
+            designation: values.designation || '',
+            geographie: values.geographie || '',
+            phase: values.phase || '',
+            numero_operation: values.numero_operation || '',
+            domaine_technique: values.domaine_technique || '',
+            numero: values.numero || '',
             emetteur: emetteur,
             date_diffusion: values.date_diffusion,
             date_bpe: values.date_bpe
-          })
-          .select()
-          .single();
-        
-        if (error) {
-          throw new Error(`Erreur lors de la création du document: ${error.message}`);
+          });
+        } catch (error: any) {
+          console.error('Erreur avec createDocumentSafely:', error);
+          
+          // Fallback à l'ancienne méthode si nécessaire
+          const { data, error: insertError } = await supabase
+            .from('documents')
+            .insert({
+              nom: values.name,
+              description: values.description || null,
+              type: values.type,
+              statut: 'En attente de diffusion',
+              version: 'A',
+              marche_id: values.marche_id,
+              fascicule_id: values.fascicule_id === 'none' ? null : values.fascicule_id,
+              file_path: filePath,
+              taille: fileSize,
+              dateupload: new Date().toISOString(),
+              designation: values.designation || null,
+              geographie: values.geographie || null,
+              phase: values.phase || null,
+              numero_operation: values.numero_operation || null,
+              domaine_technique: values.domaine_technique || null,
+              numero: values.numero || null,
+              emetteur: emetteur,
+              date_diffusion: values.date_diffusion,
+              date_bpe: values.date_bpe
+            })
+            .select()
+            .single();
+            
+          if (insertError) {
+            throw new Error(`Erreur lors de la création du document: ${insertError.message}`);
+          }
+          
+          documentId = data?.id;
         }
-        
-        documentId = data?.id;
       }
       
       if (!documentId) {
