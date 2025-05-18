@@ -13,6 +13,12 @@ export const fetchFasciculesByMarcheId = async (marcheId: string): Promise<Fasci
   try {
     console.log(`Récupération des fascicules pour le marché ${marcheId}...`);
     
+    // Vérifier que le client Supabase est correctement initialisé
+    if (!supabase) {
+      console.error("Client Supabase non initialisé");
+      throw new Error("Client Supabase non initialisé");
+    }
+    
     // Utiliser notre fonction RPC sécurisée qui évite les problèmes de récursion
     const { data, error } = await supabase
       .rpc('get_fascicules_for_marche', { marche_id_param: marcheId });

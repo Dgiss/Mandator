@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase';
 import { Marche } from './types';
 
@@ -17,50 +16,44 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
     
     console.log(`Récupération du marché ${id}...`);
     
-    // Première approche: utilisez directement la requête avec notre politique RLS optimisée
-    const { data, error } = await supabase
-      .from('marches')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle();
+    // Récupérer tous les marchés accessibles et filtrer par ID
+    const { data: accessibleMarches, error: rpcError } = await supabase.rpc('get_user_accessible_markets');
+    
+    if (rpcError) {
+      console.error("Erreur lors de la récupération des marchés accessibles:", rpcError);
       
-    if (error) {
-      console.error(`Erreur lors de la récupération du marché ${id}:`, error);
-      
-      // Si la politique RLS échoue malgré notre optimisation, utiliser une approche alternative avec RPC
-      console.log("Tentative avec RPC pour éviter les problèmes de récursion...");
-      
-      const { data: rpcData } = await supabase.rpc('check_market_access', { 
-        market_id: id 
-      });
-      
-      // Si l'utilisateur a accès, récupérer le marché en contournant RLS
-      if (rpcData === true) {
-        try {
-          // Utiliser la fonction RPC sécurisée get_accessible_marches et filtrer le résultat
-          const { data: accessibleMarches } = await supabase.rpc('get_accessible_marches');
-          
-          if (accessibleMarches && Array.isArray(accessibleMarches)) {
-            const filteredMarche = accessibleMarches.find(marche => marche.id === id);
-            if (filteredMarche) {
-              return formatMarche(filteredMarche);
-            }
-          }
-        } catch (directError) {
-          console.error("Erreur lors de la requête alternative:", directError);
-        }
+      // Tentative directe avec les nouvelles politiques non-récursives
+      const { data, error } = await supabase
+        .from('marches')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+        
+      if (error) {
+        console.error(`Erreur lors de la récupération du marché ${id}:`, error);
+        return null;
       }
       
-      return null;
+      if (!data) {
+        console.log(`Marché ${id} non trouvé.`);
+        return null;
+      }
+      
+      console.log(`Marché ${id} récupéré avec succès (méthode directe)`);
+      return formatMarche(data);
     }
     
-    if (!data) {
-      console.log(`Marché ${id} non trouvé.`);
-      return null;
+    // Filtrer le marché recherché parmi les marchés accessibles
+    if (accessibleMarches && Array.isArray(accessibleMarches)) {
+      const filteredMarche = accessibleMarches.find(marche => marche.id === id);
+      if (filteredMarche) {
+        console.log(`Marché ${id} récupéré avec succès (via RPC)`);
+        return formatMarche(filteredMarche);
+      }
     }
     
-    console.log(`Marché ${id} récupéré avec succès`);
-    return formatMarche(data);
+    console.log(`Marché ${id} non trouvé.`);
+    return null;
     
   } catch (error) {
     console.error('Exception lors de la récupération du marché:', error);

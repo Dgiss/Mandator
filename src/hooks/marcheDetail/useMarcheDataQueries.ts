@@ -8,7 +8,7 @@ import { useRef, useEffect } from 'react';
 
 /**
  * Hook optimisé qui gère les requêtes pour les données d'un marché
- * Utilise notre nouvelle fonction check_market_access
+ * Utilise notre nouvelle structure de politiques non-récursives
  */
 export const useMarcheDataQueries = (id: string | undefined) => {
   const { toast } = useToast();
@@ -59,25 +59,29 @@ export const useMarcheDataQueries = (id: string | undefined) => {
     gcTime: 10 * 60 * 1000, // Garder en cache 10 minutes
   });
 
-  // Contrôle d'accès utilisant notre fonction RPC optimisée
+  // Contrôle d'accès utilisant notre nouvelle politique non-récursive
   const accessCheckQuery = useQuery({
     queryKey: ['marche-access', id],
     queryFn: async () => {
       if (!shouldRunQuery('access')) return false;
       
       try {
-        // Utiliser notre fonction RPC optimisée
-        const { data, error } = await supabase.rpc('check_market_access', { 
-          market_id: id! 
-        });
+        // Récupérer tous les marchés accessibles et vérifier si le marché demandé est inclus
+        const { data: accessibleMarches, error: rpcError } = await supabase.rpc('get_user_accessible_markets');
         
-        if (error) {
-          console.error("Erreur lors de la vérification d'accès:", error);
+        if (rpcError) {
+          console.error("Erreur lors de la vérification d'accès via RPC:", rpcError);
+          
           // En mode dev, permettre l'accès en cas d'erreur
           return import.meta.env.DEV ? true : false;
         }
         
-        return !!data;
+        if (!accessibleMarches || !Array.isArray(accessibleMarches)) {
+          return false;
+        }
+        
+        // Vérifier si le marché demandé est dans la liste des marchés accessibles
+        return accessibleMarches.some(marche => marche.id === id);
       } catch (error) {
         console.error("Exception lors de la vérification d'accès:", error);
         return import.meta.env.DEV ? true : false;
@@ -129,7 +133,7 @@ export const useMarcheDataQueries = (id: string | undefined) => {
     gcTime: 10 * 60 * 1000,
   });
 
-  // Récupération des visas - version optimisée
+  // Récupération des visas - utilisant les nouvelles politiques non-récursives
   const visasQuery = useQuery({
     queryKey: ['visas', id],
     queryFn: async () => {
@@ -159,7 +163,7 @@ export const useMarcheDataQueries = (id: string | undefined) => {
     gcTime: 10 * 60 * 1000,
   });
 
-  // Récupération des documents récents - version optimisée
+  // Récupération des documents récents - utilisant les nouvelles politiques non-récursives
   const documentsQuery = useQuery({
     queryKey: ['documents-recents', id],
     queryFn: async () => {
@@ -203,21 +207,6 @@ export const useMarcheDataQueries = (id: string | undefined) => {
         
         if (error) {
           console.error("Erreur lors de la récupération des fascicules:", error);
-          
-          // Fallback pour les admins en cas d'erreur du RPC
-          try {
-            const { data: adminData, error: adminError } = await supabase
-              .from('fascicules')
-              .select('*')
-              .eq('marche_id', id!);
-              
-            if (!adminError && adminData) {
-              return adminData;
-            }
-          } catch (fallbackError) {
-            console.error("Erreur lors de la récupération de fallback:", fallbackError);
-          }
-          
           return [];
         }
         
