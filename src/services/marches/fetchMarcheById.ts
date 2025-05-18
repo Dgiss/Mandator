@@ -51,23 +51,6 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
         }
       }
       
-      if (import.meta.env.DEV) {
-        console.warn("Mode développement: retournant un marché minimal");
-        return {
-          id: id,
-          titre: 'Marché de test (mode dev)',
-          description: 'Accès limité en raison de problèmes de récursion RLS',
-          client: 'Non spécifié',
-          statut: 'Non défini',
-          datecreation: null,
-          budget: 'Non défini',
-          image: null,
-          logo: null,
-          user_id: null,
-          created_at: null
-        };
-      }
-      
       return null;
     }
     

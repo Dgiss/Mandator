@@ -32,14 +32,7 @@ export const fetchMarches = async (): Promise<Marche[]> => {
       
       if (fallbackError) {
         console.error('Erreur lors de la récupération directe des marchés:', fallbackError);
-        
-        // En mode développement, retourner des données vides mais ne pas bloquer l'application
-        if (import.meta.env.DEV) {
-          console.warn("Mode développement: retournant un tableau vide");
-          return [];
-        }
-        
-        throw fallbackError;
+        return [];
       }
       
       if (!fallbackData || !Array.isArray(fallbackData)) {

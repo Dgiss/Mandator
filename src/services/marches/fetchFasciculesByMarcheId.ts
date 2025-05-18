@@ -49,8 +49,6 @@ export const fetchFasciculesByMarcheId = async (marcheId: string): Promise<Fasci
         }
       }
       
-      // En mode développement, retourner un tableau vide mais ne pas bloquer l'application
-      console.warn("Impossible de récupérer les fascicules. Retour d'un tableau vide.");
       return [];
     }
     
