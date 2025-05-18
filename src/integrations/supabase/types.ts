@@ -914,33 +914,6 @@ export type Database = {
           ville: string | null
         }[]
       }
-      get_documents_for_marche: {
-        Args: { marche_id_param: string }
-        Returns: {
-          created_at: string | null
-          date_bpe: string | null
-          date_diffusion: string | null
-          dateupload: string | null
-          dateupload_old: string | null
-          description: string | null
-          designation: string | null
-          domaine_technique: string | null
-          emetteur: string | null
-          fascicule_id: string | null
-          file_path: string | null
-          geographie: string | null
-          id: string
-          marche_id: string
-          nom: string
-          numero: string | null
-          numero_operation: string | null
-          phase: string | null
-          statut: string
-          taille: string | null
-          type: string
-          version: string
-        }[]
-      }
       get_droits_for_marche: {
         Args: { marche_id_param: string }
         Returns: {
@@ -982,16 +955,8 @@ export type Database = {
         Args: { marche_id: string } | { user_id: string; marche_id: string }
         Returns: string
       }
-      has_market_rights: {
-        Args: { market_id: string }
-        Returns: boolean
-      }
       is_admin: {
         Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_market_creator: {
-        Args: { market_id: string }
         Returns: boolean
       }
       is_moe_for_marche: {

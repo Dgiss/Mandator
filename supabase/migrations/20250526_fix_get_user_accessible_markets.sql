@@ -31,32 +31,8 @@ BEGIN
 END;
 $$;
 
--- Grant execute permissions for the function
+-- Grant execute permissions for the new function
 GRANT EXECUTE ON FUNCTION public.get_accessible_marches() TO authenticated;
-
--- Ensure the get_documents_for_marche function is correctly defined
-CREATE OR REPLACE FUNCTION public.get_documents_for_marche(marche_id_param uuid)
- RETURNS SETOF documents
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $$
-BEGIN
-  -- Check if user has access to this market using non-recursive functions
-  IF public.is_admin() OR public.is_market_creator(marche_id_param) OR public.has_market_rights(marche_id_param) THEN
-    RETURN QUERY 
-      SELECT * FROM documents 
-      WHERE marche_id = marche_id_param
-      ORDER BY nom ASC;
-  END IF;
-  
-  -- Return empty set if no access
-  RETURN;
-END;
-$$;
-
--- Grant execute permissions for the documents function
-GRANT EXECUTE ON FUNCTION public.get_documents_for_marche(uuid) TO authenticated;
 
 -- Ensure the get_fascicules_for_marche function is correctly defined
 CREATE OR REPLACE FUNCTION public.get_fascicules_for_marche(marche_id_param uuid)
@@ -66,16 +42,32 @@ CREATE OR REPLACE FUNCTION public.get_fascicules_for_marche(marche_id_param uuid
  SET search_path TO 'public'
 AS $$
 BEGIN
-  -- Check if user has access to this market using non-recursive functions
-  IF public.is_admin() OR public.is_market_creator(marche_id_param) OR public.has_market_rights(marche_id_param) THEN
-    RETURN QUERY 
-      SELECT * FROM fascicules 
-      WHERE marche_id = marche_id_param
-      ORDER BY nom ASC;
+  -- Vérifier si l'utilisateur a accès à ce marché en utilisant une fonction sécurisée
+  IF NOT EXISTS (
+    SELECT 1
+    FROM (
+      SELECT m.id
+      FROM marches m 
+      WHERE m.user_id = auth.uid()
+      UNION
+      SELECT dm.marche_id
+      FROM droits_marche dm
+      WHERE dm.user_id = auth.uid()
+      UNION
+      SELECT m.id
+      FROM marches m, profiles p
+      WHERE p.id = auth.uid() AND p.role_global = 'ADMIN'
+    ) AS accessible_marches
+    WHERE accessible_marches.id = marche_id_param
+  ) THEN
+    RETURN;
   END IF;
   
-  -- Return empty set if no access
-  RETURN;
+  -- Retourner tous les fascicules pour ce marché
+  RETURN QUERY 
+    SELECT * FROM fascicules 
+    WHERE marche_id = marche_id_param
+    ORDER BY nom ASC;
 END;
 $$;
 
