@@ -1,3 +1,4 @@
+
 import { supabase } from '@/lib/supabase';
 import { Marche } from './types';
 
@@ -17,7 +18,7 @@ export const fetchMarcheById = async (id: string): Promise<Marche | null> => {
     console.log(`Récupération du marché ${id}...`);
     
     // Récupérer tous les marchés accessibles et filtrer par ID
-    const { data: accessibleMarches, error: rpcError } = await supabase.rpc('get_user_accessible_markets');
+    const { data: accessibleMarches, error: rpcError } = await supabase.rpc('get_accessible_marches');
     
     if (rpcError) {
       console.error("Erreur lors de la récupération des marchés accessibles:", rpcError);

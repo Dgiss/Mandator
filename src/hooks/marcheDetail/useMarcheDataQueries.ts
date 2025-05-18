@@ -67,7 +67,7 @@ export const useMarcheDataQueries = (id: string | undefined) => {
       
       try {
         // Récupérer tous les marchés accessibles et vérifier si le marché demandé est inclus
-        const { data: accessibleMarches, error: rpcError } = await supabase.rpc('get_user_accessible_markets');
+        const { data: accessibleMarches, error: rpcError } = await supabase.rpc('get_accessible_marches');
         
         if (rpcError) {
           console.error("Erreur lors de la vérification d'accès via RPC:", rpcError);

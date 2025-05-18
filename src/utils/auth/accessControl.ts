@@ -9,8 +9,8 @@ import { supabase } from '@/lib/supabase';
  */
 export const marcheExists = async (id: string): Promise<boolean> => {
   try {
-    // Utiliser la nouvelle fonction RPC qui évite les problèmes de récursion
-    const { data: accessibleMarches, error: rpcError } = await supabase.rpc('get_user_accessible_markets');
+    // Utiliser la fonction get_accessible_marches au lieu de get_user_accessible_markets
+    const { data: accessibleMarches, error: rpcError } = await supabase.rpc('get_accessible_marches');
     
     if (rpcError) {
       console.error('Erreur lors de la vérification via RPC:', rpcError);
@@ -49,8 +49,8 @@ export const marcheExists = async (id: string): Promise<boolean> => {
  */
 export const userHasAccessToMarche = async (marcheId: string): Promise<boolean> => {
   try {
-    // Utiliser la fonction RPC
-    const { data, error } = await supabase.rpc('get_user_accessible_markets');
+    // Utiliser la fonction get_accessible_marches au lieu de get_user_accessible_markets
+    const { data, error } = await supabase.rpc('get_accessible_marches');
     
     if (error) {
       console.error('Erreur lors de la vérification des accès:', error);

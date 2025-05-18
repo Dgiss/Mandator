@@ -4,7 +4,7 @@ import { Marche } from './types';
 
 /**
  * Récupérer tous les marchés depuis Supabase
- * Utilise la fonction RPC optimisée get_user_accessible_markets
+ * Utilise la fonction RPC optimisée get_accessible_marches
  * @returns {Promise<Marche[]>} Liste des marchés
  */
 export const fetchMarches = async (): Promise<Marche[]> => {
@@ -18,7 +18,7 @@ export const fetchMarches = async (): Promise<Marche[]> => {
     }
     
     // Utiliser la fonction RPC sécurisée qui évite les problèmes de récursion RLS
-    const { data, error } = await supabase.rpc('get_user_accessible_markets');
+    const { data, error } = await supabase.rpc('get_accessible_marches');
     
     if (error) {
       console.error('Erreur lors de la récupération des marchés via RPC:', error);
