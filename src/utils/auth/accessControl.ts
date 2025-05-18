@@ -94,6 +94,10 @@ export const createDocumentSafely = async (documentData: {
   date_bpe?: Date | null;
 }): Promise<string> => {
   try {
+    // Convert Date objects to ISO strings for PostgreSQL compatibility
+    const date_diffusion = documentData.date_diffusion ? documentData.date_diffusion.toISOString() : null;
+    const date_bpe = documentData.date_bpe ? documentData.date_bpe.toISOString() : null;
+    
     const { data, error } = await supabase.rpc('create_document_safely', {
       p_nom: documentData.nom,
       p_type: documentData.type,
@@ -111,8 +115,8 @@ export const createDocumentSafely = async (documentData: {
       p_domaine_technique: documentData.domaine_technique || null,
       p_numero: documentData.numero || null,
       p_emetteur: documentData.emetteur || null,
-      p_date_diffusion: documentData.date_diffusion || null,
-      p_date_bpe: documentData.date_bpe || null
+      p_date_diffusion: date_diffusion,
+      p_date_bpe: date_bpe
     });
 
     if (error) {

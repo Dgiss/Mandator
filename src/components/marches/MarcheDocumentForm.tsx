@@ -29,6 +29,7 @@ import { useDropzone } from 'react-dropzone';
 import { checkBucket, sanitizeFileName } from '@/utils/storage-setup';
 import { Document, DocumentAttachment } from '@/services/types';
 import { versionsService } from '@/services/versionsService';
+import { createDocumentSafely } from '@/utils/auth';
 
 interface DocumentFormProps {
   marcheId: string;
