@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase';
 import { UserDroit } from './types';
 import { MarcheSpecificRole } from '@/hooks/userRole/types';
