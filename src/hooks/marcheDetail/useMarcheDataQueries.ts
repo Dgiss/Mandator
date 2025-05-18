@@ -1,7 +1,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { fetchMarcheById } from '@/services/marches';
-import { marcheExists } from '@/utils/auth/accessControl';
+import { marcheExists, getDocumentsForMarche } from '@/utils/auth/accessControl';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useRef, useEffect } from 'react';
@@ -163,26 +163,16 @@ export const useMarcheDataQueries = (id: string | undefined) => {
     gcTime: 10 * 60 * 1000,
   });
 
-  // Récupération des documents récents - utilisant les nouvelles politiques non-récursives
+  // Récupération des documents récents - version optimisée via RPC
   const documentsQuery = useQuery({
     queryKey: ['documents-recents', id],
     queryFn: async () => {
       if (!shouldRunQuery('documents')) return [];
       
       try {
-        const { data, error } = await supabase
-          .from('documents')
-          .select('*')
-          .eq('marche_id', id!)
-          .order('created_at', { ascending: false })
-          .limit(3);
-        
-        if (error) {
-          console.error("Erreur lors de la récupération des documents récents:", error);
-          return [];
-        }
-        
-        return data || [];
+        // Utiliser notre nouvelle fonction RPC sécurisée
+        const documents = await getDocumentsForMarche(id!);
+        return documents || [];
       } catch (error) {
         console.error("Exception lors de la récupération des documents:", error);
         return [];
@@ -194,16 +184,19 @@ export const useMarcheDataQueries = (id: string | undefined) => {
     gcTime: 10 * 60 * 1000,
   });
 
-  // Récupération des fascicules - version optimisée avec RPC
+  // Récupération des fascicules - utilisant les nouvelles politiques non-récursives
   const fasciculesQuery = useQuery({
     queryKey: ['fascicules', id],
     queryFn: async () => {
       if (!shouldRunQuery('fascicules')) return [];
       
       try {
-        // Utiliser la fonction RPC sécurisée pour éviter les problèmes de récursion
+        // Avec les nouvelles politiques non-récursives, on peut faire une requête directe
         const { data, error } = await supabase
-          .rpc('get_fascicules_for_marche', { marche_id_param: id! });
+          .from('fascicules')
+          .select('*')
+          .eq('marche_id', id!)
+          .order('nom', { ascending: true });
         
         if (error) {
           console.error("Erreur lors de la récupération des fascicules:", error);

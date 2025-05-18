@@ -17,7 +17,7 @@ import { userHasAccessToMarche } from "./accessControl";
 // Export with older names for backward compatibility
 export const hasRequiredRole = hasGlobalRole;
 export const checkAccess = userHasAccessToMarche;
-export const hasAccessToMarche = userHasAccessToMarche; // Add this line to fix the missing export
+export const hasAccessToMarche = userHasAccessToMarche;
 
 // Default export for backward compatibility
 export default {
