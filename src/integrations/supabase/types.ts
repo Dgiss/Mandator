@@ -818,6 +818,29 @@ export type Database = {
           user_id: string
         }[]
       }
+      create_document_safely: {
+        Args: {
+          p_nom: string
+          p_type: string
+          p_marche_id: string
+          p_description?: string
+          p_statut?: string
+          p_version?: string
+          p_fascicule_id?: string
+          p_file_path?: string
+          p_taille?: string
+          p_designation?: string
+          p_geographie?: string
+          p_phase?: string
+          p_numero_operation?: string
+          p_domaine_technique?: string
+          p_numero?: string
+          p_emetteur?: string
+          p_date_diffusion?: string
+          p_date_bpe?: string
+        }
+        Returns: string
+      }
       create_fascicule_safely: {
         Args: {
           p_nom: string
@@ -914,6 +937,33 @@ export type Database = {
           ville: string | null
         }[]
       }
+      get_documents_for_marche: {
+        Args: { marche_id_param: string }
+        Returns: {
+          created_at: string | null
+          date_bpe: string | null
+          date_diffusion: string | null
+          dateupload: string | null
+          dateupload_old: string | null
+          description: string | null
+          designation: string | null
+          domaine_technique: string | null
+          emetteur: string | null
+          fascicule_id: string | null
+          file_path: string | null
+          geographie: string | null
+          id: string
+          marche_id: string
+          nom: string
+          numero: string | null
+          numero_operation: string | null
+          phase: string | null
+          statut: string
+          taille: string | null
+          type: string
+          version: string
+        }[]
+      }
       get_droits_for_marche: {
         Args: { marche_id_param: string }
         Returns: {
@@ -955,8 +1005,16 @@ export type Database = {
         Args: { marche_id: string } | { user_id: string; marche_id: string }
         Returns: string
       }
+      has_market_rights: {
+        Args: { market_id: string }
+        Returns: boolean
+      }
       is_admin: {
         Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_market_creator: {
+        Args: { market_id: string }
         Returns: boolean
       }
       is_moe_for_marche: {

@@ -15,7 +15,7 @@ export const marcheExists = async (id: string): Promise<boolean> => {
     if (rpcError) {
       console.error('Erreur lors de la vérification via RPC:', rpcError);
       
-      // Tentative avec la nouvelle politique non-récursive
+      // Tentative avec la politique non-récursive
       const { data, error } = await supabase
         .from('marches')
         .select('id')
@@ -65,5 +65,64 @@ export const userHasAccessToMarche = async (marcheId: string): Promise<boolean> 
   } catch (error) {
     console.error('Exception lors de la vérification des accès:', error);
     return false;
+  }
+};
+
+/**
+ * Crée un document en utilisant la fonction sécurisée
+ * @param documentData Données du document à créer
+ * @returns Promise<UUID> Identifiant du document créé
+ */
+export const createDocumentSafely = async (documentData: {
+  nom: string;
+  type: string;
+  marche_id: string;
+  description?: string;
+  statut?: string;
+  version?: string;
+  fascicule_id?: string;
+  file_path?: string;
+  taille?: string;
+  designation?: string;
+  geographie?: string;
+  phase?: string;
+  numero_operation?: string;
+  domaine_technique?: string;
+  numero?: string;
+  emetteur?: string;
+  date_diffusion?: Date;
+  date_bpe?: Date;
+}): Promise<string> => {
+  try {
+    const { data, error } = await supabase.rpc('create_document_safely', {
+      p_nom: documentData.nom,
+      p_type: documentData.type,
+      p_marche_id: documentData.marche_id,
+      p_description: documentData.description || null,
+      p_statut: documentData.statut || 'En attente de diffusion',
+      p_version: documentData.version || 'A',
+      p_fascicule_id: documentData.fascicule_id || null,
+      p_file_path: documentData.file_path || null,
+      p_taille: documentData.taille || '0 KB',
+      p_designation: documentData.designation || null,
+      p_geographie: documentData.geographie || null,
+      p_phase: documentData.phase || null,
+      p_numero_operation: documentData.numero_operation || null,
+      p_domaine_technique: documentData.domaine_technique || null,
+      p_numero: documentData.numero || null,
+      p_emetteur: documentData.emetteur || null,
+      p_date_diffusion: documentData.date_diffusion || null,
+      p_date_bpe: documentData.date_bpe || null
+    });
+
+    if (error) {
+      console.error('Erreur lors de la création du document:', error);
+      throw new Error(`Erreur lors de la création du document: ${error.message}`);
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Exception lors de la création du document:', error);
+    throw error;
   }
 };

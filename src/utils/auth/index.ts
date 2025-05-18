@@ -12,12 +12,15 @@ export * from './accessControl';
 
 // Aliasing imports for backward compatibility with old code
 import { hasGlobalRole } from "./roles";
-import { userHasAccessToMarche } from "./accessControl";
+import { userHasAccessToMarche, createDocumentSafely } from "./accessControl";
 
 // Export with older names for backward compatibility
 export const hasRequiredRole = hasGlobalRole;
 export const checkAccess = userHasAccessToMarche;
-export const hasAccessToMarche = userHasAccessToMarche; // Add this line to fix the missing export
+export const hasAccessToMarche = userHasAccessToMarche; 
+
+// Export our new secure document creation function
+export { createDocumentSafely };
 
 // Default export for backward compatibility
 export default {

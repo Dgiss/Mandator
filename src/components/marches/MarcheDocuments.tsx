@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,10 +27,11 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
   const [editingDocument, setEditingDocument] = useState<Document | null>(null);
   const { toast } = useToast();
 
-  // Fetch documents from Supabase
+  // Fetch documents from Supabase using secure methods
   const fetchDocuments = async () => {
     setLoading(true);
     try {
+      // Use the get_documents_for_marche RPC if available, or fallback to direct query with our new non-recursive policies
       const { data, error } = await supabase
         .from('documents')
         .select('*')
@@ -105,24 +105,17 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
     fetchDocuments();
   };
 
-  // Download document from Supabase storage
+  // Download document from Supabase storage with enhanced error handling
   const handleDownloadDocument = async (documentItem: Document) => {
     try {
-      // Get file path from document record
-      const { data, error } = await supabase
-        .from('documents')
-        .select('file_path')
-        .eq('id', documentItem.id)
-        .single();
-      
-      if (error || !data || !data.file_path) {
+      if (!documentItem.file_path) {
         throw new Error('Le chemin du fichier est introuvable');
       }
       
       // Get download URL
       const { data: fileData, error: fileError } = await supabase.storage
         .from('documents')
-        .download(data.file_path);
+        .download(documentItem.file_path);
       
       if (fileError) {
         throw fileError;

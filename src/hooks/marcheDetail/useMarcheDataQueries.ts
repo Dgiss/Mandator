@@ -1,7 +1,6 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { fetchMarcheById } from '@/services/marches';
-import { marcheExists } from '@/utils/auth/accessControl';
+import { marcheExists, userHasAccessToMarche } from '@/utils/auth/accessControl';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useRef, useEffect } from 'react';
@@ -66,22 +65,8 @@ export const useMarcheDataQueries = (id: string | undefined) => {
       if (!shouldRunQuery('access')) return false;
       
       try {
-        // Récupérer tous les marchés accessibles et vérifier si le marché demandé est inclus
-        const { data: accessibleMarches, error: rpcError } = await supabase.rpc('get_accessible_marches');
-        
-        if (rpcError) {
-          console.error("Erreur lors de la vérification d'accès via RPC:", rpcError);
-          
-          // En mode dev, permettre l'accès en cas d'erreur
-          return import.meta.env.DEV ? true : false;
-        }
-        
-        if (!accessibleMarches || !Array.isArray(accessibleMarches)) {
-          return false;
-        }
-        
-        // Vérifier si le marché demandé est dans la liste des marchés accessibles
-        return accessibleMarches.some(marche => marche.id === id);
+        // Vérifier l'accès en utilisant notre fonction optimisée
+        return await userHasAccessToMarche(id!);
       } catch (error) {
         console.error("Exception lors de la vérification d'accès:", error);
         return import.meta.env.DEV ? true : false;
