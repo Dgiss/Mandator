@@ -13,11 +13,13 @@ export * from './accessControl';
 // Aliasing imports for backward compatibility with old code
 import { hasGlobalRole } from "./roles";
 import { userHasAccessToMarche } from "./accessControl";
+import { getDocumentsForMarche } from "./accessControl";
 
-// Export with older names for backward compatibility
+// Export avec les anciens noms pour la compatibilité
 export const hasRequiredRole = hasGlobalRole;
 export const checkAccess = userHasAccessToMarche;
 export const hasAccessToMarche = userHasAccessToMarche;
+export { getDocumentsForMarche };
 
 // Default export for backward compatibility
 export default {
