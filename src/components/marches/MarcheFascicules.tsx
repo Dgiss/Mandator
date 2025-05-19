@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Plus, FolderPlus, Loader2, AlertTriangle } from 'lucide-react';
+import { Loader2, AlertTriangle, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/userRole';
 import { fetchFasciculesByMarcheId } from '@/services/marches/fetchFasciculesByMarcheId';
 import MarcheFasciculeForm from './MarcheFasciculeForm';
+import FasciculesTable from './FasciculesTable';
+import FasciculeDashboardModal from './FasciculeDashboardModal';
 import type { Fascicule } from '@/services/types';
 
 interface MarcheFasciculesProps {
@@ -18,6 +19,7 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [showForm, setShowForm] = useState<boolean>(false);
   const [selectedFascicule, setSelectedFascicule] = useState<Fascicule | null>(null);
+  const [showDashboard, setShowDashboard] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { canCreateFascicule, isAdmin } = useUserRole(marcheId);
@@ -47,7 +49,13 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
       const data = await fetchFasciculesByMarcheId(marcheId);
       
       if (Array.isArray(data)) {
-        setFascicules(data);
+        // Enrichir les données avec des champs émetteur fictifs pour la démo si nécessaires
+        const enrichedData = data.map(fascicule => ({
+          ...fascicule,
+          // Ajoute un émetteur aléatoire si non défini (pour la démo)
+          emetteur: fascicule.emetteur || ['EIFFAGE', 'BOUYGUES', 'VINCI', 'SPIE'][Math.floor(Math.random() * 4)]
+        }));
+        setFascicules(enrichedData);
       } else {
         console.error('Format de données incorrect:', data);
         setFascicules([]);
@@ -102,6 +110,15 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
     setLoadAttempt(prev => prev + 1); // Incrémenter pour déclencher un nouveau chargement
   };
 
+  const handleViewDetails = (fascicule: Fascicule) => {
+    setSelectedFascicule(fascicule);
+    setShowDashboard(true);
+  };
+
+  const handleCloseDashboard = () => {
+    setShowDashboard(false);
+  };
+
   // Determine if user can create or modify fascicules
   const userCanCreateOrEdit = isAdmin || canCreateFascicule(marcheId);
 
@@ -141,7 +158,7 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
         </div>
       ) : fascicules.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-48 border border-dashed rounded-lg p-6 text-center">
-          <FolderPlus className="h-12 w-12 text-gray-400 mb-3" />
+          <AlertTriangle className="h-12 w-12 text-gray-400 mb-3" />
           <h3 className="text-lg font-medium text-gray-900">Aucun fascicule</h3>
           <p className="text-sm text-gray-500 mt-1">
             Ce marché ne contient pas encore de fascicules.
@@ -157,30 +174,14 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {fascicules.map(fascicule => (
-            <Card 
-              key={fascicule.id}
-              className="p-4 cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => userCanCreateOrEdit && handleEditClick(fascicule)}
-            >
-              <h3 className="font-medium text-lg">{fascicule.nom}</h3>
-              {fascicule.description && (
-                <p className="text-sm text-gray-500 mt-1 line-clamp-2">{fascicule.description}</p>
-              )}
-              <div className="flex justify-between items-center mt-4">
-                <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded">
-                  {fascicule.nombredocuments || 0} document(s)
-                </span>
-                <span className="text-xs text-gray-500">
-                  Mis à jour: {fascicule.datemaj ? new Date(fascicule.datemaj).toLocaleDateString() : 'Jamais'}
-                </span>
-              </div>
-            </Card>
-          ))}
-        </div>
+        <FasciculesTable 
+          fascicules={fascicules}
+          loading={loading}
+          onViewDetails={handleViewDetails}
+        />
       )}
 
+      {/* Modals */}
       {showForm && (
         <MarcheFasciculeForm
           onClose={handleFormClose}
@@ -188,6 +189,12 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
           fascicule={selectedFascicule}
         />
       )}
+
+      <FasciculeDashboardModal
+        fascicule={selectedFascicule}
+        open={showDashboard}
+        onClose={handleCloseDashboard}
+      />
     </div>
   );
 };
