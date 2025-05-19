@@ -8,11 +8,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { CalendarIcon, Send, Loader2 } from 'lucide-react';
+import { CalendarIcon, Send, Loader2, PaperclipIcon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Document } from '@/services/types';
 import { visasService } from '@/services/visasService';
+import { Input } from '@/components/ui/input';
 
 interface MarcheDiffusionDialogProps {
   document: Document;
@@ -30,7 +31,14 @@ export default function MarcheDiffusionDialog({
   const [comment, setComment] = useState<string>('');
   const [echeance, setEcheance] = useState<Date | undefined>(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)); // +7 jours par défaut
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [attachment, setAttachment] = useState<File | null>(null);
   const { toast } = useToast();
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setAttachment(e.target.files[0]);
+    }
+  };
 
   const handleSubmit = async () => {
     if (isSubmitting) return;
@@ -52,13 +60,33 @@ export default function MarcheDiffusionDialog({
       const { data: { user } } = await supabase.auth.getUser();
       const demandePar = user ? user.email || 'Système' : 'Système';
       
-      // Utiliser le service de visa pour créer une entrée de visa
+      let attachmentPath = null;
+      
+      // Gérer l'upload du fichier si présent
+      if (attachment) {
+        const fileName = `${Date.now()}_${attachment.name}`;
+        const filePath = `visas/${document.marche_id}/${fileName}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('visas')
+          .upload(filePath, attachment);
+          
+        if (uploadError) {
+          console.error('Erreur lors du téléchargement du fichier:', uploadError);
+        } else {
+          attachmentPath = filePath;
+        }
+      }
+      
+      // Utiliser le service de visa pour créer une entrée de visa avec le fichier joint
       await visasService.createVisaForDiffusion(
         document.id,
         document.marche_id,
         document.version,
         demandePar,
-        echeance ? echeance.toISOString() : undefined
+        echeance ? echeance.toISOString() : undefined,
+        comment,
+        attachmentPath
       );
 
       // Mettre à jour la version également si elle existe
@@ -89,6 +117,7 @@ export default function MarcheDiffusionDialog({
       });
     } finally {
       setIsSubmitting(false);
+      setAttachment(null);
     }
   };
 
@@ -113,6 +142,22 @@ export default function MarcheDiffusionDialog({
               onChange={(e) => setComment(e.target.value)}
               className="min-h-[100px]"
             />
+          </div>
+          
+          <div>
+            <h4 className="font-medium mb-1">Pièce jointe (facultative)</h4>
+            <div className="flex items-center gap-2">
+              <Input
+                type="file"
+                onChange={handleFileChange}
+                className="flex-1"
+              />
+              {attachment && (
+                <div className="text-sm text-green-600">
+                  {attachment.name}
+                </div>
+              )}
+            </div>
           </div>
 
           <div>

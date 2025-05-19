@@ -1,3 +1,4 @@
+
 import { supabase } from '@/lib/supabase';
 import { Visa } from './types';
 
@@ -27,7 +28,15 @@ export const visasService = {
   },
 
   // Créer un nouveau visa lors de la diffusion du document
-  async createVisaForDiffusion(documentId: string, marcheId: string, version: string, demandePar: string, echeance?: string) {
+  async createVisaForDiffusion(
+    documentId: string, 
+    marcheId: string, 
+    version: string, 
+    demandePar: string, 
+    echeance?: string,
+    commentaire?: string,
+    attachmentPath?: string | null
+  ) {
     // Calculer l'échéance par défaut (7 jours à partir d'aujourd'hui)
     const defaultEcheance = new Date();
     defaultEcheance.setDate(defaultEcheance.getDate() + 7);
@@ -40,7 +49,8 @@ export const visasService = {
       date_demande: new Date().toISOString(),
       echeance: echeance || defaultEcheance.toISOString(),
       statut: 'En attente',
-      commentaire: 'Document diffusé pour visa'
+      commentaire: commentaire || 'Document diffusé pour visa',
+      attachment_path: attachmentPath || null
     };
 
     const { data, error } = await supabase
@@ -105,7 +115,13 @@ export const visasService = {
   },
 
   // Traiter un visa (approuver ou refuser) avec la logique de synchronisation du document et version
-  async processVisa(visaId: string, documentId: string, decision: 'approuve' | 'rejete', commentaire: string) {
+  async processVisa(
+    visaId: string, 
+    documentId: string, 
+    decision: 'approuve' | 'rejete', 
+    commentaire: string,
+    attachmentPath?: string | null
+  ) {
     // Déterminer les statuts selon le workflow mis à jour
     let visaStatus = decision === 'approuve' ? 'Approuvé' : 'Rejeté';
     
@@ -124,7 +140,8 @@ export const visasService = {
         .from('visas')
         .update({
           statut: visaStatus,
-          commentaire: commentaire
+          commentaire: commentaire,
+          attachment_path: attachmentPath || null
         })
         .eq('id', visaId)
         .select();

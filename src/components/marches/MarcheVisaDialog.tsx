@@ -5,11 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Loader2, CheckCircle, X } from 'lucide-react';
+import { Loader2, CheckCircle, X, PaperclipIcon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Document } from '@/services/types';
 import { visasService } from '@/services/visasService';
+import { Input } from '@/components/ui/input';
 
 interface MarcheVisaDialogProps {
   document: Document;
@@ -27,7 +28,14 @@ export default function MarcheVisaDialog({
   const [visaType, setVisaType] = useState<string>('VSO');
   const [comment, setComment] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [attachment, setAttachment] = useState<File | null>(null);
   const { toast } = useToast();
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setAttachment(e.target.files[0]);
+    }
+  };
 
   const handleSubmit = async () => {
     if (isSubmitting) return;
@@ -50,7 +58,25 @@ export default function MarcheVisaDialog({
       
       const visaId = visas[0].id;
       
-      // 2. Déterminer l'action selon le type de visa
+      // 2. Gérer l'upload du fichier si présent
+      let attachmentPath = null;
+      
+      if (attachment) {
+        const fileName = `${Date.now()}_${attachment.name}`;
+        const filePath = `visas/${document.marche_id}/${fileName}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('visas')
+          .upload(filePath, attachment);
+          
+        if (uploadError) {
+          console.error('Erreur lors du téléchargement du fichier:', uploadError);
+        } else {
+          attachmentPath = filePath;
+        }
+      }
+      
+      // 3. Déterminer l'action selon le type de visa
       let decision: 'approuve' | 'rejete' = 'approuve';
       let typePrefix = '';
       
@@ -65,11 +91,11 @@ export default function MarcheVisaDialog({
         typePrefix = 'REFUSÉ: ';
       }
       
-      // 3. Traiter le visa avec notre service
+      // 4. Traiter le visa avec notre service
       const finalComment = `${typePrefix}${comment}`;
-      await visasService.processVisa(visaId, document.id, decision, finalComment);
+      await visasService.processVisa(visaId, document.id, decision, finalComment, attachmentPath);
 
-      // 4. Informer l'utilisateur
+      // 5. Informer l'utilisateur
       toast({
         title: `Document ${visaType === 'REFUSE' ? 'refusé' : 'visé'}`,
         description: visaType === 'VAO' 
@@ -89,6 +115,7 @@ export default function MarcheVisaDialog({
       });
     } finally {
       setIsSubmitting(false);
+      setAttachment(null);
     }
   };
 
@@ -145,6 +172,25 @@ export default function MarcheVisaDialog({
               className="min-h-[100px]"
               required={visaType === 'VAO' || visaType === 'REFUSE'}
             />
+          </div>
+          
+          <div>
+            <h4 className="font-medium mb-1">Pièce jointe (facultative)</h4>
+            <div className="flex items-center gap-2">
+              <Input
+                type="file"
+                onChange={handleFileChange}
+                className="flex-1"
+              />
+              {attachment && (
+                <div className="text-sm text-green-600">
+                  {attachment.name}
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Vous pouvez joindre un fichier pour accompagner votre visa (annotations, remarques, etc.)
+            </p>
           </div>
         </div>
         

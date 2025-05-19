@@ -51,8 +51,17 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
     setDiffusionComment,
     setVisaComment,
     handleFilter,
-    retryLoading
+    retryLoading,
+    visas
   } = useVisaManagement(marcheId);
+
+  // Filtrer les visas pour n'afficher que ceux avec statut VSO, VAO ou Refusé
+  const filteredVisas = visas?.filter(visa => {
+    const commentaire = (visa.commentaire || '').toLowerCase();
+    return commentaire.includes('vso:') || 
+           commentaire.includes('vao:') || 
+           commentaire.includes('refusé:');
+  });
 
   if (loading || roleLoading) {
     return <VisasLoading />;
@@ -74,7 +83,10 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
 
   // Helper functions to determine which buttons to show based on status and user role
   const canShowDiffuseButton = (doc: any, version: any) => {
-    return canDiffuse(marcheId) && doc.statut === 'En attente de diffusion';
+    return canDiffuse(marcheId) && 
+      (doc.statut === 'En attente de diffusion' || 
+       !doc.statut || 
+       doc.statut === 'Version créée');
   };
 
   const canShowVisaButton = (doc: any) => {
@@ -97,6 +109,7 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
     <div className="space-y-6">
       <VisasHeader 
         onDiffusionOpen={handleDiffusionOpenWrapper}
+        visasCount={filteredVisas?.length || 0}
       />
 
       <Card>
@@ -114,6 +127,8 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
               loadingStates={loadingStates}
               openDiffusionDialog={handleDiffusionDialogOpen}
               openVisaDialog={handleVisaDialogOpen}
+              visas={filteredVisas}
+              showHistoricalVisas={true}
             />
           </div>
         </CardContent>
