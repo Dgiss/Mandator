@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertTriangle, Plus } from 'lucide-react';
@@ -211,16 +212,19 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
         onClose={handleCloseDashboard}
       />
 
-      {/* New document form modal */}
+      {/* New document form modal - fixed props to match the component interface */}
       {showDocumentForm && selectedFascicule && (
         <MarcheDocumentForm
-          onClose={handleCloseDocumentForm}
           marcheId={marcheId}
-          fasciculeId={selectedFascicule.id}
-          initialData={{
-            version: "A" // Setting initial version to "A" for new documents
+          editingDocument={null}
+          setEditingDocument={() => {
+            setShowDocumentForm(false);
+            setLoadAttempt(prev => prev + 1);
           }}
-          isOpen={showDocumentForm}
+          onDocumentSaved={() => {
+            setShowDocumentForm(false);
+            setLoadAttempt(prev => prev + 1);
+          }}
         />
       )}
     </div>
