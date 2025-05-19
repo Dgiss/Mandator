@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { versionsService } from '@/services/versionsService';
 import { supabase } from '@/lib/supabase';
-import { Version } from '@/services/types';
+import { Document, Version } from '@/services/types';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import MarcheDiffusionDialog from './MarcheDiffusionDialog';
@@ -173,6 +173,28 @@ export default function MarcheVersions({
     refetch();
   };
 
+  // Create a document object from the selected version for dialog components
+  const createDocumentFromVersion = (version: Version | null): Document | null => {
+    if (!version) return null;
+    
+    // Extract document info from version.documents if available
+    let docName = '';
+    if (version.documents && typeof version.documents === 'object' && 'nom' in version.documents) {
+      docName = version.documents.nom || '';
+    }
+    
+    // Create a document object with required fields
+    return {
+      id: version.document_id,
+      nom: docName,
+      type: 'pdf', // Default type if not available
+      statut: version.statut || '',
+      version: version.version,
+      marche_id: version.marche_id,
+      file_path: version.file_path || undefined
+    };
+  };
+
   return <div className="pt-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-semibold">Versions des documents</h2>
@@ -301,14 +323,14 @@ export default function MarcheVersions({
       {selectedVersion && (
         <>
           <MarcheDiffusionDialog
-            document={selectedVersion.documents as Document}
+            document={createDocumentFromVersion(selectedVersion) as Document}
             open={showDiffusionDialog}
             onOpenChange={setShowDiffusionDialog}
             onDiffusionComplete={handleDiffusionComplete}
           />
           
           <MarcheVisaDialog
-            document={selectedVersion.documents as Document}
+            document={createDocumentFromVersion(selectedVersion) as Document}
             open={showVisaDialog}
             onOpenChange={setShowVisaDialog}
             onVisaComplete={handleVisaComplete}

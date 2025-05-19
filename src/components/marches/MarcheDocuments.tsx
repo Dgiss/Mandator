@@ -31,6 +31,7 @@ interface MarcheDocumentsProps {
 interface DocumentWithVersion extends Document {
   date_diffusion_formatted?: string;
   date_visa_formatted?: string;
+  latest_version?: any;
 }
 
 export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
@@ -59,7 +60,7 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
       if (error) throw error;
       
       // Process documents to format dates and enrich with version information
-      const processedData = data.map(doc => {
+      const processedData = data.map((doc: any) => {
         // Find the latest version if versions exist
         const versions = doc.versions && Array.isArray(doc.versions) ? doc.versions : [];
         const latestVersion = versions.length > 0 ? 
@@ -71,16 +72,31 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
           })[0] 
           : null;
         
+        // Safely format dates if they exist
+        let dateDiffusionFormatted = '-';
+        if (doc.date_diffusion) {
+          try {
+            dateDiffusionFormatted = format(new Date(doc.date_diffusion), 'dd/MM/yyyy', { locale: fr });
+          } catch (e) {
+            console.error("Error formatting date_diffusion:", e);
+          }
+        }
+        
+        let dateBpeFormatted = '-';
+        if (doc.date_bpe) {
+          try {
+            dateBpeFormatted = format(new Date(doc.date_bpe), 'dd/MM/yyyy', { locale: fr });
+          } catch (e) {
+            console.error("Error formatting date_bpe:", e);
+          }
+        }
+        
         return {
           ...doc,
-          date_diffusion_formatted: doc.date_diffusion ? 
-            format(new Date(doc.date_diffusion), 'dd/MM/yyyy', { locale: fr }) : 
-            '-',
-          date_visa_formatted: doc.date_bpe ? 
-            format(new Date(doc.date_bpe), 'dd/MM/yyyy', { locale: fr }) : 
-            '-',
+          date_diffusion_formatted: dateDiffusionFormatted,
+          date_visa_formatted: dateBpeFormatted,
           latest_version: latestVersion
-        };
+        } as DocumentWithVersion;
       });
       
       setDocuments(processedData);
