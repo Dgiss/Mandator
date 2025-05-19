@@ -101,7 +101,7 @@ export const VisasTable: React.FC<VisasTableProps> = ({
               </TableRow>
             ) : (
               documents.map((doc) => {
-                const latestVersion = doc.versions && doc.versions.length > 0 ? doc.versions[0] : null;
+                const latestVersion = doc.version ? { version: doc.version, statut: doc.statut } : null;
                 
                 return (
                   <TableRow 
@@ -112,7 +112,7 @@ export const VisasTable: React.FC<VisasTableProps> = ({
                     <TableCell className="font-medium">{doc.nom}</TableCell>
                     <TableCell>{doc.type || 'N/A'}</TableCell>
                     <TableCell>
-                      {latestVersion ? latestVersion.version : (doc.version || 'N/A')}
+                      {latestVersion ? latestVersion.version : 'N/A'}
                     </TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadgeClass(doc.statut)}`}>
@@ -120,7 +120,20 @@ export const VisasTable: React.FC<VisasTableProps> = ({
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      {/* Aucun bouton d'action n'est affiché à la demande de l'utilisateur */}
+                      {/* Action buttons here if needed */}
+                      {/* Added ability for mandataires to see visa buttons */}
+                      {(doc.statut === 'En attente de validation' || doc.statut === 'En attente de visa') && 
+                       isMandataire() && openVisaDialog && (
+                        <button 
+                          className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs font-medium"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (latestVersion) openVisaDialog(doc, latestVersion as Version);
+                          }}
+                        >
+                          Viser
+                        </button>
+                      )}
                     </TableCell>
                   </TableRow>
                 );
@@ -205,4 +218,4 @@ export const VisasTable: React.FC<VisasTableProps> = ({
       )}
     </div>
   );
-};
+}

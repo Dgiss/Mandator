@@ -20,7 +20,7 @@ interface MarcheVisasProps {
 }
 
 export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
-  const { role, loading: roleLoading, canDiffuse, canVisa } = useUserRole(marcheId);
+  const { role, loading: roleLoading, canDiffuse, canVisa, isMandataire } = useUserRole(marcheId);
   const {
     documents,
     filteredDocuments,
@@ -91,13 +91,12 @@ export default function MarcheVisas({ marcheId }: MarcheVisasProps) {
 
   const canShowVisaButton = (doc: any) => {
     // This button is for adding visas, not for processing them
-    return false; // Disabling this button as per workflow
+    return false; // Disabled as per workflow
   };
 
   const canShowProcessVisaButton = (doc: any) => {
-    // Modifié pour permettre aux mandataires de viser les documents en attente de validation
-    return canVisa(marcheId) && 
-           (doc.statut === 'En attente de validation' || doc.statut === 'En attente de visa');
+    // Modified to allow mandataires to review documents awaiting validation or visa
+    return canVisa(marcheId) || isMandataire(marcheId);
   };
 
   const handleDiffusionOpenWrapper = () => {

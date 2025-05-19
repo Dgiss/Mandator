@@ -1,7 +1,9 @@
+
 import { useState, useEffect } from 'react';
 import { Document, Version, Visa } from '@/components/marches/visas/types';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { useUserRole } from '@/hooks/userRole';
 
 // Types
 interface FilterOptions {
@@ -39,6 +41,8 @@ export function useVisaManagement(marcheId: string) {
   const [visaComment, setVisaComment] = useState<string>('');
   const [attachmentName, setAttachmentName] = useState<string | null>(null);
 
+  // Access user role information
+  const { isMOE, isMandataire } = useUserRole(marcheId);
   const { toast } = useToast();
 
   // Charger les documents et les visas du marché
@@ -59,18 +63,14 @@ export function useVisaManagement(marcheId: string) {
       // Fetch documents
       const { data: documentsData, error: documentsError } = await supabase
         .from('documents')
-        .select('*, versions(*)')
+        .select('*')
         .eq('marche_id', marcheId)
         .order('created_at', { ascending: false });
       
       if (documentsError) throw documentsError;
       
       // Transform documents to match our expected type
-      const transformedDocuments = documentsData.map((doc: any): Document => ({
-        ...doc,
-        currentVersionId: doc.versions && doc.versions.length > 0 ? doc.versions[0].id : undefined,
-        versions: doc.versions || []
-      }));
+      const transformedDocuments = documentsData as Document[];
       
       // Fetch visas
       const { data: visasData, error: visasError } = await supabase
@@ -124,10 +124,12 @@ export function useVisaManagement(marcheId: string) {
 
   const handleDocumentSelect = (document: Document) => {
     setSelectedDocument(document);
-    
-    // If document has versions, select the latest one
-    if (document.versions && document.versions.length > 0) {
-      setSelectedVersion(document.versions[0]);
+    // Set a default version based on document.version
+    if (document.version) {
+      setSelectedVersion({
+        version: document.version,
+        statut: document.statut
+      } as Version);
     } else {
       setSelectedVersion(null);
     }
@@ -232,6 +234,11 @@ export function useVisaManagement(marcheId: string) {
     fetchData();
   };
 
+  // Added helper functions to check user permissions
+  const canUserProcessVisa = () => {
+    return isMOE() || isMandataire();
+  };
+
   return {
     documents,
     filteredDocuments,
@@ -263,6 +270,7 @@ export function useVisaManagement(marcheId: string) {
     setDiffusionComment,
     setVisaComment,
     handleFilter,
-    retryLoading
+    retryLoading,
+    canUserProcessVisa
   };
 }

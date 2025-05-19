@@ -27,7 +27,6 @@ export interface Document {
   statut: 'En attente de diffusion' | 'En attente de validation' | 'En attente de visa' | 'BPE' | 'À remettre à jour' | 'Refusé';
   latestVersion?: Version | null;
   currentVersionId?: string;
-  versions?: Version[];
 }
 
 export interface MarcheVisasProps {
