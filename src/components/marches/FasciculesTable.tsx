@@ -1,22 +1,36 @@
+
 import React, { useState } from 'react';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { Eye, Filter } from 'lucide-react';
+import { Eye, Filter, Files, File } from 'lucide-react';
 import { Fascicule } from '@/services/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { MultiFileUpload } from '@/components/ui/multi-file-upload';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
 interface FasciculesTableProps {
   fascicules: Fascicule[];
   loading: boolean;
   onViewDetails: (fascicule: Fascicule) => void;
+  onOpenDocumentForm?: (fascicule: Fascicule) => void;
 }
+
 const FasciculesTable: React.FC<FasciculesTableProps> = ({
   fascicules,
   loading,
-  onViewDetails
+  onViewDetails,
+  onOpenDocumentForm
 }) => {
   const [marcheFilter, setMarcheFilter] = useState<string>('all');
   const [societeFilter, setSocieteFilter] = useState<string>('all');
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
+  const [uploadingFascicule, setUploadingFascicule] = useState<Fascicule | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+  const { toast } = useToast();
 
   // Extraire les options uniques pour les filtres
   const marches = Array.from(new Set(fascicules.map(f => f.marche_id || 'inconnu')));
@@ -35,6 +49,57 @@ const FasciculesTable: React.FC<FasciculesTableProps> = ({
     if (nom.includes(' - ')) return nom;
     return `${nom.toUpperCase()} - ${Math.floor(Math.random() * 9000) + 1000} à ${Math.floor(Math.random() * 9000) + 1000}`;
   };
+
+  // Gérer l'upload multiple de fichiers
+  const handleMultipleUpload = (fascicule: Fascicule) => {
+    setUploadingFascicule(fascicule);
+    setShowUploadModal(true);
+    setUploadFiles([]);
+  };
+
+  // Gérer l'ajout unitaire
+  const handleUnitaryAdd = (fascicule: Fascicule) => {
+    if (onOpenDocumentForm) {
+      onOpenDocumentForm(fascicule);
+    } else {
+      toast({
+        title: "Fonctionnalité non implémentée",
+        description: "L'ouverture du formulaire de document n'est pas encore disponible.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Simuler l'upload des fichiers
+  const handleUploadSubmit = async () => {
+    if (!uploadingFascicule || uploadFiles.length === 0) return;
+    
+    setUploading(true);
+    
+    // Simuler l'upload de chaque fichier
+    for (const file of uploadFiles) {
+      // Initialiser la progression
+      setUploadProgress(prev => ({ ...prev, [file.name]: 0 }));
+      
+      // Simuler la progression
+      for (let progress = 0; progress <= 100; progress += 10) {
+        setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
+        await new Promise(resolve => setTimeout(resolve, 200)); // Attendre 200ms entre chaque mise à jour
+      }
+    }
+    
+    // Une fois terminé
+    toast({
+      title: "Documents créés",
+      description: `${uploadFiles.length} document(s) ont été ajoutés au fascicule avec l'indice A.`,
+      variant: "default",
+    });
+    
+    setUploading(false);
+    setShowUploadModal(false);
+    setUploadFiles([]);
+  };
+
   return <div className="space-y-4">
       <div className="flex flex-col md:flex-row gap-4 justify-between">
         
@@ -104,15 +169,85 @@ const FasciculesTable: React.FC<FasciculesTableProps> = ({
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => onViewDetails(fascicule)}>
-                      <Eye className="h-4 w-4" />
-                      <span className="sr-only">Voir détails</span>
-                    </Button>
+                    <div className="flex justify-end gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 p-0" 
+                        onClick={() => handleMultipleUpload(fascicule)}
+                        title="Upload multiple"
+                      >
+                        <Files className="h-4 w-4" />
+                        <span className="sr-only">Upload multiple</span>
+                      </Button>
+                      
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 p-0" 
+                        onClick={() => handleUnitaryAdd(fascicule)}
+                        title="Ajout unitaire"
+                      >
+                        <File className="h-4 w-4" />
+                        <span className="sr-only">Ajout unitaire</span>
+                      </Button>
+                      
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 p-0" 
+                        onClick={() => onViewDetails(fascicule)}
+                        title="Voir détails"
+                      >
+                        <Eye className="h-4 w-4" />
+                        <span className="sr-only">Voir détails</span>
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>)}
           </TableBody>
         </Table>
       </div>
+
+      {/* Modal d'upload multiple */}
+      <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Upload multiple pour {uploadingFascicule?.nom}</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Les fichiers uploadés seront automatiquement ajoutés en tant que nouveaux documents avec l'indice A.
+            </p>
+            
+            <MultiFileUpload
+              id="document-files"
+              files={uploadFiles}
+              onChange={setUploadFiles}
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+              progress={uploadProgress}
+            />
+            
+            <div className="flex justify-end gap-2 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowUploadModal(false)}
+                disabled={uploading}
+              >
+                Annuler
+              </Button>
+              <Button 
+                onClick={handleUploadSubmit} 
+                disabled={uploadFiles.length === 0 || uploading}
+              >
+                {uploading ? "Traitement en cours..." : "Créer les documents"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>;
 };
+
 export default FasciculesTable;

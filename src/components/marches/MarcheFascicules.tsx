@@ -8,6 +8,7 @@ import { enrichFasciculeData } from '@/utils/auth'; // Import de la fonction d'e
 import MarcheFasciculeForm from './MarcheFasciculeForm';
 import FasciculesTable from './FasciculesTable';
 import FasciculeDashboardModal from './FasciculeDashboardModal';
+import MarcheDocumentForm from './MarcheDocumentForm'; // Importing the document form
 import type { Fascicule } from '@/services/types';
 
 interface MarcheFasciculesProps {
@@ -20,6 +21,7 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
   const [showForm, setShowForm] = useState<boolean>(false);
   const [selectedFascicule, setSelectedFascicule] = useState<Fascicule | null>(null);
   const [showDashboard, setShowDashboard] = useState<boolean>(false);
+  const [showDocumentForm, setShowDocumentForm] = useState<boolean>(false); // New state for document form
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { canCreateFascicule, isAdmin } = useUserRole(marcheId);
@@ -115,6 +117,22 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
     setShowDashboard(false);
   };
 
+  // New handler for opening document form
+  const handleOpenDocumentForm = (fascicule: Fascicule) => {
+    setSelectedFascicule(fascicule);
+    setShowDocumentForm(true);
+  };
+
+  // New handler for closing document form
+  const handleCloseDocumentForm = (refreshNeeded: boolean = false) => {
+    setShowDocumentForm(false);
+    if (refreshNeeded) {
+      setTimeout(() => {
+        setLoadAttempt(prev => prev + 1);
+      }, 500);
+    }
+  };
+
   // Determine if user can create or modify fascicules
   const userCanCreateOrEdit = isAdmin || canCreateFascicule(marcheId);
 
@@ -174,6 +192,7 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
           fascicules={fascicules}
           loading={loading}
           onViewDetails={handleViewDetails}
+          onOpenDocumentForm={handleOpenDocumentForm}
         />
       )}
 
@@ -191,6 +210,19 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
         open={showDashboard}
         onClose={handleCloseDashboard}
       />
+
+      {/* New document form modal */}
+      {showDocumentForm && selectedFascicule && (
+        <MarcheDocumentForm
+          onClose={handleCloseDocumentForm}
+          marcheId={marcheId}
+          fasciculeId={selectedFascicule.id}
+          initialData={{
+            version: "A" // Setting initial version to "A" for new documents
+          }}
+          isOpen={showDocumentForm}
+        />
+      )}
     </div>
   );
 };
