@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Table, 
@@ -121,9 +120,8 @@ export const VisasTable: React.FC<VisasTableProps> = ({
                     </TableCell>
                     <TableCell className="text-right">
                       {/* Action buttons here if needed */}
-                      {/* Added ability for mandataires to see visa buttons */}
-                      {(doc.statut === 'En attente de validation' || doc.statut === 'En attente de visa') && 
-                       isMandataire() && openVisaDialog && (
+                      {/* Corrected condition to ensure "Viser" button appears for mandataires when doc status is "En attente de visa" */}
+                      {isMandataire() && doc.statut === 'En attente de visa' && openVisaDialog && (
                         <button 
                           className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs font-medium"
                           onClick={(e) => {
