@@ -8,7 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { Fascicule } from '@/services/types';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Info } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface MarcheFasciculeFormProps {
   onClose: (refreshNeeded?: boolean) => void;
@@ -144,6 +145,15 @@ const MarcheFasciculeForm: React.FC<MarcheFasciculeFormProps> = ({
               disabled={isSubmitting}
             />
           </div>
+
+          {!isEditing && (
+            <Alert className="bg-blue-50 border-blue-200">
+              <Info className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-700 text-sm">
+                Les documents ajoutés à ce fascicule auront automatiquement une version initiale 'A' créée.
+              </AlertDescription>
+            </Alert>
+          )}
           
           <div className="flex justify-end space-x-2 pt-4">
             <Button

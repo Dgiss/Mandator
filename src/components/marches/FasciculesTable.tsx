@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { MultiFileUpload } from '@/components/ui/multi-file-upload';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
+import { versionsService } from '@/services/versionsService';
 
 interface FasciculesTableProps {
   fascicules: Fascicule[];
@@ -124,6 +125,30 @@ const FasciculesTable: React.FC<FasciculesTableProps> = ({
             variant: "destructive",
           });
           continue;
+        }
+
+        // Créer automatiquement une version initiale pour le document
+        if (data && data[0]) {
+          try {
+            console.log('Création automatique de la version initiale pour le document:', data[0].id);
+            
+            // Préparer les données du document pour la création de version
+            await versionsService.createInitialVersion(
+              {
+                id: data[0].id,
+                nom: data[0].nom,
+                type: data[0].type,
+                marche_id: data[0].marche_id
+              },
+              null, // Pas de filePath pour l'instant
+              fileSize
+            );
+            
+            console.log('Version initiale créée avec succès');
+          } catch (versionError) {
+            console.error(`Erreur lors de la création de la version pour ${file.name}:`, versionError);
+            // Ne pas arrêter l'exécution, continuer même si la création de version échoue
+          }
         }
         
         // Marquer l'upload comme terminé
