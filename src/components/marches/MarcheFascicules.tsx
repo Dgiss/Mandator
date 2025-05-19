@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertTriangle, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/userRole';
 import { fetchFasciculesByMarcheId } from '@/services/marches/fetchFasciculesByMarcheId';
+import { enrichFasciculeData } from '@/utils/auth'; // Import de la fonction d'enrichissement
 import MarcheFasciculeForm from './MarcheFasciculeForm';
 import FasciculesTable from './FasciculesTable';
 import FasciculeDashboardModal from './FasciculeDashboardModal';
@@ -49,12 +49,8 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
       const data = await fetchFasciculesByMarcheId(marcheId);
       
       if (Array.isArray(data)) {
-        // Enrichir les données avec des champs émetteur fictifs pour la démo si nécessaires
-        const enrichedData = data.map(fascicule => ({
-          ...fascicule,
-          // Ajoute un émetteur aléatoire si non défini (pour la démo)
-          emetteur: fascicule.emetteur || ['EIFFAGE', 'BOUYGUES', 'VINCI', 'SPIE'][Math.floor(Math.random() * 4)]
-        }));
+        // Utiliser enrichFasciculeData pour ajouter les données manquantes
+        const enrichedData = data.map(fascicule => enrichFasciculeData(fascicule));
         setFascicules(enrichedData);
       } else {
         console.error('Format de données incorrect:', data);

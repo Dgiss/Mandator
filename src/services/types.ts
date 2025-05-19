@@ -1,3 +1,4 @@
+
 // Type pour un marché
 export interface Marche {
   id: string;
@@ -73,6 +74,7 @@ export interface Fascicule {
   description?: string;
   marche_id: string;
   created_at?: string;
+  emetteur?: string; // Ajout du champ manquant pour l'émetteur (société)
 }
 
 // Nouveau type pour les pièces jointes
