@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,9 @@ export default function MarcheVersions({
   marcheId
 }: MarcheVersionsProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedVersion, setSelectedVersion] = useState<Version | null>(null);
+  const [showDiffusionDialog, setShowDiffusionDialog] = useState(false);
+  const [showVisaDialog, setShowVisaDialog] = useState(false);
   const { toast } = useToast();
 
   // Utiliser notre hook pour la gestion des rôles
@@ -145,6 +149,30 @@ export default function MarcheVersions({
     return isMandataire() && version.statut === 'En attente de visa';
   };
 
+  // Handler pour ouvrir la boîte de dialogue de diffusion
+  const handleOpenDiffusionDialog = (version: Version) => {
+    setSelectedVersion(version);
+    setShowDiffusionDialog(true);
+  };
+
+  // Handler pour ouvrir la boîte de dialogue de visa
+  const handleOpenVisaDialog = (version: Version) => {
+    setSelectedVersion(version);
+    setShowVisaDialog(true);
+  };
+
+  // Handler pour la fin de la diffusion
+  const handleDiffusionComplete = () => {
+    setShowDiffusionDialog(false);
+    refetch();
+  };
+
+  // Handler pour la fin du visa
+  const handleVisaComplete = () => {
+    setShowVisaDialog(false);
+    refetch();
+  };
+
   return <div className="pt-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-semibold">Versions des documents</h2>
@@ -236,13 +264,7 @@ export default function MarcheVersions({
                         <Button 
                           variant="outline"
                           size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const element = document.createElement('dialog');
-                            element.setAttribute('open', 'true');
-                            element.innerText = 'Dialog for diffusion';
-                            document.body.appendChild(element);
-                          }}
+                          onClick={() => handleOpenDiffusionDialog(version)}
                         >
                           <Send className="h-4 w-4 mr-1" />
                           <span className="hidden sm:inline">Diffuser</span>
@@ -254,23 +276,12 @@ export default function MarcheVersions({
                         <Button 
                           variant="btpPrimary"
                           size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const element = document.createElement('dialog');
-                            element.setAttribute('open', 'true');
-                            element.innerText = 'Dialog for visa';
-                            document.body.appendChild(element);
-                          }}
+                          onClick={() => handleOpenVisaDialog(version)}
                         >
                           <CheckCircle className="h-4 w-4 mr-1" />
                           <span className="hidden sm:inline">Viser</span>
                         </Button>
                       )}
-                      
-                      {/* Intégration des composants de dialogue existants */}
-                      {version.statut === 'En attente de diffusion' && <MarcheDiffusionDialog version={version} onDiffusionComplete={refetch} />}
-                      
-                      {version.statut === 'En attente de visa' && <MarcheVisaDialog version={version} onVisaComplete={refetch} />}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -285,5 +296,24 @@ export default function MarcheVersions({
           </TableBody>
         </Table>
       </Card>
+      
+      {/* Boîtes de dialogue */}
+      {selectedVersion && (
+        <>
+          <MarcheDiffusionDialog
+            document={selectedVersion.documents as Document}
+            open={showDiffusionDialog}
+            onOpenChange={setShowDiffusionDialog}
+            onDiffusionComplete={handleDiffusionComplete}
+          />
+          
+          <MarcheVisaDialog
+            document={selectedVersion.documents as Document}
+            open={showVisaDialog}
+            onOpenChange={setShowVisaDialog}
+            onVisaComplete={handleVisaComplete}
+          />
+        </>
+      )}
     </div>;
 }

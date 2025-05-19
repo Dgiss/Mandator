@@ -61,9 +61,14 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
       // Process documents to format dates and enrich with version information
       const processedData = data.map(doc => {
         // Find the latest version if versions exist
-        const versions = doc.versions || [];
+        const versions = doc.versions && Array.isArray(doc.versions) ? doc.versions : [];
         const latestVersion = versions.length > 0 ? 
-          versions.sort((a, b) => new Date(b.date_creation).getTime() - new Date(a.date_creation).getTime())[0] 
+          versions.sort((a: any, b: any) => {
+            // Ensure we have date_creation values to sort by
+            const dateA = a.date_creation ? new Date(a.date_creation).getTime() : 0;
+            const dateB = b.date_creation ? new Date(b.date_creation).getTime() : 0;
+            return dateB - dateA;
+          })[0] 
           : null;
         
         return {
