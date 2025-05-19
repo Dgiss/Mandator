@@ -91,7 +91,9 @@ export const VisasTable: React.FC<VisasTableProps> = ({
       hasVisaDialog
     });
     
-    return userIsMandataire && hasCorrectStatus && hasVisaDialog;
+    // Simplifions la condition: si l'utilisateur est mandataire et le document est en attente de visa,
+    // montrons le bouton même sans openVisaDialog (qui sera géré par le parent si nécessaire)
+    return userIsMandataire() && hasCorrectStatus;
   };
 
   return (
@@ -137,7 +139,7 @@ export const VisasTable: React.FC<VisasTableProps> = ({
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      {showViserButton && (
+                      {showViserButton && openVisaDialog && (
                         <button 
                           className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs font-medium"
                           onClick={(e) => {
