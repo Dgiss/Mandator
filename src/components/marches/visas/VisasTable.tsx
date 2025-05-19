@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Table, 
@@ -91,9 +90,8 @@ export const VisasTable: React.FC<VisasTableProps> = ({
       hasVisaDialog
     });
     
-    // Simplifions la condition: si l'utilisateur est mandataire et le document est en attente de visa,
-    // montrons le bouton même sans openVisaDialog (qui sera géré par le parent si nécessaire)
-    return userIsMandataire() && hasCorrectStatus;
+    // Corrected condition: user is mandataire and document status is "En attente de visa"
+    return userIsMandataire && hasCorrectStatus;
   };
 
   return (
