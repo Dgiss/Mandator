@@ -1,6 +1,6 @@
 
 export interface Visa {
-  id: string;
+  id?: string;
   document_id?: string;
   marche_id: string;
   version?: string;
@@ -10,10 +10,11 @@ export interface Visa {
   date_demande?: string;
   echeance?: string;
   attachment_path?: string;
+  documents?: { nom: string } | null;
 }
 
 export interface Version {
-  id: string;
+  id?: string;
   version: string;
   statut: 'En attente de diffusion' | 'En attente de validation' | 'En attente de visa' | 'BPE' | 'À remettre à jour' | 'Refusé';
 }
@@ -22,10 +23,11 @@ export interface Document {
   id: string;
   nom: string;
   type?: string;
-  currentVersionId: string;
+  version?: string;
   statut: 'En attente de diffusion' | 'En attente de validation' | 'En attente de visa' | 'BPE' | 'À remettre à jour' | 'Refusé';
-  versions: Version[];
   latestVersion?: Version | null;
+  currentVersionId?: string;
+  versions?: Version[];
 }
 
 export interface MarcheVisasProps {
@@ -34,7 +36,8 @@ export interface MarcheVisasProps {
 
 // Component props interfaces
 export interface VisasHeaderProps {
-  onDiffusionOpen: (document: Document) => void;
+  onDiffusionOpen: () => void;
+  visasCount?: number;
 }
 
 export interface VisaFiltersProps {
@@ -49,6 +52,8 @@ export interface VisasTableProps {
   loadingStates: Record<string, boolean>;
   openDiffusionDialog?: (document: Document, version: Version) => void;
   openVisaDialog?: (document: Document, version: Version) => void;
+  visas?: Visa[];
+  showHistoricalVisas?: boolean;
 }
 
 export interface VisasLoadingProps {}

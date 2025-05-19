@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { Document, Version, Visa } from '@/services/types';
+import { Document, Version, Visa } from '@/components/marches/visas/types';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
@@ -66,6 +65,13 @@ export function useVisaManagement(marcheId: string) {
       
       if (documentsError) throw documentsError;
       
+      // Transform documents to match our expected type
+      const transformedDocuments = documentsData.map((doc: any): Document => ({
+        ...doc,
+        currentVersionId: doc.versions && doc.versions.length > 0 ? doc.versions[0].id : undefined,
+        versions: doc.versions || []
+      }));
+      
       // Fetch visas
       const { data: visasData, error: visasError } = await supabase
         .from('visas')
@@ -75,8 +81,8 @@ export function useVisaManagement(marcheId: string) {
         
       if (visasError) throw visasError;
       
-      setDocuments(documentsData);
-      setFilteredDocuments(documentsData);
+      setDocuments(transformedDocuments);
+      setFilteredDocuments(transformedDocuments);
       setVisas(visasData);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -198,7 +204,7 @@ export function useVisaManagement(marcheId: string) {
     await fetchData();
   };
 
-  const handleProcessVisaSubmit = async () => {
+  const handleProcessVisaSubmit = async (type: 'VSO' | 'VAO' | 'Refusé', comment: string) => {
     // Implement process visa logic
     await new Promise(resolve => setTimeout(resolve, 1000));
     toast({

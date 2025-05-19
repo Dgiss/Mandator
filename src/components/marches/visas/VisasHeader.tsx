@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Send, Plus, FileHistory } from 'lucide-react';
+import { Send, Plus, History } from 'lucide-react';
 
 interface VisasHeaderProps {
   onDiffusionOpen: () => void;
@@ -17,10 +17,12 @@ export const VisasHeader: React.FC<VisasHeaderProps> = ({
       <div>
         <h1 className="text-2xl font-semibold">Historique des visas</h1>
         <p className="text-muted-foreground">
-          <FileHistory className="inline mr-1 h-4 w-4" />
+          <History className="inline mr-1 h-4 w-4" />
           {visasCount} visa{visasCount !== 1 ? 's' : ''} (VSO, VAO, Refusé)
         </p>
       </div>
     </div>
   );
 };
+
+export type { VisasHeaderProps };

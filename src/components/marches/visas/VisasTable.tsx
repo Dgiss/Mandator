@@ -8,7 +8,7 @@ import {
   TableBody, 
   TableCell 
 } from '@/components/ui/table';
-import { Document, Version, Visa } from '@/services/types';
+import { Document, Version, Visa } from '@/components/marches/visas/types';
 import { useUserRole } from '@/hooks/userRole';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -101,7 +101,7 @@ export const VisasTable: React.FC<VisasTableProps> = ({
               </TableRow>
             ) : (
               documents.map((doc) => {
-                const latestVersion = doc.versions?.length > 0 ? doc.versions[0] : null;
+                const latestVersion = doc.versions && doc.versions.length > 0 ? doc.versions[0] : null;
                 
                 return (
                   <TableRow 
@@ -112,7 +112,7 @@ export const VisasTable: React.FC<VisasTableProps> = ({
                     <TableCell className="font-medium">{doc.nom}</TableCell>
                     <TableCell>{doc.type || 'N/A'}</TableCell>
                     <TableCell>
-                      {latestVersion ? latestVersion.version : 'N/A'}
+                      {latestVersion ? latestVersion.version : (doc.version || 'N/A')}
                     </TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadgeClass(doc.statut)}`}>
