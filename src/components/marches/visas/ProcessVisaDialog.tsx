@@ -72,6 +72,7 @@ export const ProcessVisaDialog = ({
               <Label htmlFor="visa-vso" className="flex items-center cursor-pointer">
                 <FileCheck className="h-4 w-4 mr-2 text-green-600" />
                 <span className="font-medium">Visa Sans Observation (VSO)</span>
+                <span className="ml-2 text-xs text-gray-500">→ Document marqué "BPE"</span>
               </Label>
             </div>
             
@@ -80,6 +81,7 @@ export const ProcessVisaDialog = ({
               <Label htmlFor="visa-vao" className="flex items-center cursor-pointer">
                 <AlertTriangle className="h-4 w-4 mr-2 text-amber-600" />
                 <span className="font-medium">Visa Avec Observation (VAO)</span>
+                <span className="ml-2 text-xs text-gray-500">→ Crée version {selectedVersion?.version && getNextVersionLetter(selectedVersion.version)}</span>
               </Label>
             </div>
             
@@ -88,6 +90,7 @@ export const ProcessVisaDialog = ({
               <Label htmlFor="visa-refuse" className="flex items-center cursor-pointer">
                 <FileX className="h-4 w-4 mr-2 text-red-600" />
                 <span className="font-medium">Refusé</span>
+                <span className="ml-2 text-xs text-gray-500">→ Crée version {selectedVersion?.version && getNextVersionLetter(selectedVersion.version)}</span>
               </Label>
             </div>
           </RadioGroup>
@@ -133,3 +136,10 @@ export const ProcessVisaDialog = ({
     </Dialog>
   );
 };
+
+// Fonction pour obtenir la lettre suivante
+function getNextVersionLetter(currentVersion: string): string {
+  const currentLetter = currentVersion.charAt(0);
+  const nextLetterCode = currentLetter.charCodeAt(0) + 1;
+  return String.fromCharCode(nextLetterCode);
+}

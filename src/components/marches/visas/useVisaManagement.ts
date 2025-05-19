@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Document, Version, Visa } from '@/components/marches/visas/types';
 import { supabase } from '@/lib/supabase';
@@ -218,16 +217,163 @@ export function useVisaManagement(marcheId: string) {
     await fetchData();
   };
 
+  // Nouvelle fonction pour incrémenter l'indice de version alphabétiquement
+  const getNextVersionLetter = (currentVersion: string): string => {
+    // Extraire la première lettre de la version actuelle (ex: 'A' dans 'A')
+    const currentLetter = currentVersion.charAt(0);
+    
+    // Convertir en code ASCII et incrémenter (A→B, B→C, etc.)
+    const nextLetterCode = currentLetter.charCodeAt(0) + 1;
+    
+    // Reconvertir en caractère
+    return String.fromCharCode(nextLetterCode);
+  };
+
+  // Fonction pour créer une nouvelle version à partir d'une version refusée
+  const createNextVersion = async (document: Document, refusedVersion: string, commentaire: string) => {
+    try {
+      // Obtenir la lettre suivante pour la nouvelle version
+      const nextVersionLetter = getNextVersionLetter(refusedVersion);
+      
+      console.log(`Création de la version ${nextVersionLetter} suite au refus de la version ${refusedVersion}`);
+      
+      // Créer la nouvelle version dans la base de données
+      const { data: newVersionData, error: newVersionError } = await supabase
+        .from('versions')
+        .insert({
+          document_id: document.id,
+          marche_id: marcheId,
+          version: nextVersionLetter,
+          cree_par: "Système (suite à refus)",
+          commentaire: `Nouvelle version suite au refus de la version ${refusedVersion} - ${commentaire}`,
+          statut: "En attente de diffusion",
+          date_creation: new Date().toISOString()
+        })
+        .select();
+      
+      if (newVersionError) throw newVersionError;
+      
+      // Mettre à jour le document avec la nouvelle version comme version courante
+      const { error: updateDocError } = await supabase
+        .from('documents')
+        .update({
+          version: nextVersionLetter,
+          statut: "En attente de diffusion"
+        })
+        .eq('id', document.id);
+      
+      if (updateDocError) throw updateDocError;
+      
+      toast({
+        title: "Nouvelle version créée",
+        description: `La version ${nextVersionLetter} du document a été créée automatiquement`
+      });
+      
+      // Recharger les données pour actualiser l'affichage
+      await fetchData();
+      
+      return true;
+    } catch (error) {
+      console.error("Erreur lors de la création de la nouvelle version:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de créer la nouvelle version du document",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
   const handleProcessVisaSubmit = async (type: 'VSO' | 'VAO' | 'Refusé', comment: string) => {
-    // Implement process visa logic
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    toast({
-      title: "Visa traité",
-      description: "Le visa a été traité avec succès"
-    });
-    setProcessVisaDialogOpen(false);
-    clearDialogData();
-    await fetchData();
+    if (!selectedDocument || !selectedVersion) return;
+    
+    try {
+      setLoadingStates(prev => ({...prev, [selectedDocument.id]: true}));
+      
+      let commentWithPrefix = '';
+      let newDocumentStatus = '';
+      let newVersionStatus = '';
+      let createNewVersion = false;
+      
+      // Déterminer le commentaire et les statuts selon le type de visa
+      switch (type) {
+        case 'VSO':
+          commentWithPrefix = `VSO: ${comment || 'Visa sans observation'}`;
+          newDocumentStatus = 'BPE';
+          newVersionStatus = 'BPE';
+          createNewVersion = false;
+          break;
+        case 'VAO':
+          commentWithPrefix = `VAO: ${comment}`;
+          newDocumentStatus = 'En attente de diffusion';
+          newVersionStatus = 'À remettre à jour';
+          createNewVersion = true;
+          break;
+        case 'Refusé':
+          commentWithPrefix = `Refusé: ${comment}`;
+          newDocumentStatus = 'En attente de diffusion';
+          newVersionStatus = 'Refusé';
+          createNewVersion = true;
+          break;
+      }
+      
+      // Mettre à jour la version avec le nouveau statut
+      const { error: versionError } = await supabase
+        .from('versions')
+        .update({ 
+          statut: newVersionStatus,
+          commentaire: commentWithPrefix
+        })
+        .eq('document_id', selectedDocument.id)
+        .eq('version', selectedVersion.version);
+      
+      if (versionError) throw versionError;
+      
+      // Mettre à jour le document avec le nouveau statut
+      const { error: documentError } = await supabase
+        .from('documents')
+        .update({ statut: newDocumentStatus })
+        .eq('id', selectedDocument.id);
+      
+      if (documentError) throw documentError;
+      
+      // Mettre à jour le visa si nécessaire
+      if (selectedVisa) {
+        const { error: visaError } = await supabase
+          .from('visas')
+          .update({ 
+            statut: type === 'VSO' ? 'Approuvé' : 'Refusé',
+            commentaire: commentWithPrefix
+          })
+          .eq('id', selectedVisa.id);
+        
+        if (visaError) throw visaError;
+      }
+      
+      // Si nécessaire, créer automatiquement une nouvelle version
+      if (createNewVersion) {
+        await createNextVersion(selectedDocument, selectedVersion.version, comment);
+      }
+      
+      toast({
+        title: "Visa traité",
+        description: `Le document a été ${type === 'VSO' ? 'approuvé' : type === 'VAO' ? 'retourné avec observations' : 'refusé'}`
+      });
+      
+      // Fermer la boîte de dialogue et actualiser les données
+      setProcessVisaDialogOpen(false);
+      clearDialogData();
+      await fetchData();
+    } catch (error) {
+      console.error('Error processing visa:', error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors du traitement du visa",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingStates(prev => ({...prev, [selectedDocument.id]: false}));
+    }
   };
 
   const retryLoading = () => {

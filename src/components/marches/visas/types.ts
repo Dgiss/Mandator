@@ -1,4 +1,3 @@
-
 export interface Visa {
   id?: string;
   document_id?: string;
@@ -29,11 +28,11 @@ export interface Document {
   currentVersionId?: string;
 }
 
+// Component props interfaces
 export interface MarcheVisasProps {
   marcheId: string;
 }
 
-// Component props interfaces
 export interface VisasHeaderProps {
   onDiffusionOpen: () => void;
   visasCount?: number;
