@@ -1,32 +1,20 @@
-
 import React, { useState } from 'react';
-import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell
-} from '@/components/ui/table';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Eye, Filter } from 'lucide-react';
 import { Fascicule } from '@/services/types';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 interface FasciculesTableProps {
   fascicules: Fascicule[];
   loading: boolean;
   onViewDetails: (fascicule: Fascicule) => void;
 }
-
-const FasciculesTable: React.FC<FasciculesTableProps> = ({ fascicules, loading, onViewDetails }) => {
+const FasciculesTable: React.FC<FasciculesTableProps> = ({
+  fascicules,
+  loading,
+  onViewDetails
+}) => {
   const [marcheFilter, setMarcheFilter] = useState<string>('all');
   const [societeFilter, setSocieteFilter] = useState<string>('all');
 
@@ -47,11 +35,9 @@ const FasciculesTable: React.FC<FasciculesTableProps> = ({ fascicules, loading, 
     if (nom.includes(' - ')) return nom;
     return `${nom.toUpperCase()} - ${Math.floor(Math.random() * 9000) + 1000} à ${Math.floor(Math.random() * 9000) + 1000}`;
   };
-
-  return (
-    <div className="space-y-4">
+  return <div className="space-y-4">
       <div className="flex flex-col md:flex-row gap-4 justify-between">
-        <h2 className="text-2xl font-bold">Fascicules du marché</h2>
+        
         <div className="flex flex-col sm:flex-row gap-2">
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-gray-500" />
@@ -61,9 +47,7 @@ const FasciculesTable: React.FC<FasciculesTableProps> = ({ fascicules, loading, 
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tous les marchés</SelectItem>
-                {marches.map((marche, index) => (
-                  <SelectItem key={index} value={marche}>{marche}</SelectItem>
-                ))}
+                {marches.map((marche, index) => <SelectItem key={index} value={marche}>{marche}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -76,9 +60,7 @@ const FasciculesTable: React.FC<FasciculesTableProps> = ({ fascicules, loading, 
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Toutes les sociétés</SelectItem>
-                {societes.map((societe, index) => (
-                  <SelectItem key={index} value={societe}>{societe}</SelectItem>
-                ))}
+                {societes.map((societe, index) => <SelectItem key={index} value={societe}>{societe}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -97,21 +79,15 @@ const FasciculesTable: React.FC<FasciculesTableProps> = ({ fascicules, loading, 
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
-              <TableRow>
+            {loading ? <TableRow>
                 <TableCell colSpan={5} className="h-24 text-center">
                   Chargement des fascicules...
                 </TableCell>
-              </TableRow>
-            ) : filteredFascicules.length === 0 ? (
-              <TableRow>
+              </TableRow> : filteredFascicules.length === 0 ? <TableRow>
                 <TableCell colSpan={5} className="h-24 text-center">
                   Aucun fascicule trouvé
                 </TableCell>
-              </TableRow>
-            ) : (
-              filteredFascicules.map((fascicule) => (
-                <TableRow key={fascicule.id}>
+              </TableRow> : filteredFascicules.map(fascicule => <TableRow key={fascicule.id}>
                   <TableCell className="font-medium">
                     {formatNomenclature(fascicule.nom)}
                   </TableCell>
@@ -128,24 +104,15 @@ const FasciculesTable: React.FC<FasciculesTableProps> = ({ fascicules, loading, 
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-8 w-8 p-0"
-                      onClick={() => onViewDetails(fascicule)}
-                    >
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => onViewDetails(fascicule)}>
                       <Eye className="h-4 w-4" />
                       <span className="sr-only">Voir détails</span>
                     </Button>
                   </TableCell>
-                </TableRow>
-              ))
-            )}
+                </TableRow>)}
           </TableBody>
         </Table>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default FasciculesTable;
