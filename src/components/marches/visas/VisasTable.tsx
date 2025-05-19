@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { 
   Table, 
@@ -77,6 +78,22 @@ export const VisasTable: React.FC<VisasTableProps> = ({
     }
   };
 
+  // Debug function to check conditions for displaying the "Viser" button
+  const canUserViseDocument = (doc: Document) => {
+    const userIsMandataire = isMandataire();
+    const hasCorrectStatus = doc.statut === 'En attente de visa';
+    const hasVisaDialog = !!openVisaDialog;
+    
+    console.log(`Viser button conditions for ${doc.nom}:`, {
+      userIsMandataire,
+      docStatus: doc.statut,
+      hasCorrectStatus,
+      hasVisaDialog
+    });
+    
+    return userIsMandataire && hasCorrectStatus && hasVisaDialog;
+  };
+
   return (
     <div className="rounded-md border">
       {!showHistoricalVisas ? (
@@ -101,6 +118,7 @@ export const VisasTable: React.FC<VisasTableProps> = ({
             ) : (
               documents.map((doc) => {
                 const latestVersion = doc.version ? { version: doc.version, statut: doc.statut } : null;
+                const showViserButton = canUserViseDocument(doc);
                 
                 return (
                   <TableRow 
@@ -119,14 +137,12 @@ export const VisasTable: React.FC<VisasTableProps> = ({
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      {/* Action buttons here if needed */}
-                      {/* Corrected condition to ensure "Viser" button appears for mandataires when doc status is "En attente de visa" */}
-                      {isMandataire() && doc.statut === 'En attente de visa' && openVisaDialog && (
+                      {showViserButton && (
                         <button 
                           className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs font-medium"
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (latestVersion) openVisaDialog(doc, latestVersion as Version);
+                            if (latestVersion && openVisaDialog) openVisaDialog(doc, latestVersion as Version);
                           }}
                         >
                           Viser
