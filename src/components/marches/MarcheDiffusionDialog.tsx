@@ -1,208 +1,166 @@
 
 import React, { useState } from 'react';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogFooter,
-  DialogTrigger 
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
+import { CalendarIcon, Send, Loader2 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
-import { useDropzone } from 'react-dropzone';
-import { FileText, Send, Upload, X } from 'lucide-react';
-import { versionsService } from '@/services/versionsService';
-import { Version } from '@/services/types';
-import { useQueryClient } from '@tanstack/react-query';
-import { useUserRole } from '@/hooks/useUserRole';
+import { Document } from '@/services/types';
+import { visasService } from '@/services/visasService';
 
 interface MarcheDiffusionDialogProps {
-  version: Version;
-  onDiffusionComplete?: () => void;
-  userRole?: string;
+  document: Document;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onDiffusionComplete: () => void;
 }
 
-const MarcheDiffusionDialog: React.FC<MarcheDiffusionDialogProps> = ({ 
-  version, 
-  onDiffusionComplete,
-}) => {
-  const [open, setOpen] = useState(false);
-  const [commentaire, setCommentaire] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+export default function MarcheDiffusionDialog({
+  document,
+  open,
+  onOpenChange,
+  onDiffusionComplete
+}: MarcheDiffusionDialogProps) {
+  const [comment, setComment] = useState<string>('');
+  const [echeance, setEcheance] = useState<Date | undefined>(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)); // +7 jours par défaut
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  // Utiliser notre nouveau hook pour la gestion des rôles
-  const { canDiffuse } = useUserRole();
-
-  // Role check - only MANDATAIRE can diffuse
-  const canDiffuseThis = canDiffuse && version.statut === 'En attente de diffusion';
-
-  // React-dropzone setup
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop: (acceptedFiles) => {
-      if (acceptedFiles.length > 0) {
-        setSelectedFile(acceptedFiles[0]);
-      }
-    },
-    accept: {
-      'application/pdf': ['.pdf'],
-      'application/msword': ['.doc'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-    },
-    maxFiles: 1,
-    maxSize: 10485760, // 10MB
-  });
-
-  const handleDiffuse = async () => {
-    if (!canDiffuseThis) {
-      toast({
-        title: "Accès non autorisé",
-        description: "Seul le MANDATAIRE peut diffuser les documents.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
     setIsSubmitting(true);
+
     try {
-      // Appeler le service de diffusion qui créera également un visa
-      const result = await versionsService.diffuseVersion(
-        version.id || '', 
-        commentaire, 
-        selectedFile || undefined
+      // 1. Mettre à jour le statut du document
+      const { error: docError } = await supabase
+        .from('documents')
+        .update({ 
+          statut: 'En attente de visa',
+          date_diffusion: new Date().toISOString()
+        })
+        .eq('id', document.id);
+      
+      if (docError) throw docError;
+
+      // 2. Créer une entrée de visa pour ce document
+      const { data: { user } } = await supabase.auth.getUser();
+      const demandePar = user ? user.email || 'Système' : 'Système';
+      
+      // Utiliser le service de visa pour créer une entrée de visa
+      await visasService.createVisaForDiffusion(
+        document.id,
+        document.marche_id,
+        document.version,
+        demandePar,
+        echeance ? echeance.toISOString() : undefined
       );
 
-      if (result.success) {
-        toast({
-          title: "Document diffusé",
-          description: "Le document a été diffusé avec succès et est maintenant en attente de visa.",
-          variant: "success",
-        });
-        setOpen(false);
+      // Mettre à jour la version également si elle existe
+      if (document.id) {
+        const { error: versionError } = await supabase
+          .from('versions')
+          .update({ statut: 'En attente de visa' })
+          .eq('document_id', document.id)
+          .eq('version', document.version);
         
-        // Invalidate queries to refresh the data
-        queryClient.invalidateQueries({ queryKey: ['versions', version.marche_id] });
-        queryClient.invalidateQueries({ queryKey: ['documents', version.marche_id] });
-        queryClient.invalidateQueries({ queryKey: ['visas', version.marche_id] });
-        
-        if (onDiffusionComplete) {
-          onDiffusionComplete();
+        if (versionError) {
+          console.error("Erreur lors de la mise à jour de la version:", versionError);
         }
-      } else {
-        throw new Error("Échec de la diffusion");
       }
+
+      toast({
+        title: "Document diffusé",
+        description: "Le document a été diffusé avec succès pour validation"
+      });
+      
+      onDiffusionComplete();
     } catch (error) {
-      console.error("Erreur lors de la diffusion:", error);
+      console.error('Erreur lors de la diffusion:', error);
       toast({
         title: "Erreur",
-        description: "Une erreur est survenue lors de la diffusion du document.",
-        variant: "destructive",
+        description: "Une erreur est survenue lors de la diffusion du document",
+        variant: "destructive"
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Remove selected file
-  const removeFile = () => {
-    setSelectedFile(null);
-  };
-
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button 
-          variant="outline" 
-          className="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700"
-          disabled={!canDiffuseThis}
-        >
-          <Send className="h-4 w-4 mr-2" /> Diffuser
-        </Button>
-      </DialogTrigger>
-      
-      <DialogContent className="sm:max-w-[600px]">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Diffuser le document</DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4 py-4">
-          <div className="text-sm text-gray-600">
-            <p>Vous êtes sur le point de diffuser la version {version.version} du document pour visa. 
-            Une fois diffusé, le document passera en statut "En attente de visa" et un visa sera automatiquement créé.</p>
-          </div>
-          
+        <div className="py-4 space-y-4">
           <div>
-            <label className="text-sm font-medium mb-2 block">Document final (facultatif)</label>
-            {selectedFile ? (
-              <div className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
-                <div className="flex items-center">
-                  <FileText className="h-4 w-4 text-gray-500 mr-2" />
-                  <span className="text-sm truncate">{selectedFile.name}</span>
-                  <span className="text-xs text-gray-500 ml-2">({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={removeFile}
-                  className="text-red-500 hover:text-red-700"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            ) : (
-              <div {...getRootProps()} className="flex items-center justify-center w-full">
-                <div className={`flex flex-col items-center justify-center w-full h-24 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer ${isDragActive ? 'bg-gray-100' : 'bg-gray-50'} hover:bg-gray-100 transition-colors`}>
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Upload className="w-8 h-8 mb-3 text-gray-500" />
-                    <p className="mb-1 text-sm text-gray-500">
-                      <span className="font-semibold">Cliquez ou glissez-déposez</span>
-                    </p>
-                    <p className="text-xs text-gray-500">PDF, DOC, DOCX (MAX. 10Mo)</p>
-                  </div>
-                  <input {...getInputProps()} />
-                </div>
-              </div>
-            )}
-            <p className="text-xs text-gray-500 mt-1">
-              Si vous ne téléversez pas de nouveau document, la version actuelle sera utilisée.
-            </p>
+            <h4 className="font-medium mb-1">Document</h4>
+            <p className="text-sm text-gray-700">{document.nom}</p>
           </div>
-          
+
           <div>
-            <label htmlFor="commentaire" className="text-sm font-medium mb-2 block">
-              Commentaire de diffusion
-            </label>
+            <h4 className="font-medium mb-1">Commentaire (facultatif)</h4>
             <Textarea
-              id="commentaire"
-              placeholder="Ajoutez un commentaire sur cette diffusion..."
-              value={commentaire}
-              onChange={(e) => setCommentaire(e.target.value)}
-              rows={4}
+              placeholder="Ajouter un commentaire pour le mandataire qui visera ce document..."
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              className="min-h-[100px]"
             />
+          </div>
+
+          <div>
+            <h4 className="font-medium mb-1">Échéance</h4>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !echeance && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {echeance ? format(echeance, "PPP", { locale: fr }) : "Sélectionner une date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={echeance}
+                  onSelect={setEcheance}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
         
         <DialogFooter>
-          <Button 
-            variant="outline" 
-            onClick={() => setOpen(false)}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
             Annuler
           </Button>
-          <Button 
-            onClick={handleDiffuse} 
-            disabled={isSubmitting}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            {isSubmitting ? "Diffusion en cours..." : "Diffuser le document"}
+          <Button onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Diffusion en cours...
+              </>
+            ) : (
+              <>
+                <Send className="mr-2 h-4 w-4" />
+                Diffuser pour visa
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-};
-
-export default MarcheDiffusionDialog;
+}
