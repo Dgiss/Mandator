@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertTriangle, Plus } from 'lucide-react';
@@ -22,7 +21,7 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
   const [showForm, setShowForm] = useState<boolean>(false);
   const [selectedFascicule, setSelectedFascicule] = useState<Fascicule | null>(null);
   const [showDashboard, setShowDashboard] = useState<boolean>(false);
-  const [showDocumentForm, setShowDocumentForm] = useState<boolean>(false); // New state for document form
+  const [showDocumentForm, setShowDocumentForm] = useState<boolean>(false); // State for document form
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { canCreateFascicule, isAdmin } = useUserRole(marcheId);
@@ -118,13 +117,13 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
     setShowDashboard(false);
   };
 
-  // New handler for opening document form
+  // Handler for opening document form
   const handleOpenDocumentForm = (fascicule: Fascicule) => {
     setSelectedFascicule(fascicule);
     setShowDocumentForm(true);
   };
 
-  // New handler for closing document form
+  // Handler for closing document form
   const handleCloseDocumentForm = (refreshNeeded: boolean = false) => {
     setShowDocumentForm(false);
     if (refreshNeeded) {
@@ -212,7 +211,7 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
         onClose={handleCloseDashboard}
       />
 
-      {/* New document form modal - fixed props to match the component interface */}
+      {/* New document form modal - with correct props */}
       {showDocumentForm && selectedFascicule && (
         <MarcheDocumentForm
           marcheId={marcheId}
