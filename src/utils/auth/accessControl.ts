@@ -9,13 +9,13 @@ import { supabase } from '@/lib/supabase';
  */
 export const marcheExists = async (id: string): Promise<boolean> => {
   try {
-    // Utiliser la fonction get_accessible_marches au lieu de get_user_accessible_markets
+    // Utiliser la fonction non-récursive pour obtenir les marchés accessibles
     const { data: accessibleMarches, error: rpcError } = await supabase.rpc('get_accessible_marches');
     
     if (rpcError) {
-      console.error('Erreur lors de la vérification via RPC:', rpcError);
+      console.error('Erreur lors de la récupération des marchés accessibles via RPC:', rpcError);
       
-      // Tentative avec la politique non-récursive
+      // Plan B: Tentative directe avec une requête sécurisée
       const { data, error } = await supabase
         .from('marches')
         .select('id')
@@ -23,7 +23,7 @@ export const marcheExists = async (id: string): Promise<boolean> => {
         .maybeSingle();
       
       if (error) {
-        console.error(`Erreur lors de la vérification de l'existence du marché ${id}:`, error);
+        console.error(`Erreur lors de la vérification directe de l'existence du marché ${id}:`, error);
         return false;
       }
       
@@ -49,11 +49,11 @@ export const marcheExists = async (id: string): Promise<boolean> => {
  */
 export const userHasAccessToMarche = async (marcheId: string): Promise<boolean> => {
   try {
-    // Utiliser la fonction get_accessible_marches au lieu de get_user_accessible_markets
+    // Utiliser la fonction RPC non-récursive pour obtenir les marchés
     const { data, error } = await supabase.rpc('get_accessible_marches');
     
     if (error) {
-      console.error('Erreur lors de la vérification des accès:', error);
+      console.error('Erreur lors de la vérification des accès via RPC:', error);
       return false;
     }
     
