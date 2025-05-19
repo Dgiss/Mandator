@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { 
   Table, 
@@ -91,7 +92,7 @@ export const VisasTable: React.FC<VisasTableProps> = ({
     });
     
     // Corrected condition: user is mandataire and document status is "En attente de visa"
-    return userIsMandataire && hasCorrectStatus;
+    return userIsMandataire && hasCorrectStatus && hasVisaDialog;
   };
 
   return (
@@ -137,7 +138,7 @@ export const VisasTable: React.FC<VisasTableProps> = ({
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      {showViserButton && openVisaDialog && (
+                      {showViserButton && (
                         <button 
                           className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs font-medium"
                           onClick={(e) => {
