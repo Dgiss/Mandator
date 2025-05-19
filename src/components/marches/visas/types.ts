@@ -10,7 +10,7 @@ export interface Visa {
   date_demande?: string;
   echeance?: string;
   attachment_path?: string;
-  documents?: { nom: string } | null;
+  documents?: { nom: string } | null | { [key: string]: any };
 }
 
 export interface Version {

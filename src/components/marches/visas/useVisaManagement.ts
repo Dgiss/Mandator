@@ -81,9 +81,21 @@ export function useVisaManagement(marcheId: string) {
         
       if (visasError) throw visasError;
       
+      // Transform visas to handle potential errors in the documents join
+      const safeVisas: Visa[] = visasData.map((visa: any) => {
+        // Handle the case where documents might be an error object or missing nom property
+        const visaWithSafeDocuments: Visa = {
+          ...visa,
+          documents: visa.documents && typeof visa.documents === 'object' && 'nom' in visa.documents 
+            ? visa.documents 
+            : { nom: 'Document inconnu' }
+        };
+        return visaWithSafeDocuments;
+      });
+      
       setDocuments(transformedDocuments);
       setFilteredDocuments(transformedDocuments);
-      setVisas(visasData);
+      setVisas(safeVisas);
     } catch (error) {
       console.error('Error fetching data:', error);
       setError(true);

@@ -173,10 +173,15 @@ export const VisasTable: React.FC<VisasTableProps> = ({
                   cleanComment = cleanComment.split(':').slice(1).join(':').trim();
                 }
                 
+                // Get document name safely
+                const documentName = visa.documents && typeof visa.documents === 'object' && 'nom' in visa.documents 
+                  ? visa.documents.nom 
+                  : 'Document inconnu';
+                
                 return (
                   <TableRow key={visa.id}>
                     <TableCell className="font-medium">
-                      {visa.documents?.nom || 'Document inconnu'}
+                      {documentName}
                     </TableCell>
                     <TableCell>
                       <Badge className={`${badgeClass} font-normal`}>
