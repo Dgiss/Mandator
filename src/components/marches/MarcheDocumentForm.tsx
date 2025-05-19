@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger 
@@ -399,7 +400,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
       }
       
       // Automatically create a version when a document is created
-      if (documentId && !isEditing && selectedFile) {
+      if (documentId && !isEditing) {
         try {
           console.log('Creating initial version for document:', documentId);
           
@@ -407,12 +408,14 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
           const docForVersion = {
             id: documentId,
             nom: values.name,
-            type: values.type
+            type: values.type,
+            marche_id: values.marche_id
           };
           
           await versionsService.createInitialVersion(docForVersion, filePath, fileSize);
         } catch (versionError) {
           console.error("Erreur lors de la création de la version:", versionError);
+          // Ne pas arrêter l'exécution, continuer même si la création de version échoue
         }
       }
       
