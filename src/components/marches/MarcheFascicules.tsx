@@ -1,14 +1,15 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertTriangle, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/userRole';
 import { fetchFasciculesByMarcheId } from '@/services/marches/fetchFasciculesByMarcheId';
-import { enrichFasciculeData } from '@/utils/auth'; // Import de la fonction d'enrichissement
+import { enrichFasciculeData } from '@/utils/auth'; 
 import MarcheFasciculeForm from './MarcheFasciculeForm';
 import FasciculesTable from './FasciculesTable';
 import FasciculeDashboardModal from './FasciculeDashboardModal';
-import MarcheDocumentForm from './MarcheDocumentForm'; // Importing the document form
+import MarcheDocumentForm from './MarcheDocumentForm';
 import type { Fascicule } from '@/services/types';
 
 interface MarcheFasciculesProps {
@@ -21,7 +22,7 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
   const [showForm, setShowForm] = useState<boolean>(false);
   const [selectedFascicule, setSelectedFascicule] = useState<Fascicule | null>(null);
   const [showDashboard, setShowDashboard] = useState<boolean>(false);
-  const [showDocumentForm, setShowDocumentForm] = useState<boolean>(false); // State for document form
+  const [showDocumentForm, setShowDocumentForm] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { canCreateFascicule, isAdmin } = useUserRole(marcheId);
@@ -105,7 +106,7 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
   };
 
   const handleRetry = () => {
-    setLoadAttempt(prev => prev + 1); // Incrémenter pour déclencher un nouveau chargement
+    setLoadAttempt(prev => prev + 1); 
   };
 
   const handleViewDetails = (fascicule: Fascicule) => {
@@ -211,19 +212,19 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
         onClose={handleCloseDashboard}
       />
 
-      {/* New document form modal - with correct props */}
+      {/* Document form modal with correct props */}
       {showDocumentForm && selectedFascicule && (
         <MarcheDocumentForm
           marcheId={marcheId}
           editingDocument={null}
           setEditingDocument={() => {
-            setShowDocumentForm(false);
-            setLoadAttempt(prev => prev + 1);
+            handleCloseDocumentForm(true);
           }}
           onDocumentSaved={() => {
-            setShowDocumentForm(false);
-            setLoadAttempt(prev => prev + 1);
+            handleCloseDocumentForm(true);
           }}
+          fasciculeId={selectedFascicule.id}
+          initialData={{ version: 'A' }}
         />
       )}
     </div>

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
@@ -83,14 +82,13 @@ const FasciculesTable: React.FC<FasciculesTableProps> = ({
         // Initialiser la progression
         setUploadProgress(prev => ({ ...prev, [file.name]: 0 }));
         
-        // Simuler la progression (dans une app réelle, ceci serait remplacé par un vrai upload)
+        // Simuler la progression
         for (let progress = 0; progress <= 90; progress += 10) {
           setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
           await new Promise(resolve => setTimeout(resolve, 100));
         }
         
         // Créer le document dans la base de données
-        // Dans une implémentation réelle, on utiliserait la fonction create_document_safely
         const documentData = {
           nom: file.name, // Utiliser le nom du fichier comme nom du document
           type: 'Document technique',
@@ -102,7 +100,7 @@ const FasciculesTable: React.FC<FasciculesTableProps> = ({
           dateupload: new Date().toISOString()
         };
 
-        // Simuler la création du document (à remplacer par un vrai appel API dans une implémentation réelle)
+        // Simulation de la création du document (à remplacer par un vrai appel API)
         await new Promise(resolve => setTimeout(resolve, 300));
         
         // Marquer l'upload comme terminé
@@ -247,8 +245,8 @@ const FasciculesTable: React.FC<FasciculesTableProps> = ({
           
           <div className="space-y-4 py-4">
             <p className="text-sm text-muted-foreground">
-              Les fichiers uploadés seront automatiquement ajoutés en tant que nouveaux documents avec l'indice A.
-              Chaque document utilisera le nom du fichier comme nom de document.
+              Chaque fichier uploadé sera ajouté comme un document individuel avec l'indice A.
+              Le nom de chaque document correspondra au nom du fichier.
             </p>
             
             <MultiFileUpload
