@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
@@ -88,28 +89,52 @@ const FasciculesTable: React.FC<FasciculesTableProps> = ({
           await new Promise(resolve => setTimeout(resolve, 100));
         }
         
+        // Récupérer l'utilisateur actuel pour l'utiliser comme émetteur
+        const { data: { user } } = await supabase.auth.getUser();
+        const emetteur = user ? user.email || 'Utilisateur' : 'Utilisateur';
+        
+        // Obtenir l'extension pour déterminer le type
+        const fileType = file.name.split('.').pop()?.toUpperCase() || 'DOC';
+        const fileSize = `${(file.size / 1024).toFixed(1)} KB`;
+        
         // Créer le document dans la base de données
         const documentData = {
           nom: file.name, // Utiliser le nom du fichier comme nom du document
-          type: 'Document technique',
+          type: fileType,
           marche_id: uploadingFascicule.marche_id,
           fascicule_id: uploadingFascicule.id,
           statut: 'En attente de diffusion',
           version: 'A', // Indice A pour tous les nouveaux documents
-          taille: `${(file.size / 1024).toFixed(1)} KB`,
-          dateupload: new Date().toISOString()
+          taille: fileSize,
+          dateupload: new Date().toISOString(),
+          emetteur: emetteur
         };
 
-        // Simulation de la création du document (à remplacer par un vrai appel API)
-        await new Promise(resolve => setTimeout(resolve, 300));
+        // Créer le document dans la base de données
+        const { data, error } = await supabase
+          .from('documents')
+          .insert(documentData)
+          .select();
+          
+        if (error) {
+          console.error(`Erreur lors de la création du document pour ${file.name}:`, error);
+          toast({
+            title: "Erreur",
+            description: `Impossible de créer le document pour ${file.name}: ${error.message}`,
+            variant: "destructive",
+          });
+          continue;
+        }
         
         // Marquer l'upload comme terminé
         setUploadProgress(prev => ({ ...prev, [file.name]: 100 }));
+        
+        console.log(`Document créé avec succès pour ${file.name}:`, data);
       } catch (error) {
         console.error(`Erreur lors de la création du document pour ${file.name}:`, error);
         toast({
           title: "Erreur",
-          description: `Impossible de créer le document pour ${file.name}`,
+          description: `Une erreur est survenue lors du traitement de ${file.name}`,
           variant: "destructive",
         });
       }
