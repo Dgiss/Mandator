@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertTriangle, Plus } from 'lucide-react';
@@ -212,7 +211,7 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
         onClose={handleCloseDashboard}
       />
 
-      {/* Document form modal with correct props */}
+      {/* Document form modal with correct props based on the DocumentFormProps interface */}
       {showDocumentForm && selectedFascicule && (
         <MarcheDocumentForm
           marcheId={marcheId}
@@ -223,8 +222,6 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
           onDocumentSaved={() => {
             handleCloseDocumentForm(true);
           }}
-          fasciculeId={selectedFascicule.id}
-          initialData={{ version: 'A' }}
         />
       )}
     </div>
