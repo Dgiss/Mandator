@@ -14,7 +14,7 @@ interface MarcheHeaderProps {
 }
 
 const MarcheHeader: React.FC<MarcheHeaderProps> = ({ marche, getStatusColor, formatDate }) => {
-  const { role, getMarcheRole } = useUserRole(marche.id);
+  const { getMarcheRole } = useUserRole(marche.id);
   const [marcheRole, setMarcheRole] = React.useState<MarcheSpecificRole>(null);
   
   React.useEffect(() => {
@@ -31,8 +31,8 @@ const MarcheHeader: React.FC<MarcheHeaderProps> = ({ marche, getStatusColor, for
     switch(roleType) {
       case 'MOE': return 'default';
       case 'MANDATAIRE': return 'secondary';
-      case 'CONSULTANT': return 'outline';
-      default: return role === 'ADMIN' ? 'destructive' : 'outline';
+      case 'OBSERVATEUR': return 'outline';
+      default: return 'outline';
     }
   };
 
@@ -40,7 +40,7 @@ const MarcheHeader: React.FC<MarcheHeaderProps> = ({ marche, getStatusColor, for
     if (marcheRole) {
       return marcheRole;
     }
-    return role === 'ADMIN' ? 'ADMIN' : 'VISITEUR';
+    return 'VISITEUR';
   };
 
   return (
