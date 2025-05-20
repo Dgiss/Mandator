@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,6 +22,7 @@ import { fr } from 'date-fns/locale';
 import { useUserRole } from '@/hooks/useUserRole';
 import MarcheDiffusionDialog from './MarcheDiffusionDialog';
 import MarcheVisaDialog from './MarcheVisaDialog';
+import ViewDocumentButton from './documents/ViewDocumentButton';
 
 interface MarcheDocumentsProps {
   marcheId: string;
@@ -442,10 +442,8 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
                         <span className="sr-only">Modifier</span>
                       </Button>
                       
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <Eye className="h-4 w-4" />
-                        <span className="sr-only">Voir</span>
-                      </Button>
+                      {/* Remplacer le bouton Voir par notre nouveau ViewDocumentButton */}
+                      <ViewDocumentButton document={doc} />
                       
                       <Button 
                         variant="ghost" 
