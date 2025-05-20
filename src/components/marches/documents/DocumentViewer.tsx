@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Document } from '@/services/types';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { FileText, Code, Settings, CalendarDays, LayoutList, Versions, Activity } from 'lucide-react';
+import { FileText, Code, Settings, CalendarDays, LayoutList, History, Activity } from 'lucide-react';
 import DocumentDetails from './DocumentDetails';
 import DocumentVersions from './DocumentVersions';
 import DocumentActivities from './DocumentActivities';
@@ -71,7 +71,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
               <span>Détails</span>
             </TabsTrigger>
             <TabsTrigger value="versions" className="flex items-center gap-1">
-              <Versions className="h-4 w-4" />
+              <History className="h-4 w-4" />
               <span>Versions</span>
             </TabsTrigger>
             <TabsTrigger value="activities" className="flex items-center gap-1">

@@ -99,12 +99,12 @@ const DocumentVersions: React.FC<DocumentVersionsProps> = ({ document }) => {
         throw fileError;
       }
       
-      // Create a download link
+      // Create a download link - using window.document instead of the parameter named document
       const url = URL.createObjectURL(fileData);
-      const link = document.createElement('a');
+      const link = window.document.createElement('a');
       link.href = url;
       link.download = `${document.nom} - ${version.version}`;
-      document.body.appendChild(link);
+      window.document.body.appendChild(link);
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
