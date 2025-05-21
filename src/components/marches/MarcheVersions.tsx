@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -102,16 +103,19 @@ export default function MarcheVersions({
       case 'Approuvé':
       case 'VSO':
       case 'VAO':
+      case 'BPE':
         return "bg-green-100 text-green-800 hover:bg-green-200";
       case 'Rejeté':
       case 'Refusé':
         return "bg-red-100 text-red-800 hover:bg-red-200";
       case 'En attente de visa':
+      case 'En attente de validation':
         return "bg-blue-100 text-blue-800 hover:bg-blue-200";
       case 'En attente de diffusion':
       case 'Diffusé':
         return "bg-yellow-100 text-yellow-800 hover:bg-yellow-200";
       case 'Brouillon':
+      case 'À remettre à jour':
         return "bg-purple-100 text-purple-800 hover:bg-purple-200";
       default:
         return "bg-gray-100 text-gray-800 hover:bg-gray-200";
@@ -141,35 +145,39 @@ export default function MarcheVersions({
     return "Document sans nom";
   };
 
-  // Vérifier si la version peut être diffusée (pour MANDATAIRE)
+  // Vérifier si la version peut être diffusée (pour MANDATAIRE uniquement)
   const canDiffuseVersion = (version: Version): boolean => {
     console.log(`Checking if can diffuse version: ${version.version}, status: ${version.statut}`, {
       isMandataire: isMandataire(),
+      isMOE: isMOE(),
       status: version.statut
     });
     
-    // MISE À JOUR: Pour Mandataire uniquement sur version en "Brouillon" OU "En attente de diffusion"
-    return isMandataire() && 
-           (version.statut === 'Brouillon' || version.statut === 'En attente de diffusion');
+    // STRICTEMENT pour Mandataire uniquement sur version en "En attente de diffusion"
+    return isMandataire() &&
+           !isMOE() && // Si l'utilisateur a par erreur les deux rôles, on prioritise Mandataire
+           version.statut === 'En attente de diffusion';
   };
 
-  // Vérifier si la version peut être visée (pour MOE)
+  // Vérifier si la version peut être visée (pour MOE uniquement)
   const canVisaVersion = (version: Version): boolean => {
     console.log(`Checking if can visa version: ${version.version}, status: ${version.statut}`, {
       isMOE: isMOE(),
+      isMandataire: isMandataire(),
       status: version.statut,
       hasVisa: hasVisa(version)
     });
     
-    // MISE À JOUR: Pour MOE uniquement sur version "Diffusé", "En attente de diffusion" ou "En attente de visa" et qui n'a pas déjà un visa
-    return isMOE() && 
-           (version.statut === 'Diffusé' || version.statut === 'En attente de diffusion' || version.statut === 'En attente de visa') && 
+    // STRICTEMENT pour MOE uniquement sur version "Diffusé" et qui n'a pas déjà un visa
+    return isMOE() &&
+           !isMandataire() && // Si l'utilisateur a par erreur les deux rôles, on prioritise Mandataire
+           version.statut === 'Diffusé' &&
            !hasVisa(version);
   };
   
-  // Vérifier si la version a déjà un visa appliqué (VSO, VAO ou Refusé)
+  // Vérifier si la version a déjà un visa appliqué (VSO, VAO, Refusé ou BPE)
   const hasVisa = (version: Version): boolean => {
-    const visaStatuses = ['VSO', 'VAO', 'Refusé'];
+    const visaStatuses = ['VSO', 'VAO', 'Refusé', 'BPE'];
     return visaStatuses.includes(version.statut || '');
   };
 
@@ -219,13 +227,26 @@ export default function MarcheVersions({
     };
   };
 
+  // Afficher clairement le rôle actif de l'utilisateur
+  const getActiveUserRole = () => {
+    if (isMandataire() && !isMOE()) {
+      return "Connecté comme Mandataire";
+    } else if (isMOE() && !isMandataire()) {
+      return "Connecté comme MOE";
+    } else if (isMOE() && isMandataire()) {
+      return "Connecté avec plusieurs rôles (priorité aux actions Mandataire)";
+    } else {
+      return "Connecté";
+    }
+  };
+
   return <div className="pt-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-semibold">Versions des documents</h2>
         {!roleLoading && (
           <div className="flex items-center space-x-2">
             <span className="text-sm text-gray-500">
-              {isMOE() ? "Connecté comme MOE" : isMandataire() ? "Connecté comme Mandataire" : ""}
+              {getActiveUserRole()}
             </span>
           </div>
         )}
@@ -308,7 +329,7 @@ export default function MarcheVersions({
                       </Button>
                       
                       {/* Affichage conditionnel des boutons d'action selon rôle et statut */}
-                      {/* 1. Bouton Diffuser pour Mandataire sur versions en Brouillon */}
+                      {/* 1. Bouton Diffuser pour Mandataire sur versions en attente de diffusion */}
                       {canDiffuseVersion(version) && (
                         <Button 
                           variant="outline"

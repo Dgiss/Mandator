@@ -85,41 +85,45 @@ export const VisasTable: React.FC<VisasTableProps> = ({
 
   // Check if a document has a visa (VSO, VAO, Refusé)
   const hasVisa = (doc: Document) => {
-    const visaStatuses = ['VSO', 'VAO', 'Refusé'];
+    const visaStatuses = ['VSO', 'VAO', 'Refusé', 'BPE'];
     return visaStatuses.includes(doc.statut);
   };
 
-  // Règles d'affichage du bouton de visa selon rôle et statut
+  // Règles d'affichage du bouton de visa selon rôle (MOE UNIQUEMENT)
   const canUserViseDocument = (doc: Document) => {
     // Ajout de logs pour débugger
     console.log(`Viser button check for ${doc.nom}:`, {
       userIsMOE: isMOE(),
+      userIsMandataire: isMandataire(),
       docStatus: doc.statut,
       hasVisaDialog: !!openVisaDialog,
       hasVisa: hasVisa(doc),
       docMarcheId: doc.marche_id
     });
     
-    // MISE À JOUR: Un MOE peut viser un document diffusé, en attente de diffusion, OU en attente de visa qui n'a pas déjà un visa
+    // Un MOE peut viser UNIQUEMENT un document "Diffusé" qui n'a pas déjà un visa
     return isMOE() && 
-           (doc.statut === 'Diffusé' || doc.statut === 'En attente de diffusion' || doc.statut === 'En attente de visa') && 
+           !isMandataire() && // Priorité au rôle Mandataire si les deux existent
+           doc.statut === 'Diffusé' && 
            !!openVisaDialog && 
            !hasVisa(doc);
   };
   
-  // Règles d'affichage du bouton de diffusion selon rôle et statut
+  // Règles d'affichage du bouton de diffusion selon rôle (MANDATAIRE UNIQUEMENT)
   const canUserDiffuseDocument = (doc: Document) => {
     // Ajout de logs pour débugger
     console.log(`Diffuser button check for ${doc.nom}:`, {
+      userIsMOE: isMOE(),
       userIsMandataire: isMandataire(),
       docStatus: doc.statut,
       hasDiffusionDialog: !!openDiffusionDialog,
       docMarcheId: doc.marche_id
     });
     
-    // MISE À JOUR: Un Mandataire peut diffuser un document en brouillon OU en attente de diffusion
+    // Un Mandataire peut diffuser UNIQUEMENT un document en "En attente de diffusion"
     return isMandataire() && 
-           (doc.statut === 'Brouillon' || doc.statut === 'En attente de diffusion') && 
+           !isMOE() && // Si par erreur l'utilisateur a les deux rôles, priorité au rôle Mandataire
+           doc.statut === 'En attente de diffusion' && 
            !!openDiffusionDialog;
   };
 
@@ -194,7 +198,7 @@ export const VisasTable: React.FC<VisasTableProps> = ({
                           </button>
                         )}
                         
-                        {/* Bouton Diffuser - uniquement pour Mandataire sur brouillons */}
+                        {/* Bouton Diffuser - uniquement pour Mandataire sur documents en attente de diffusion */}
                         {showDiffuserButton && (
                           <button 
                             className="px-2 py-1 bg-purple-100 text-purple-800 rounded-md text-xs font-medium"
