@@ -35,14 +35,14 @@ const DocumentDetails: React.FC<DocumentDetailsProps> = ({ document, formatDate 
 
       // Créer un URL blob et déclencher le téléchargement
       const url = URL.createObjectURL(data);
-      const link = document.createElement('a');
+      const link = window.document.createElement('a');
       const fileName = document.file_path.split('/').pop() || `${document.nom}.pdf`;
       
       link.href = url;
       link.download = fileName;
-      document.body.appendChild(link);
+      window.document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      window.document.body.removeChild(link);
       URL.revokeObjectURL(url);
       
       toast.success("Téléchargement démarré");
