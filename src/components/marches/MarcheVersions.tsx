@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -162,9 +161,9 @@ export default function MarcheVersions({
       hasVisa: hasVisa(version)
     });
     
-    // MISE À JOUR: Pour MOE uniquement sur version "Diffusé" OU "En attente de diffusion" et qui n'a pas déjà un visa
+    // MISE À JOUR: Pour MOE uniquement sur version "Diffusé", "En attente de diffusion" ou "En attente de visa" et qui n'a pas déjà un visa
     return isMOE() && 
-           (version.statut === 'Diffusé' || version.statut === 'En attente de diffusion') && 
+           (version.statut === 'Diffusé' || version.statut === 'En attente de diffusion' || version.statut === 'En attente de visa') && 
            !hasVisa(version);
   };
   

@@ -100,9 +100,9 @@ export const VisasTable: React.FC<VisasTableProps> = ({
       docMarcheId: doc.marche_id
     });
     
-    // MISE À JOUR: Un MOE peut viser un document diffusé OU en attente de diffusion qui n'a pas déjà un visa
+    // MISE À JOUR: Un MOE peut viser un document diffusé, en attente de diffusion, OU en attente de visa qui n'a pas déjà un visa
     return isMOE() && 
-           (doc.statut === 'Diffusé' || doc.statut === 'En attente de diffusion') && 
+           (doc.statut === 'Diffusé' || doc.statut === 'En attente de diffusion' || doc.statut === 'En attente de visa') && 
            !!openVisaDialog && 
            !hasVisa(doc);
   };
