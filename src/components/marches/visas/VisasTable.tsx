@@ -100,9 +100,11 @@ export const VisasTable: React.FC<VisasTableProps> = ({
       docMarcheId: doc.marche_id
     });
     
-    // Un MOE peut viser un document diffusé qui n'a pas déjà un visa
-    // Note: isMOE() va maintenant utiliser le marcheId spécifique
-    return isMOE() && doc.statut === 'Diffusé' && !!openVisaDialog && !hasVisa(doc);
+    // MISE À JOUR: Un MOE peut viser un document diffusé OU en attente de diffusion qui n'a pas déjà un visa
+    return isMOE() && 
+           (doc.statut === 'Diffusé' || doc.statut === 'En attente de diffusion') && 
+           !!openVisaDialog && 
+           !hasVisa(doc);
   };
   
   // Règles d'affichage du bouton de diffusion selon rôle et statut
@@ -115,9 +117,10 @@ export const VisasTable: React.FC<VisasTableProps> = ({
       docMarcheId: doc.marche_id
     });
     
-    // Un Mandataire peut diffuser un document en brouillon
-    // Note: isMandataire() va maintenant utiliser le marcheId spécifique
-    return isMandataire() && doc.statut === 'Brouillon' && !!openDiffusionDialog;
+    // MISE À JOUR: Un Mandataire peut diffuser un document en brouillon OU en attente de diffusion
+    return isMandataire() && 
+           (doc.statut === 'Brouillon' || doc.statut === 'En attente de diffusion') && 
+           !!openDiffusionDialog;
   };
 
   // Helper function to convert Document from visas/types to services/types format if needed

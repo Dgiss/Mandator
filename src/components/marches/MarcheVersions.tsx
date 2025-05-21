@@ -149,9 +149,9 @@ export default function MarcheVersions({
       status: version.statut
     });
     
-    // Pour Mandataire uniquement sur version en "Brouillon"
-    // Note: isMandataire() utilise maintenant le marcheId spécifique passé au hook useUserRole
-    return isMandataire() && version.statut === 'Brouillon';
+    // MISE À JOUR: Pour Mandataire uniquement sur version en "Brouillon" OU "En attente de diffusion"
+    return isMandataire() && 
+           (version.statut === 'Brouillon' || version.statut === 'En attente de diffusion');
   };
 
   // Vérifier si la version peut être visée (pour MOE)
@@ -162,9 +162,10 @@ export default function MarcheVersions({
       hasVisa: hasVisa(version)
     });
     
-    // Pour MOE uniquement sur version "Diffusé" et qui n'a pas déjà un visa
-    // Note: isMOE() utilise maintenant le marcheId spécifique passé au hook useUserRole
-    return isMOE() && version.statut === 'Diffusé' && !hasVisa(version);
+    // MISE À JOUR: Pour MOE uniquement sur version "Diffusé" OU "En attente de diffusion" et qui n'a pas déjà un visa
+    return isMOE() && 
+           (version.statut === 'Diffusé' || version.statut === 'En attente de diffusion') && 
+           !hasVisa(version);
   };
   
   // Vérifier si la version a déjà un visa appliqué (VSO, VAO ou Refusé)
