@@ -27,6 +27,7 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
   const [viewingDocument, setViewingDocument] = useState<ProjectDocument | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { canEdit } = useUserRole(marcheId);
 
@@ -143,11 +144,15 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
     }
   };
 
-  // Récupérer les documents
+  // Récupérer les documents avec une logique de nouvelle tentative
   useEffect(() => {
     const fetchDocuments = async () => {
       setLoading(true);
+      setError(null);
+      
       try {
+        console.log(`Fetching documents for marché: ${marcheId}, attempt: ${loadAttempt}`);
+        
         const { data, error } = await supabase
           .from('documents')
           .select('*')
@@ -158,9 +163,16 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
         }
 
         if (data) {
+          console.log(`Successfully fetched ${data.length} documents`);
           setDocuments(data);
+        } else {
+          console.log('No documents found (empty data array)');
+          setDocuments([]);
         }
       } catch (error: any) {
+        console.error("Error fetching documents:", error);
+        setError(`Erreur lors de la récupération des documents: ${error.message}`);
+        
         toast({
           title: "Erreur",
           description: `Erreur lors de la récupération des documents: ${error.message}`,
@@ -171,8 +183,19 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
       }
     };
 
+    // Appeler fetchDocuments immédiatement
     fetchDocuments();
-  }, [marcheId, loadAttempt, toast]);
+    
+    // Programmer une nouvelle tentative après 5 secondes en cas d'erreur
+    const retryTimer = setTimeout(() => {
+      if (error) {
+        console.log("Retrying document fetch due to previous error...");
+        setLoadAttempt(prev => prev + 1);
+      }
+    }, 5000);
+    
+    return () => clearTimeout(retryTimer);
+  }, [marcheId, loadAttempt, toast, error]);
 
   // Filtrer les documents
   const filteredDocuments = documents.filter(doc => {
@@ -186,21 +209,53 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
     );
   });
 
+  // État pour le rechargement manuel
+  const [isReloading, setIsReloading] = useState(false);
+  
+  // Fonction pour recharger manuellement les documents
+  const handleManualReload = () => {
+    setIsReloading(true);
+    setLoadAttempt(prev => prev + 1);
+    setTimeout(() => setIsReloading(false), 1000); // Show spinner for at least 1 second
+  };
+
   return (
     <div className="w-full">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Documents du marché</h2>
-        {canEdit && (
-          <Button 
-            variant="default" 
-            onClick={openNewDocumentForm}
-            className="flex items-center gap-2"
-            aria-label="Ajouter un document"
-          >
-            <Plus size={16} />
-            Nouveau document
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {error && (
+            <Button 
+              variant="outline" 
+              onClick={handleManualReload}
+              className={`flex items-center gap-2 ${isReloading ? 'opacity-50' : ''}`}
+              disabled={isReloading}
+            >
+              {isReloading ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-gray-900"></div>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-refresh-cw">
+                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                  <path d="M21 3v5h-5"/>
+                  <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                  <path d="M3 21v-5h5"/>
+                </svg>
+              )}
+              {isReloading ? 'Chargement...' : 'Actualiser'}
+            </Button>
+          )}
+          {canEdit && (
+            <Button 
+              variant="default" 
+              onClick={openNewDocumentForm}
+              className="flex items-center gap-2"
+              aria-label="Ajouter un document"
+            >
+              <Plus size={16} />
+              Nouveau document
+            </Button>
+          )}
+        </div>
       </div>
       
       {/* Formulaire de recherche et filtres */}
@@ -215,6 +270,24 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
           />
         </div>
       </div>
+      
+      {/* Message d'erreur */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6 flex items-start">
+          <div className="flex-shrink-0 mr-3 mt-0.5">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" x2="12" y1="8" y2="12"/>
+              <line x1="12" x2="12.01" y1="16" y2="16"/>
+            </svg>
+          </div>
+          <div>
+            <p className="font-medium">Erreur de chargement</p>
+            <p className="text-sm">{error}</p>
+            <p className="text-sm mt-1">Tentative de rechargement automatique en cours...</p>
+          </div>
+        </div>
+      )}
       
       {/* Tableau des documents */}
       <Card>
