@@ -22,6 +22,7 @@ export interface Version {
 export interface Document {
   id: string;
   nom: string;
+  description?: string; // Added description property
   type?: string;
   version?: string;
   statut: 'En attente de diffusion' | 'En attente de validation' | 'En attente de visa' | 'BPE' | 'À remettre à jour' | 'Refusé' | 'Diffusé' | 'Brouillon' | 'VSO' | 'VAO' | 'Approuvé';
