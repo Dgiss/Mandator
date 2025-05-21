@@ -84,12 +84,12 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
         }
 
         const url = window.URL.createObjectURL(data);
-        const link = document.createElement('a');
+        const link = window.document.createElement('a');
         link.href = url;
         link.setAttribute('download', document.nom);
-        document.body.appendChild(link);
+        window.document.body.appendChild(link);
         link.click();
-        document.body.removeChild(link);
+        window.document.body.removeChild(link);
         URL.revokeObjectURL(url);
 
         toast({
