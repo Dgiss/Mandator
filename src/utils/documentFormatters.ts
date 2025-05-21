@@ -8,11 +8,11 @@ import { Document } from '@/services/types';
  */
 export const generateDocumentCodification = (document: Document | any): string => {
   // Récupère les composants de la codification
-  const geo = document.geographie || '---';
-  const phase = document.phase || '---';
-  const emetteur = document.emetteur || '---';
-  const typeOperation = document.numero_operation || '---';
-  const domaine = document.domaine_technique || '---';
+  const geo = document.geographie || '';
+  const phase = document.phase || '';
+  const emetteur = document.emetteur || '';
+  const typeOperation = document.numero_operation || document.type_operation || '';
+  const domaine = document.domaine_technique || '';
   
   // Formatage du numéro avec des zéros en préfixe (4 chiffres)
   let numero = '0000';
@@ -24,8 +24,11 @@ export const generateDocumentCodification = (document: Document | any): string =
   // Ajouter la version si disponible
   const version = document.version || 'A';
   
+  // Filtrer les champs vides pour éviter les tirets multiples
+  const parts = [geo, phase, emetteur, typeOperation, domaine, numero + version].filter(part => part);
+  
   // Assembler la codification complète
-  return `${geo}-${phase}-${emetteur}-${typeOperation}-${domaine}-${numero}${version}`;
+  return parts.join('-');
 };
 
 /**
@@ -33,11 +36,11 @@ export const generateDocumentCodification = (document: Document | any): string =
  * Utile pour les recherches et classifications
  */
 export const generateDocumentReference = (document: Document | any): string => {
-  const geo = document.geographie || '---';
-  const phase = document.phase || '---';
-  const emetteur = document.emetteur || '---';
-  const typeOperation = document.numero_operation || '---';
-  const domaine = document.domaine_technique || '---';
+  const geo = document.geographie || '';
+  const phase = document.phase || '';
+  const emetteur = document.emetteur || '';
+  const typeOperation = document.numero_operation || document.type_operation || '';
+  const domaine = document.domaine_technique || '';
   
   // Formatage du numéro avec des zéros en préfixe (4 chiffres)
   let numero = '0000';
@@ -45,7 +48,10 @@ export const generateDocumentReference = (document: Document | any): string => {
     numero = document.numero.toString().padStart(4, '0');
   }
   
-  return `${geo}-${phase}-${emetteur}-${typeOperation}-${domaine}-${numero}`;
+  // Filtrer les champs vides pour éviter les tirets multiples
+  const parts = [geo, phase, emetteur, typeOperation, domaine, numero].filter(part => part);
+  
+  return parts.join('-');
 };
 
 /**
