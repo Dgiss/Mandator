@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Document } from '@/services/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -14,6 +14,8 @@ interface DocumentDetailsProps {
 }
 
 const DocumentDetails: React.FC<DocumentDetailsProps> = ({ document, formatDate }) => {
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
   // Fonction pour télécharger le document
   const handleDownload = async () => {
     if (!document.file_path) {
@@ -22,14 +24,20 @@ const DocumentDetails: React.FC<DocumentDetailsProps> = ({ document, formatDate 
     }
 
     try {
+      setIsLoading(true);
+      
+      // Vérifier d'abord dans quel bucket se trouve le fichier
+      let bucketName = 'versions';
+      
       // Télécharger le fichier depuis Supabase Storage
       const { data, error } = await supabase.storage
-        .from('versions')
+        .from(bucketName)
         .download(document.file_path);
       
       if (error) {
         console.error('Erreur lors du téléchargement:', error);
         toast.error("Erreur lors du téléchargement du fichier.");
+        setIsLoading(false);
         return;
       }
 
@@ -49,6 +57,8 @@ const DocumentDetails: React.FC<DocumentDetailsProps> = ({ document, formatDate 
     } catch (error) {
       console.error('Erreur:', error);
       toast.error("Impossible de télécharger le fichier.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -60,22 +70,46 @@ const DocumentDetails: React.FC<DocumentDetailsProps> = ({ document, formatDate 
     }
 
     try {
+      setIsLoading(true);
+      console.log('Tentative de visualisation du fichier:', document.file_path);
+      
+      // Vérifier d'abord dans quel bucket se trouve le fichier
+      let bucketName = 'versions';
+      
       // Récupérer l'URL publique ou temporaire du fichier
       const { data, error } = await supabase.storage
-        .from('versions')
+        .from(bucketName)
         .createSignedUrl(document.file_path, 3600); // URL valide pendant 1 heure
       
       if (error) {
         console.error('Erreur lors de la création de l\'URL:', error);
+        
+        // Essayer de récupérer l'URL publique comme alternative
+        const publicUrlData = supabase.storage
+          .from(bucketName)
+          .getPublicUrl(document.file_path);
+          
+        if (publicUrlData && publicUrlData.data && publicUrlData.data.publicUrl) {
+          console.log('URL publique récupérée:', publicUrlData.data.publicUrl);
+          window.open(publicUrlData.data.publicUrl, '_blank');
+          setIsLoading(false);
+          return;
+        }
+        
         toast.error("Erreur lors de l'accès au fichier.");
+        setIsLoading(false);
         return;
       }
 
+      console.log('URL générée avec succès:', data.signedUrl);
+      
       // Ouvrir l'URL dans un nouvel onglet
       window.open(data.signedUrl, '_blank');
     } catch (error) {
       console.error('Erreur:', error);
       toast.error("Impossible d'ouvrir le fichier.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -219,9 +253,13 @@ const DocumentDetails: React.FC<DocumentDetailsProps> = ({ document, formatDate 
           variant="outline" 
           onClick={handleDownload}
           className="flex items-center gap-2"
-          disabled={!document.file_path}
+          disabled={!document.file_path || isLoading}
         >
-          <Download className="h-4 w-4" />
+          {isLoading ? (
+            <span className="animate-spin mr-2">⏳</span>
+          ) : (
+            <Download className="h-4 w-4" />
+          )}
           Télécharger le Document
         </Button>
         
@@ -229,9 +267,13 @@ const DocumentDetails: React.FC<DocumentDetailsProps> = ({ document, formatDate 
           variant="btpPrimary" 
           onClick={handleView}
           className="flex items-center gap-2"
-          disabled={!document.file_path}
+          disabled={!document.file_path || isLoading}
         >
-          <Eye className="h-4 w-4" />
+          {isLoading ? (
+            <span className="animate-spin mr-2">⏳</span>
+          ) : (
+            <Eye className="h-4 w-4" />
+          )}
           Visualiser le Document
         </Button>
       </div>
