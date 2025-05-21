@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
-import { FileText, Plus, Search, Filter, Download, Eye } from 'lucide-react';
+import { FileText, Plus, Search, Download, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Document as ProjectDocument } from '@/services/types';
 import { supabase } from '@/lib/supabase';
@@ -84,6 +84,7 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
           throw new Error(error.message);
         }
 
+        // Create URL and anchor element for download using window.document
         const url = window.URL.createObjectURL(data);
         const link = window.document.createElement('a');
         link.href = url;
@@ -340,7 +341,7 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
                     </TableCell>
                     <TableCell>{formatDate(document.date_diffusion || document.created_at)}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end space-x-2">
+                      <div className="flex justify-end space-x-2" onClick={(e) => e.stopPropagation()}>
                         <Button 
                           variant="ghost" 
                           size="icon" 
