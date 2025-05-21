@@ -3,10 +3,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { fetchUserProfile } from '@/services/authService';
+import { toast } from 'sonner';
 
 /**
  * Custom hook to handle authentication state with improved session management
- * and database error handling
+ * and error handling
  */
 export const useAuthState = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -19,6 +20,7 @@ export const useAuthState = () => {
   // Function to safely load user profile with error handling and retries
   const loadUserProfile = useCallback(async (userId: string) => {
     try {
+      console.log('Loading profile for user:', userId);
       setAuthError(null); // Clear previous errors
       
       if (!userId) {
@@ -41,6 +43,7 @@ export const useAuthState = () => {
         }
         
         setAuthError('Erreur lors du chargement du profil');
+        toast.error('Erreur lors du chargement du profil');
         return;
       }
       
@@ -48,6 +51,7 @@ export const useAuthState = () => {
       setRetryCount(0);
       
       if (data) {
+        console.log('Profile loaded successfully:', data);
         setProfile(data);
       } else {
         console.warn('No profile data found');
@@ -61,6 +65,7 @@ export const useAuthState = () => {
 
   // Clear all auth state
   const clearAuthState = useCallback(() => {
+    console.log('Clearing auth state');
     setSession(null);
     setUser(null);
     setProfile(null);
@@ -106,6 +111,8 @@ export const useAuthState = () => {
     // Then check current session with proper error handling
     const initializeAuthState = async () => {
       try {
+        setLoading(true);
+        console.log('Initializing auth state...');
         const { data: { session: currentSession }, error } = await supabase.auth.getSession();
         
         if (error) {
