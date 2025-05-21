@@ -146,8 +146,8 @@ export const VisasTable: React.FC<VisasTableProps> = ({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[200px]">Designation</TableHead>
-              <TableHead>Codification</TableHead>
+              <TableHead className="w-[180px]">Designation</TableHead>
+              <TableHead className="w-[240px]">Codification</TableHead>
               <TableHead>Version</TableHead>
               <TableHead>Statut</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -172,7 +172,9 @@ export const VisasTable: React.FC<VisasTableProps> = ({
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => onDocumentSelect(doc)}
                   >
-                    <TableCell className="font-medium">{doc.description || doc.nom}</TableCell>
+                    <TableCell className="font-medium truncate">
+                      {doc.description || doc.nom}
+                    </TableCell>
                     <TableCell className="font-mono text-sm">
                       {generateDocumentReference(enrichDocumentIfNeeded(doc))}
                     </TableCell>
