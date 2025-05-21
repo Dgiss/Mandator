@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Document } from '@/services/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,7 +38,7 @@ const DocumentDetails: React.FC<DocumentDetailsProps> = ({ document, formatDate 
       console.log(`Tentative de téléchargement depuis le bucket "${bucketName}" avec le chemin "${filePath}"`);
       
       // Télécharger le fichier depuis Supabase Storage
-      const { data, error } = await supabase.storage
+      let { data, error } = await supabase.storage
         .from(bucketName)
         .download(filePath);
       
@@ -111,7 +110,7 @@ const DocumentDetails: React.FC<DocumentDetailsProps> = ({ document, formatDate 
       console.log(`Tentative de visualisation depuis le bucket "${bucketName}" avec le chemin "${filePath}"`);
       
       // Récupérer l'URL publique ou temporaire du fichier
-      const { data, error } = await supabase.storage
+      let { data, error } = await supabase.storage
         .from(bucketName)
         .createSignedUrl(filePath, 3600); // URL valide pendant 1 heure
       
