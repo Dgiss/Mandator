@@ -30,7 +30,7 @@ export default function MarcheVersions({
   const [showVisaDialog, setShowVisaDialog] = useState(false);
   const { toast } = useToast();
 
-  // Utiliser notre hook pour la gestion des rôles
+  // Utiliser notre hook pour la gestion des rôles en passant le marcheId
   const {
     role,
     loading: roleLoading,
@@ -150,6 +150,7 @@ export default function MarcheVersions({
     });
     
     // Pour Mandataire uniquement sur version en "Brouillon"
+    // Note: isMandataire() utilise maintenant le marcheId spécifique passé au hook useUserRole
     return isMandataire() && version.statut === 'Brouillon';
   };
 
@@ -162,6 +163,7 @@ export default function MarcheVersions({
     });
     
     // Pour MOE uniquement sur version "Diffusé" et qui n'a pas déjà un visa
+    // Note: isMOE() utilise maintenant le marcheId spécifique passé au hook useUserRole
     return isMOE() && version.statut === 'Diffusé' && !hasVisa(version);
   };
   

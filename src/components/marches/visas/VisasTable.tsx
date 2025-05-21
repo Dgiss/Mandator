@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { 
   Table, 
@@ -33,8 +34,9 @@ export const VisasTable: React.FC<VisasTableProps> = ({
   visas = [],
   showHistoricalVisas = false
 }) => {
-  // Get user roles information
-  const { isMOE, isMandataire } = useUserRole();
+  // Get user roles information with the marcheId from the first document (if available)
+  const marcheId = documents.length > 0 && documents[0].marche_id ? documents[0].marche_id : undefined;
+  const { isMOE, isMandataire } = useUserRole(marcheId);
 
   // Helper function to get appropriate status badge styling
   const getStatusBadgeClass = (status: string) => {
@@ -94,10 +96,12 @@ export const VisasTable: React.FC<VisasTableProps> = ({
       userIsMOE: isMOE(),
       docStatus: doc.statut,
       hasVisaDialog: !!openVisaDialog,
-      hasVisa: hasVisa(doc)
+      hasVisa: hasVisa(doc),
+      docMarcheId: doc.marche_id
     });
     
     // Un MOE peut viser un document diffusé qui n'a pas déjà un visa
+    // Note: isMOE() va maintenant utiliser le marcheId spécifique
     return isMOE() && doc.statut === 'Diffusé' && !!openVisaDialog && !hasVisa(doc);
   };
   
@@ -107,10 +111,12 @@ export const VisasTable: React.FC<VisasTableProps> = ({
     console.log(`Diffuser button check for ${doc.nom}:`, {
       userIsMandataire: isMandataire(),
       docStatus: doc.statut,
-      hasDiffusionDialog: !!openDiffusionDialog
+      hasDiffusionDialog: !!openDiffusionDialog,
+      docMarcheId: doc.marche_id
     });
     
     // Un Mandataire peut diffuser un document en brouillon
+    // Note: isMandataire() va maintenant utiliser le marcheId spécifique
     return isMandataire() && doc.statut === 'Brouillon' && !!openDiffusionDialog;
   };
 
@@ -119,7 +125,7 @@ export const VisasTable: React.FC<VisasTableProps> = ({
     if (document && openDiffusionDialog && !('marche_id' in document)) {
       return {
         ...document,
-        marche_id: '',
+        marche_id: marcheId || '',
       };
     }
     return document;
