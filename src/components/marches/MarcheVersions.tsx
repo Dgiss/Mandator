@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -154,8 +153,8 @@ export default function MarcheVersions({
     });
     
     // STRICTEMENT pour Mandataire uniquement sur version en "En attente de diffusion"
+    // Si l'utilisateur a les deux rôles, nous permettons toujours cette action
     return isMandataire() &&
-           !isMOE() && // Si l'utilisateur a par erreur les deux rôles, on prioritise Mandataire
            version.statut === 'En attente de diffusion';
   };
 
@@ -168,10 +167,10 @@ export default function MarcheVersions({
       hasVisa: hasVisa(version)
     });
     
-    // STRICTEMENT pour MOE uniquement sur version "Diffusé" et qui n'a pas déjà un visa
+    // STRICTEMENT pour MOE uniquement sur versions "Diffusé" ou "En attente de visa" et qui n'ont pas déjà un visa
+    // Si l'utilisateur a les deux rôles, nous permettons toujours cette action pour le rôle MOE
     return isMOE() &&
-           !isMandataire() && // Si l'utilisateur a par erreur les deux rôles, on prioritise Mandataire
-           version.statut === 'Diffusé' &&
+           (version.statut === 'Diffusé' || version.statut === 'En attente de visa') &&
            !hasVisa(version);
   };
   
@@ -234,7 +233,7 @@ export default function MarcheVersions({
     } else if (isMOE() && !isMandataire()) {
       return "Connecté comme MOE";
     } else if (isMOE() && isMandataire()) {
-      return "Connecté avec plusieurs rôles (priorité aux actions Mandataire)";
+      return "Connecté avec plusieurs rôles (MOE et Mandataire)";
     } else {
       return "Connecté";
     }
@@ -341,7 +340,7 @@ export default function MarcheVersions({
                         </Button>
                       )}
                       
-                      {/* 2. Bouton Viser pour MOE sur versions en état Diffusé */}
+                      {/* 2. Bouton Viser pour MOE sur versions en état Diffusé ou En attente de visa */}
                       {canVisaVersion(version) && (
                         <Button 
                           variant="btpPrimary"

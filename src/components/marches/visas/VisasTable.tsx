@@ -83,7 +83,7 @@ export const VisasTable: React.FC<VisasTableProps> = ({
     }
   };
 
-  // Check if a document has a visa (VSO, VAO, Refusé)
+  // Check if a document has a visa (VSO, VAO, Refusé, BPE)
   const hasVisa = (doc: Document) => {
     const visaStatuses = ['VSO', 'VAO', 'Refusé', 'BPE'];
     return visaStatuses.includes(doc.statut);
@@ -91,7 +91,7 @@ export const VisasTable: React.FC<VisasTableProps> = ({
 
   // Règles d'affichage du bouton de visa selon rôle (MOE UNIQUEMENT)
   const canUserViseDocument = (doc: Document) => {
-    // Ajout de logs pour débugger
+    // Ajouter plus de logs pour déboguer
     console.log(`Viser button check for ${doc.nom}:`, {
       userIsMOE: isMOE(),
       userIsMandataire: isMandataire(),
@@ -101,17 +101,17 @@ export const VisasTable: React.FC<VisasTableProps> = ({
       docMarcheId: doc.marche_id
     });
     
-    // Un MOE peut viser UNIQUEMENT un document "Diffusé" qui n'a pas déjà un visa
+    // Un MOE peut viser UNIQUEMENT un document "Diffusé" ou "En attente de visa" qui n'a pas déjà un visa
+    // Si l'utilisateur a les deux rôles, on prioritise le rôle de MOE pour cette action
     return isMOE() && 
-           !isMandataire() && // Priorité au rôle Mandataire si les deux existent
-           doc.statut === 'Diffusé' && 
+           (doc.statut === 'Diffusé' || doc.statut === 'En attente de visa') && 
            !!openVisaDialog && 
            !hasVisa(doc);
   };
   
   // Règles d'affichage du bouton de diffusion selon rôle (MANDATAIRE UNIQUEMENT)
   const canUserDiffuseDocument = (doc: Document) => {
-    // Ajout de logs pour débugger
+    // Ajouter plus de logs pour déboguer
     console.log(`Diffuser button check for ${doc.nom}:`, {
       userIsMOE: isMOE(),
       userIsMandataire: isMandataire(),
@@ -121,8 +121,8 @@ export const VisasTable: React.FC<VisasTableProps> = ({
     });
     
     // Un Mandataire peut diffuser UNIQUEMENT un document en "En attente de diffusion"
+    // Si l'utilisateur a les deux rôles, nous ne permettons pas cette action pour éviter les confusions
     return isMandataire() && 
-           !isMOE() && // Si par erreur l'utilisateur a les deux rôles, priorité au rôle Mandataire
            doc.statut === 'En attente de diffusion' && 
            !!openDiffusionDialog;
   };
