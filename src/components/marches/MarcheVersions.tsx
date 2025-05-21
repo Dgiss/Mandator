@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,6 +15,7 @@ import { fr } from 'date-fns/locale';
 import MarcheDiffusionDialog from './MarcheDiffusionDialog';
 import MarcheVisaDialog from './MarcheVisaDialog';
 import { useUserRole } from '@/hooks/useUserRole';
+import { generateDocumentReference } from '@/utils/documentFormatters';
 
 interface MarcheVersionsProps {
   marcheId: string;
@@ -284,7 +284,15 @@ export default function MarcheVersions({
                   <TableCell>
                     <div className="flex items-center">
                       <FileText className="h-5 w-5 text-gray-500 mr-2" />
-                      <span className="font-medium">{getDocumentName(version)}</span>
+                      <span className="font-medium">{
+                        version.documents && 
+                        typeof version.documents === 'object' && 
+                        version.documents !== null && 
+                        'description' in version.documents && 
+                        version.documents.description ? 
+                        version.documents.description : 
+                        getDocumentName(version)
+                      }</span>
                     </div>
                     {version.commentaire && (
                       <div className="text-sm text-gray-500 mt-1 line-clamp-1">

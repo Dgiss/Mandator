@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +13,7 @@ import MarcheDocumentForm from './MarcheDocumentForm';
 import DocumentViewer from './documents/DocumentViewer';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/userRole';
-import { generateDocumentCodification } from '@/utils/documentFormatters';
+import { generateDocumentReference } from '@/utils/documentFormatters';
 
 interface MarcheDocumentsProps {
   marcheId: string;
@@ -212,9 +211,9 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
   // Filtrer les documents
   const filteredDocuments = documents.filter(doc => {
     const searchLower = searchTerm.toLowerCase();
-    const codification = generateDocumentCodification(doc);
+    const codification = generateDocumentReference(doc);
     return (
-      doc.nom.toLowerCase().includes(searchLower) ||
+      doc.description || doc.nom.toLowerCase().includes(searchLower) ||
       (doc.description && doc.description.toLowerCase().includes(searchLower)) ||
       (doc.type && doc.type.toLowerCase().includes(searchLower)) ||
       codification.toLowerCase().includes(searchLower)
@@ -337,11 +336,10 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
                 filteredDocuments.map(document => (
                   <TableRow key={document.id} className="cursor-pointer hover:bg-gray-50" onClick={() => viewDocument(document)}>
                     <TableCell>
-                      <div className="font-medium">{document.nom}</div>
-                      <div className="text-sm text-gray-500 truncate">{document.description || ''}</div>
+                      <div className="font-medium">{document.description || document.nom}</div>
                     </TableCell>
                     <TableCell className="font-mono text-sm">
-                      {generateDocumentCodification(document)}
+                      {generateDocumentReference(document)}
                     </TableCell>
                     <TableCell>{document.version || '—'}</TableCell>
                     <TableCell>

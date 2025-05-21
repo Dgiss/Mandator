@@ -13,7 +13,7 @@ import { useUserRole } from '@/hooks/userRole';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { generateDocumentCodification } from '@/utils/documentFormatters';
+import { generateDocumentReference } from '@/utils/documentFormatters';
 
 interface VisasTableProps {
   documents: Document[];
@@ -172,9 +172,9 @@ export const VisasTable: React.FC<VisasTableProps> = ({
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => onDocumentSelect(doc)}
                   >
-                    <TableCell className="font-medium">{doc.nom}</TableCell>
+                    <TableCell className="font-medium">{doc.description || doc.nom}</TableCell>
                     <TableCell className="font-mono text-sm">
-                      {generateDocumentCodification(enrichDocumentIfNeeded(doc))}
+                      {generateDocumentReference(enrichDocumentIfNeeded(doc))}
                     </TableCell>
                     <TableCell>
                       {latestVersion ? latestVersion.version : 'N/A'}
