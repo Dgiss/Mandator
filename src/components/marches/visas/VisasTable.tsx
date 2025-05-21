@@ -42,13 +42,16 @@ export const VisasTable: React.FC<VisasTableProps> = ({
     switch (status) {
       case 'BPE':
       case 'Approuvé':
+      case 'VSO':
+      case 'VAO':
         return 'bg-green-100 text-green-800';
       case 'En attente de validation':
       case 'En attente de visa':
         return 'bg-amber-100 text-amber-800';
       case 'En attente de diffusion':
+      case 'Diffusé':
         return 'bg-blue-100 text-blue-800';
-      case 'À remettre à jour':
+      case 'Brouillon':
         return 'bg-purple-100 text-purple-800';
       case 'Rejeté':
       case 'Refusé':
@@ -79,21 +82,43 @@ export const VisasTable: React.FC<VisasTableProps> = ({
     }
   };
 
-  // Debug function to check conditions for displaying the "Viser" button
+  // Check if a document has a visa (VSO, VAO, Refusé)
+  const hasVisa = (doc: Document) => {
+    const visaStatuses = ['VSO', 'VAO', 'Refusé'];
+    return visaStatuses.includes(doc.statut);
+  };
+
+  // Règles d'affichage du bouton de visa selon rôle et statut
   const canUserViseDocument = (doc: Document) => {
-    const userIsMandataire = isMandataire();
-    const hasCorrectStatus = doc.statut === 'En attente de visa';
+    // Le bouton de visa n'est affiché que pour les utilisateurs MOE et seulement
+    // pour les documents avec un statut "Diffusé"
+    const userIsMOE = isMOE();
+    const hasCorrectStatus = doc.statut === 'Diffusé';
     const hasVisaDialog = !!openVisaDialog;
+    const documentHasNoVisa = !hasVisa(doc);
     
     console.log(`Viser button conditions for ${doc.nom}:`, {
-      userIsMandataire,
+      userIsMOE,
       docStatus: doc.statut,
       hasCorrectStatus,
-      hasVisaDialog
+      hasVisaDialog,
+      documentHasNoVisa
     });
     
-    // Corrected condition: user is mandataire and document status is "En attente de visa"
-    return userIsMandataire && hasCorrectStatus && hasVisaDialog;
+    // Un MOE peut viser un document diffusé qui n'a pas déjà un visa
+    return userIsMOE && hasCorrectStatus && hasVisaDialog && documentHasNoVisa;
+  };
+  
+  // Règles d'affichage du bouton de diffusion selon rôle et statut
+  const canUserDiffuseDocument = (doc: Document) => {
+    // Le bouton de diffusion n'est affiché que pour les utilisateurs Mandataire et seulement
+    // pour les documents avec un statut "Brouillon"
+    const userIsMandataire = isMandataire();
+    const hasCorrectStatus = doc.statut === 'Brouillon';
+    const hasDiffusionDialog = !!openDiffusionDialog;
+    
+    // Un Mandataire peut diffuser un document en brouillon
+    return userIsMandataire && hasCorrectStatus && hasDiffusionDialog;
   };
 
   // Helper function to convert Document from visas/types to services/types format if needed
@@ -134,6 +159,7 @@ export const VisasTable: React.FC<VisasTableProps> = ({
               documents.map((doc) => {
                 const latestVersion = doc.version ? { version: doc.version, statut: doc.statut } : null;
                 const showViserButton = canUserViseDocument(doc);
+                const showDiffuserButton = canUserDiffuseDocument(doc);
                 
                 return (
                   <TableRow 
@@ -154,17 +180,33 @@ export const VisasTable: React.FC<VisasTableProps> = ({
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      {showViserButton && (
-                        <button 
-                          className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs font-medium"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (latestVersion && openVisaDialog) openVisaDialog(doc, latestVersion as Version);
-                          }}
-                        >
-                          Viser
-                        </button>
-                      )}
+                      <div className="flex justify-end space-x-2">
+                        {/* Bouton Viser - uniquement pour MOE sur documents diffusés */}
+                        {showViserButton && (
+                          <button 
+                            className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs font-medium"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (latestVersion && openVisaDialog) openVisaDialog(doc, latestVersion as Version);
+                            }}
+                          >
+                            Viser
+                          </button>
+                        )}
+                        
+                        {/* Bouton Diffuser - uniquement pour Mandataire sur brouillons */}
+                        {showDiffuserButton && (
+                          <button 
+                            className="px-2 py-1 bg-purple-100 text-purple-800 rounded-md text-xs font-medium"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (latestVersion && openDiffusionDialog) openDiffusionDialog(doc, latestVersion as Version);
+                            }}
+                          >
+                            Diffuser
+                          </button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 );

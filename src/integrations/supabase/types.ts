@@ -113,11 +113,11 @@ export type Database = {
           marche_id: string
           nom: string
           numero: string | null
-          numero_operation: string | null
           phase: string | null
           statut: string
           taille: string | null
           type: string
+          type_operation: string | null
           version: string
         }
         Insert: {
@@ -137,11 +137,11 @@ export type Database = {
           marche_id: string
           nom: string
           numero?: string | null
-          numero_operation?: string | null
           phase?: string | null
           statut?: string
           taille?: string | null
           type: string
+          type_operation?: string | null
           version: string
         }
         Update: {
@@ -161,11 +161,11 @@ export type Database = {
           marche_id?: string
           nom?: string
           numero?: string | null
-          numero_operation?: string | null
           phase?: string | null
           statut?: string
           taille?: string | null
           type?: string
+          type_operation?: string | null
           version?: string
         }
         Relationships: []
@@ -956,11 +956,11 @@ export type Database = {
           marche_id: string
           nom: string
           numero: string | null
-          numero_operation: string | null
           phase: string | null
           statut: string
           taille: string | null
           type: string
+          type_operation: string | null
           version: string
         }[]
       }

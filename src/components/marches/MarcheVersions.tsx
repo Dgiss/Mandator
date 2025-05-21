@@ -101,13 +101,19 @@ export default function MarcheVersions({
   const getStatusBadgeVariant = (statut: string) => {
     switch (statut) {
       case 'Approuvé':
+      case 'VSO':
+      case 'VAO':
         return "bg-green-100 text-green-800 hover:bg-green-200";
       case 'Rejeté':
+      case 'Refusé':
         return "bg-red-100 text-red-800 hover:bg-red-200";
       case 'En attente de visa':
         return "bg-blue-100 text-blue-800 hover:bg-blue-200";
       case 'En attente de diffusion':
+      case 'Diffusé':
         return "bg-yellow-100 text-yellow-800 hover:bg-yellow-200";
+      case 'Brouillon':
+        return "bg-purple-100 text-purple-800 hover:bg-purple-200";
       default:
         return "bg-gray-100 text-gray-800 hover:bg-gray-200";
     }
@@ -136,17 +142,22 @@ export default function MarcheVersions({
     return "Document sans nom";
   };
 
-  // Vérifier si la version peut être diffusée (pour MOE)
+  // Vérifier si la version peut être diffusée (pour MANDATAIRE)
   const canDiffuseVersion = (version: Version): boolean => {
-    return isMOE() && 
-      (version.statut === 'En attente de diffusion' || 
-       !version.statut || 
-       version.statut === 'Version créée');
+    // Pour Mandataire uniquement sur version en "Brouillon"
+    return isMandataire() && version.statut === 'Brouillon';
   };
 
-  // Vérifier si la version peut être visée (pour MANDATAIRE)
+  // Vérifier si la version peut être visée (pour MOE)
   const canVisaVersion = (version: Version): boolean => {
-    return isMandataire() && version.statut === 'En attente de visa';
+    // Pour MOE uniquement sur version "Diffusé"
+    return isMOE() && version.statut === 'Diffusé';
+  };
+  
+  // Vérifier si la version a déjà un visa appliqué (VSO, VAO ou Refusé)
+  const hasVisa = (version: Version): boolean => {
+    const visaStatuses = ['VSO', 'VAO', 'Refusé'];
+    return visaStatuses.includes(version.statut || '');
   };
 
   // Handler pour ouvrir la boîte de dialogue de diffusion
@@ -247,15 +258,13 @@ export default function MarcheVersions({
                   <TableCell className="hidden md:table-cell">{version.cree_par}</TableCell>
                   <TableCell>
                     <Badge className={`font-normal ${getStatusBadgeVariant(version.statut || '')}`}>
-                      {version.statut || 'En attente de diffusion'}
+                      {version.statut || 'Brouillon'}
                     </Badge>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{formatDate(version.date_creation)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end space-x-1">
-                      {/* Affichage conditionnel des boutons d'actions en fonction du rôle */}
-                      
-                      {/* Bouton pour voir les pièces jointes */}
+                      {/* Boutons de base toujours affichés */}
                       {version.attachments && version.attachments.length > 0 && (
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                           <Paperclip className="h-4 w-4" />
@@ -263,13 +272,11 @@ export default function MarcheVersions({
                         </Button>
                       )}
                       
-                      {/* Bouton pour voir le document */}
                       <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                         <Eye className="h-4 w-4" />
                         <span className="sr-only">Voir</span>
                       </Button>
                       
-                      {/* Bouton pour télécharger le document */}
                       <Button 
                         variant="ghost" 
                         size="sm" 
@@ -281,7 +288,8 @@ export default function MarcheVersions({
                         <span className="sr-only">Télécharger</span>
                       </Button>
                       
-                      {/* Bouton Diffuser - uniquement pour MOE et versions non diffusées */}
+                      {/* Affichage conditionnel des boutons d'action selon rôle et statut */}
+                      {/* 1. Bouton Diffuser pour Mandataire sur versions en Brouillon */}
                       {canDiffuseVersion(version) && (
                         <Button 
                           variant="outline"
@@ -293,8 +301,8 @@ export default function MarcheVersions({
                         </Button>
                       )}
                       
-                      {/* Bouton Viser - uniquement pour MANDATAIRE et versions en attente de visa */}
-                      {canVisaVersion(version) && (
+                      {/* 2. Bouton Viser pour MOE sur versions en état Diffusé */}
+                      {canVisaVersion(version) && !hasVisa(version) && (
                         <Button 
                           variant="btpPrimary"
                           size="sm"
