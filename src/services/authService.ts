@@ -1,10 +1,50 @@
 
 import { supabase } from '@/lib/supabase';
 import { UserProfileData } from '@/types/auth';
+import { toast } from 'sonner';
+
+/**
+ * Maximum number of retry attempts for auth operations
+ */
+const MAX_RETRY_ATTEMPTS = 3;
+
+/**
+ * Delay between retry attempts (in ms)
+ */
+const RETRY_DELAY = 1000;
+
+/**
+ * Helper function to implement retry logic for auth operations
+ */
+const withRetry = async (operation: () => Promise<any>, retries = MAX_RETRY_ATTEMPTS) => {
+  try {
+    return await operation();
+  } catch (error: any) {
+    console.error("Auth operation error:", error);
+    
+    // Check if error is retryable and we have retries left
+    if (
+      retries > 0 && 
+      (error.name === "AuthRetryableFetchError" || 
+       error.message?.includes("network") || 
+       error.status === 503 || 
+       error.status === 429)
+    ) {
+      console.log(`Retrying auth operation. Attempts remaining: ${retries-1}`);
+      
+      // Wait for delay and retry
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+      return withRetry(operation, retries - 1);
+    }
+    
+    // If not retryable or out of retries, rethrow
+    throw error;
+  }
+};
 
 /**
  * Connexion avec email et mot de passe
- * Amélioration de la gestion des erreurs
+ * Amélioration de la gestion des erreurs avec mécanisme de retry
  * @param email Email de l'utilisateur
  * @param password Mot de passe
  * @returns Le résultat de la connexion
@@ -12,9 +52,12 @@ import { UserProfileData } from '@/types/auth';
 export const signInWithEmail = async (email: string, password: string) => {
   try {
     console.log("Attempting to sign in with email:", email);
-    const { data, error } = await supabase.auth.signInWithPassword({ 
-      email, 
-      password 
+    
+    const { data, error } = await withRetry(async () => {
+      return await supabase.auth.signInWithPassword({ 
+        email, 
+        password 
+      });
     });
     
     if (error) {
@@ -26,13 +69,27 @@ export const signInWithEmail = async (email: string, password: string) => {
     return { data };
   } catch (err) {
     console.error("Exception in signInWithEmail:", err);
-    return { error: err };
+    
+    // Improve error message for better user experience
+    let userMessage = "Erreur de connexion. Veuillez réessayer.";
+    
+    if (err instanceof Error) {
+      if (err.name === "AuthRetryableFetchError" || 
+          err.message?.includes("network") ||
+          err.message?.includes("timeout")) {
+        userMessage = "Problème de connexion au serveur d'authentification. Vérifiez votre connexion internet et réessayez.";
+      } else if (err.message?.includes("credentials")) {
+        userMessage = "Email ou mot de passe incorrect.";
+      }
+    }
+    
+    return { error: { message: userMessage, originalError: err } };
   }
 };
 
 /**
  * Inscription avec email, mot de passe et données utilisateur
- * Version améliorée avec gestion des erreurs pour le problème de confirmation d'email
+ * Version améliorée avec gestion des erreurs et retry
  * @param email Email de l'utilisateur
  * @param password Mot de passe
  * @param userData Données supplémentaires (nom, prénom, etc.)
@@ -46,17 +103,18 @@ export const signUpWithEmail = async (
   try {
     console.log("Attempting to sign up with email:", email);
     
-    // 1. Inscription de l'utilisateur
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          ...userData,
-          role_global: 'STANDARD' // Par défaut, tous les nouveaux utilisateurs sont standard
-        },
-        emailRedirectTo: `${window.location.origin}/auth`
-      }
+    const { data, error } = await withRetry(async () => {
+      return await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            ...userData,
+            role_global: 'STANDARD' // Par défaut, tous les nouveaux utilisateurs sont standard
+          },
+          emailRedirectTo: `${window.location.origin}/auth`
+        }
+      });
     });
     
     if (error) {
@@ -74,7 +132,21 @@ export const signUpWithEmail = async (
     return { data };
   } catch (err) {
     console.error("Exception in signUpWithEmail:", err);
-    return { error: err };
+    
+    // Improve error message for better user experience
+    let userMessage = "Erreur lors de l'inscription. Veuillez réessayer.";
+    
+    if (err instanceof Error) {
+      if (err.name === "AuthRetryableFetchError" || 
+          err.message?.includes("network") ||
+          err.message?.includes("timeout")) {
+        userMessage = "Problème de connexion au serveur d'authentification. Vérifiez votre connexion internet et réessayez.";
+      } else if (err.message?.includes("User already registered")) {
+        userMessage = "Cet email est déjà utilisé. Veuillez vous connecter ou utiliser un autre email.";
+      }
+    }
+    
+    return { error: { message: userMessage, originalError: err } };
   }
 };
 
@@ -85,7 +157,10 @@ export const signUpWithEmail = async (
 export const signOutUser = async () => {
   try {
     console.log("Attempting to sign out");
-    const { error } = await supabase.auth.signOut();
+    
+    const { error } = await withRetry(async () => {
+      return await supabase.auth.signOut();
+    });
     
     if (error) {
       console.error("Error during sign out:", error);
@@ -96,6 +171,7 @@ export const signOutUser = async () => {
     return { error: null, success: true };
   } catch (err) {
     console.error("Exception in signOutUser:", err);
+    toast.error("Erreur lors de la déconnexion. Veuillez réessayer.");
     return { error: err };
   }
 };
@@ -111,10 +187,12 @@ export const updateUserProfile = async (userId: string, data: UserProfileData) =
     console.log(`Updating profile for user ${userId}:`, data);
     
     // Mettre à jour le profil dans la base de données
-    const { error } = await supabase
-      .from('profiles')
-      .update(data)
-      .eq('id', userId);
+    const { error } = await withRetry(async () => {
+      return await supabase
+        .from('profiles')
+        .update(data)
+        .eq('id', userId);
+    });
     
     if (error) {
       console.error("Error updating profile:", error);
@@ -139,11 +217,13 @@ export const fetchUserProfile = async (userId: string) => {
     console.log(`Fetching profile for user ${userId}`);
     
     // Récupérer le profil de l'utilisateur dans la base de données
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle(); // Utilisation de maybeSingle pour éviter les erreurs quand aucun résultat n'est trouvé
+    const { data, error } = await withRetry(async () => {
+      return await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+    });
     
     if (error) {
       console.error("Error fetching profile:", error);
@@ -155,5 +235,18 @@ export const fetchUserProfile = async (userId: string) => {
   } catch (err) {
     console.error("Exception in fetchUserProfile:", err);
     return { error: err };
+  }
+};
+
+// Add a health check function to verify Supabase connectivity
+export const checkSupabaseConnection = async () => {
+  try {
+    // Try to access a public endpoint that doesn't require auth
+    const { error } = await supabase.from('profiles').select('count').limit(1);
+    
+    return { isConnected: !error, error };
+  } catch (err) {
+    console.error("Supabase connectivity issue:", err);
+    return { isConnected: false, error: err };
   }
 };

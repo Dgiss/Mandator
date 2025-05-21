@@ -9,6 +9,7 @@ export interface AuthContextType {
   loading: boolean;
   loginInProgress?: boolean;
   authError?: string | null;
+  connectionStatus?: 'unknown' | 'connected' | 'disconnected';
   signIn: (email: string, password: string) => Promise<{ error: any | null; data?: any }>;
   signUp: (
     email: string, 

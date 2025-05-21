@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, Mail, Key, User, Building, Loader2, AlertCircle } from 'lucide-react';
+import { FileText, Mail, Key, User, Building, Loader2, AlertCircle, WifiOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { validateField } from '@/hooks/form/validation';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+
 export default function AuthPage() {
   const navigate = useNavigate();
   const {
@@ -18,7 +19,8 @@ export default function AuthPage() {
     signIn,
     signUp,
     loginInProgress,
-    authError
+    authError,
+    connectionStatus
   } = useAuth();
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -31,8 +33,6 @@ export default function AuthPage() {
   const [registerLoading, setRegisterLoading] = useState(false);
   const [error, setError] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
-  
-  // Suppression de la variable creatingUsers qui n'est plus nécessaire
   
   useEffect(() => {
     // Si l'utilisateur est connecté, rediriger vers la page d'accueil
@@ -47,6 +47,7 @@ export default function AuthPage() {
       setError(authError);
     }
   }, [authError]);
+
   const validateEmailField = (email: string) => {
     const emailValidation = validateField('email', email, {
       required: true,
@@ -55,6 +56,7 @@ export default function AuthPage() {
     });
     return emailValidation;
   };
+
   const validatePasswordField = (password: string) => {
     return validateField('password', password, {
       required: true,
@@ -62,6 +64,7 @@ export default function AuthPage() {
       errorMessage: "Le mot de passe doit contenir au moins 6 caractères"
     });
   };
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
@@ -80,6 +83,7 @@ export default function AuthPage() {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -99,6 +103,7 @@ export default function AuthPage() {
       setError(error.message || "Une erreur est survenue lors de la connexion");
     }
   };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -126,8 +131,6 @@ export default function AuthPage() {
     }
   };
 
-  // Suppression de la fonction handleSetupTestUsers qui n'est plus nécessaire
-
   // Si l'utilisateur est en cours de chargement, afficher un indicateur de chargement
   if (loading) {
     return <div className="flex justify-center items-center min-h-screen">
@@ -137,6 +140,7 @@ export default function AuthPage() {
         </div>
       </div>;
   }
+
   return <div className="flex flex-col min-h-screen">
       <header className="bg-white shadow-sm py-4 px-6">
         <div className="container mx-auto flex items-center">
@@ -168,6 +172,16 @@ export default function AuthPage() {
                 Connectez-vous pour accéder à votre espace personnel
               </p>
             </div>
+            
+            {/* Show connectivity warning if there are issues */}
+            {connectionStatus === 'disconnected' && (
+              <Alert variant="destructive" className="mb-6">
+                <WifiOff className="h-4 w-4" />
+                <AlertDescription>
+                  Problème de connexion au serveur. Certaines fonctionnalités pourraient être indisponibles.
+                </AlertDescription>
+              </Alert>
+            )}
             
             <Tabs defaultValue="login" className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-6">
@@ -211,15 +225,12 @@ export default function AuthPage() {
                           </a>
                         </div>
                       </div>
-                      <Button type="submit" className="w-full mt-6 bg-btp-blue hover:bg-btp-navy" variant="btpPrimary" disabled={loginInProgress}>
+                      <Button type="submit" className="w-full mt-6 bg-btp-blue hover:bg-btp-navy" variant="btpPrimary" disabled={loginInProgress || connectionStatus === 'disconnected'}>
                         {loginInProgress ? <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             Connexion en cours...
                           </> : "Se connecter"}
                       </Button>
-                      
-                      {/* Section supprimée: comptes test et bouton créer utilisateurs */}
-                      
                     </form>
                   </CardContent>
                 </Card>
@@ -283,7 +294,7 @@ export default function AuthPage() {
                           {errors.passwordConfirm && <p className="text-red-500 text-xs mt-1">{errors.passwordConfirm}</p>}
                         </div>
                       </div>
-                      <Button type="submit" className="w-full mt-6 bg-btp-blue hover:bg-btp-navy" variant="btpPrimary" disabled={registerLoading}>
+                      <Button type="submit" className="w-full mt-6 bg-btp-blue hover:bg-btp-navy" variant="btpPrimary" disabled={registerLoading || connectionStatus === 'disconnected'}>
                         {registerLoading ? <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             Inscription en cours...

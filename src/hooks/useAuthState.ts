@@ -16,6 +16,7 @@ export const useAuthState = () => {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [initializationAttempts, setInitializationAttempts] = useState(0);
 
   // Function to safely load user profile with error handling and retries
   const loadUserProfile = useCallback(async (userId: string) => {
@@ -34,7 +35,7 @@ export const useAuthState = () => {
         console.error('Error loading profile:', error);
         
         // Si l'erreur concerne une base de données, nous réessayons
-        if (error.message && error.message.includes("Database error") && retryCount < 3) {
+        if (error.message?.includes("Database error") && retryCount < 3) {
           console.log(`Database error detected, retrying (${retryCount + 1}/3)...`);
           setRetryCount(prev => prev + 1);
           // Attendre avant de réessayer
@@ -104,6 +105,7 @@ export const useAuthState = () => {
   useEffect(() => {
     console.log('Setting up auth state listener...');
     let didCancel = false;
+    let retryTimeout: ReturnType<typeof setTimeout> | null = null;
     
     // Setup auth state change listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
@@ -118,6 +120,14 @@ export const useAuthState = () => {
         if (error) {
           console.error('Error getting session:', error);
           setAuthError(error.message);
+          
+          // If we haven't exceeded max attempts, retry initialization
+          if (initializationAttempts < 3) {
+            console.log(`Auth initialization failed, retrying (${initializationAttempts + 1}/3)...`);
+            setInitializationAttempts(prev => prev + 1);
+            retryTimeout = setTimeout(initializeAuthState, 1000);
+            return;
+          }
         }
         
         if (!didCancel) {
@@ -130,12 +140,21 @@ export const useAuthState = () => {
           }
           
           setLoading(false);
+          // Reset initialization attempts counter on success
+          setInitializationAttempts(0);
         }
       } catch (err) {
         console.error('Exception in auth initialization:', err);
         if (!didCancel) {
           setAuthError('Erreur lors de l\'initialisation de l\'authentification');
           setLoading(false);
+          
+          // If we haven't exceeded max attempts, retry initialization
+          if (initializationAttempts < 3) {
+            console.log(`Auth initialization failed, retrying (${initializationAttempts + 1}/3)...`);
+            setInitializationAttempts(prev => prev + 1);
+            retryTimeout = setTimeout(initializeAuthState, 1000);
+          }
         }
       }
     };
@@ -146,9 +165,10 @@ export const useAuthState = () => {
     return () => {
       console.log('Cleaning up auth state listener');
       didCancel = true;
+      if (retryTimeout) clearTimeout(retryTimeout);
       subscription?.unsubscribe();
     };
-  }, [handleAuthStateChange, loadUserProfile]);
+  }, [handleAuthStateChange, loadUserProfile, initializationAttempts]);
 
   return { 
     session, 

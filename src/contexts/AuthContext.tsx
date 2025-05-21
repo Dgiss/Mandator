@@ -1,12 +1,13 @@
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AuthContextType } from '@/types/auth';
 import { useAuthState } from '@/hooks/useAuthState';
 import { 
   signInWithEmail, 
   signUpWithEmail, 
   signOutUser, 
-  updateUserProfile
+  updateUserProfile,
+  checkSupabaseConnection
 } from '@/services/authService';
 import { toast } from 'sonner';
 
@@ -16,10 +17,38 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { session, user, profile, loading, authError, setProfile, refreshProfile } = useAuthState();
   const [loginInProgress, setLoginInProgress] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'connected' | 'disconnected'>('unknown');
 
-  // Sign in function with improved error handling
+  // Check Supabase connectivity once on component mount
+  useEffect(() => {
+    const checkConnection = async () => {
+      const { isConnected } = await checkSupabaseConnection();
+      setConnectionStatus(isConnected ? 'connected' : 'disconnected');
+      
+      // Show toast if connection issues are detected
+      if (!isConnected) {
+        toast.error(
+          "Problème de connexion au serveur. Certaines fonctionnalités pourraient être indisponibles.", 
+          { duration: 5000 }
+        );
+      }
+    };
+    
+    checkConnection();
+  }, []);
+
+  // Sign in function with improved error handling and connectivity check
   const signIn = async (email: string, password: string) => {
     try {
+      // Check connection status before attempting login
+      if (connectionStatus === 'disconnected') {
+        const { isConnected } = await checkSupabaseConnection();
+        if (!isConnected) {
+          toast.error("Impossible de se connecter au serveur. Vérifiez votre connexion internet.");
+          return { error: { message: "Impossible de se connecter au serveur" } };
+        }
+      }
+      
       setLoginInProgress(true);
       console.log("Starting sign-in process for:", email);
       
@@ -52,6 +81,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     userData?: { nom?: string; prenom?: string; entreprise?: string; email?: string }
   ) => {
     try {
+      // Check connection status before attempting signup
+      if (connectionStatus === 'disconnected') {
+        const { isConnected } = await checkSupabaseConnection();
+        if (!isConnected) {
+          toast.error("Impossible de se connecter au serveur. Vérifiez votre connexion internet.");
+          return { error: { message: "Impossible de se connecter au serveur" } };
+        }
+      }
+      
       setLoginInProgress(true);
       console.log("Starting sign-up process for:", email);
       
@@ -84,7 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Sign out function with improved state cleanup
+  // Sign out function with improved state cleanup and error handling
   const signOut = async () => {
     try {
       console.log("Starting sign-out process");
@@ -109,7 +147,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Update profile function
+  // Update profile function with improved error handling
   const updateProfile = async (data: { 
     nom?: string; prenom?: string; entreprise?: string; email?: string 
   }) => {
@@ -148,7 +186,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signUp, 
         signOut, 
         updateProfile,
-        refreshProfile
+        refreshProfile,
+        connectionStatus
       }}
     >
       {children}
