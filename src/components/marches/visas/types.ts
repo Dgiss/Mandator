@@ -16,7 +16,7 @@ export interface Visa {
 export interface Version {
   id?: string;
   version: string;
-  statut: 'En attente de diffusion' | 'En attente de validation' | 'En attente de visa' | 'BPE' | 'À remettre à jour' | 'Refusé';
+  statut: 'En attente de diffusion' | 'En attente de validation' | 'En attente de visa' | 'BPE' | 'À remettre à jour' | 'Refusé' | 'Diffusé' | 'Brouillon' | 'VSO' | 'VAO' | 'Approuvé';
 }
 
 export interface Document {
@@ -24,7 +24,7 @@ export interface Document {
   nom: string;
   type?: string;
   version?: string;
-  statut: 'En attente de diffusion' | 'En attente de validation' | 'En attente de visa' | 'BPE' | 'À remettre à jour' | 'Refusé';
+  statut: 'En attente de diffusion' | 'En attente de validation' | 'En attente de visa' | 'BPE' | 'À remettre à jour' | 'Refusé' | 'Diffusé' | 'Brouillon' | 'VSO' | 'VAO' | 'Approuvé';
   latestVersion?: Version | null;
   currentVersionId?: string;
   marche_id?: string; // Adding this to make it more compatible with the Document type from services
