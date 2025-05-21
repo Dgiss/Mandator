@@ -466,18 +466,20 @@ export const versionsService = {
 
       if (docUpdateError) throw docUpdateError;
 
-      // Si c'est un VAO, créer automatiquement une nouvelle version (lettre suivante)
-      if (nouveauStatut === 'À remettre à jour') {
+      // Si c'est un rejet ou un VAO, créer automatiquement une nouvelle version (lettre suivante)
+      if (decision === 'rejete' || commentaire.includes('VAO:')) {
         // Obtenir la prochaine lettre de version
         const nextLetter = await this.getNextVersionLetter(versionData.document_id);
+        
+        console.log(`Création automatique de la version ${nextLetter} suite à un ${decision === 'rejete' ? 'refus' : 'VAO'}`);
         
         // Créer une nouvelle version en attente de diffusion
         await this.addVersion({
           document_id: versionData.document_id,
           marche_id: versionData.marche_id,
           version: nextLetter,
-          cree_par: "Système", // À remplacer par l'utilisateur réel
-          commentaire: `Nouvelle version suite à VAO de la version ${versionData.version}`,
+          cree_par: "Système (suite à " + (commentaire.includes('VAO:') ? "VAO" : "refus") + ")",
+          commentaire: `Nouvelle version suite à ${commentaire.includes('VAO:') ? "VAO" : "refus"} de la version ${versionData.version}`,
           statut: "En attente de diffusion"
         });
         

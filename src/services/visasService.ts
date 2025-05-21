@@ -191,8 +191,8 @@ export const visasService = {
       
       if (docUpdateError) throw docUpdateError;
       
-      // 6. Pour les VAO, créer une nouvelle version avec la lettre suivante
-      if (isVAO) {
+      // 6. Pour les VAO ou Refusé, créer une nouvelle version avec la lettre suivante
+      if (isVAO || !isVSO) {
         // Obtenir la prochaine lettre de version
         const nextVersionLetter = this.getNextVersionLetter(visaData.version);
         
@@ -213,8 +213,8 @@ export const visasService = {
             document_id: visaData.document_id,
             marche_id: visaData.marche_id,
             version: nextVersionLetter,
-            cree_par: "Système (suite à VAO)",
-            commentaire: `Nouvelle version suite au VAO de la version ${visaData.version} - ${commentaire}`,
+            cree_par: "Système (suite à " + (isVAO ? "VAO" : "Refus") + ")",
+            commentaire: `Nouvelle version suite au ${isVAO ? "VAO" : "refus"} de la version ${visaData.version} - ${commentaire}`,
             statut: "En attente de diffusion"
           });
           
