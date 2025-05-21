@@ -96,6 +96,19 @@ export const VisasTable: React.FC<VisasTableProps> = ({
     return userIsMandataire && hasCorrectStatus && hasVisaDialog;
   };
 
+  // Helper function to convert Document from visas/types to services/types format if needed
+  const enrichDocumentIfNeeded = (document: Document) => {
+    // If we're using this from a component expecting marche_id and it doesn't have it, add it
+    // This is a workaround for the type mismatch between different Document interfaces
+    if (document && openDiffusionDialog && !('marche_id' in document)) {
+      return {
+        ...document,
+        marche_id: '',  // Add a default empty string for marche_id
+      };
+    }
+    return document;
+  };
+
   return (
     <div className="rounded-md border">
       {!showHistoricalVisas ? (
@@ -130,7 +143,7 @@ export const VisasTable: React.FC<VisasTableProps> = ({
                   >
                     <TableCell className="font-medium">{doc.nom}</TableCell>
                     <TableCell className="font-mono text-sm">
-                      {generateDocumentCodification(doc)}
+                      {generateDocumentCodification(enrichDocumentIfNeeded(doc))}
                     </TableCell>
                     <TableCell>
                       {latestVersion ? latestVersion.version : 'N/A'}

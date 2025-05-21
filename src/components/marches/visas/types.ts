@@ -27,6 +27,14 @@ export interface Document {
   statut: 'En attente de diffusion' | 'En attente de validation' | 'En attente de visa' | 'BPE' | 'À remettre à jour' | 'Refusé';
   latestVersion?: Version | null;
   currentVersionId?: string;
+  marche_id?: string; // Adding this to make it more compatible with the Document type from services
+  // Optional fields that might be needed for codification
+  geographie?: string;
+  phase?: string;
+  emetteur?: string;
+  numero_operation?: string;
+  domaine_technique?: string;
+  numero?: string;
 }
 
 // Component props interfaces

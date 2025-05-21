@@ -5,7 +5,7 @@ import { Document } from '@/services/types';
  * Génère la codification complète d'un document au format:
  * Géographie-Phase-Emetteur-Type_Opération-Domaine-Numéro
  */
-export const generateDocumentCodification = (document: Document): string => {
+export const generateDocumentCodification = (document: Document | any): string => {
   const geo = document.geographie || '---';
   const phase = document.phase || '---';
   const emetteur = document.emetteur || '---';

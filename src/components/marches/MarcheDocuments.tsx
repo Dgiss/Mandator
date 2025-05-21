@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -5,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { FileText, Plus, Search, Filter, Download, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Document } from '@/services/types';
+import { Document as ProjectDocument } from '@/services/types';
 import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -20,10 +21,10 @@ interface MarcheDocumentsProps {
 }
 
 export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [documents, setDocuments] = useState<ProjectDocument[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [editingDocument, setEditingDocument] = useState<Document | null>(null);
-  const [viewingDocument, setViewingDocument] = useState<Document | null>(null);
+  const [editingDocument, setEditingDocument] = useState<ProjectDocument | null>(null);
+  const [viewingDocument, setViewingDocument] = useState<ProjectDocument | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const { toast } = useToast();
@@ -50,7 +51,6 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
       file_path: '',
       marche_id: marcheId,
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
     });
   };
 
@@ -63,7 +63,7 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
     });
   }, [toast]);
 
-  const downloadDocument = (document: Document) => {
+  const downloadDocument = (document: ProjectDocument) => {
     if (!document.file_path) {
       toast({
         title: "Erreur",
@@ -108,7 +108,7 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
     downloadFile();
   };
 
-  const viewDocument = (document: Document) => {
+  const viewDocument = (document: ProjectDocument) => {
     setViewingDocument(document);
   };
 
