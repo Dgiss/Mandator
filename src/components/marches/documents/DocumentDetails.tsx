@@ -3,7 +3,10 @@ import React from 'react';
 import { Document } from '@/services/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { FileText, Code, Settings, CalendarDays } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { FileText, Code, Settings, CalendarDays, Download, Eye } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
 
 interface DocumentDetailsProps {
   document: Document;
@@ -11,6 +14,71 @@ interface DocumentDetailsProps {
 }
 
 const DocumentDetails: React.FC<DocumentDetailsProps> = ({ document, formatDate }) => {
+  // Fonction pour télécharger le document
+  const handleDownload = async () => {
+    if (!document.file_path) {
+      toast.error("Aucun fichier n'est associé à ce document.");
+      return;
+    }
+
+    try {
+      // Télécharger le fichier depuis Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('versions')
+        .download(document.file_path);
+      
+      if (error) {
+        console.error('Erreur lors du téléchargement:', error);
+        toast.error("Erreur lors du téléchargement du fichier.");
+        return;
+      }
+
+      // Créer un URL blob et déclencher le téléchargement
+      const url = URL.createObjectURL(data);
+      const link = document.createElement('a');
+      const fileName = document.file_path.split('/').pop() || `${document.nom}.pdf`;
+      
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success("Téléchargement démarré");
+    } catch (error) {
+      console.error('Erreur:', error);
+      toast.error("Impossible de télécharger le fichier.");
+    }
+  };
+
+  // Fonction pour visualiser le document
+  const handleView = async () => {
+    if (!document.file_path) {
+      toast.error("Aucun fichier n'est associé à ce document.");
+      return;
+    }
+
+    try {
+      // Récupérer l'URL publique ou temporaire du fichier
+      const { data, error } = await supabase.storage
+        .from('versions')
+        .createSignedUrl(document.file_path, 3600); // URL valide pendant 1 heure
+      
+      if (error) {
+        console.error('Erreur lors de la création de l\'URL:', error);
+        toast.error("Erreur lors de l'accès au fichier.");
+        return;
+      }
+
+      // Ouvrir l'URL dans un nouvel onglet
+      window.open(data.signedUrl, '_blank');
+    } catch (error) {
+      console.error('Erreur:', error);
+      toast.error("Impossible d'ouvrir le fichier.");
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Informations principales */}
@@ -144,6 +212,29 @@ const DocumentDetails: React.FC<DocumentDetailsProps> = ({ document, formatDate 
           </CardContent>
         </Card>
       )}
+
+      {/* Boutons pour télécharger et visualiser le document */}
+      <div className="flex flex-wrap gap-3 justify-end mt-6">
+        <Button 
+          variant="outline" 
+          onClick={handleDownload}
+          className="flex items-center gap-2"
+          disabled={!document.file_path}
+        >
+          <Download className="h-4 w-4" />
+          Télécharger le Document
+        </Button>
+        
+        <Button 
+          variant="btpPrimary" 
+          onClick={handleView}
+          className="flex items-center gap-2"
+          disabled={!document.file_path}
+        >
+          <Eye className="h-4 w-4" />
+          Visualiser le Document
+        </Button>
+      </div>
     </div>
   );
 };
