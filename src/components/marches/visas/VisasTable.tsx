@@ -121,8 +121,9 @@ export const VisasTable: React.FC<VisasTableProps> = ({
     });
     
     // Un Mandataire peut diffuser UNIQUEMENT un document en "En attente de diffusion"
-    // Si l'utilisateur a les deux rôles, nous ne permettons pas cette action pour éviter les confusions
+    // Le rôle MOE ne devrait JAMAIS pouvoir diffuser
     return isMandataire() && 
+           !isMOE() &&   // Restriction explicite: MOE ne peut JAMAIS diffuser
            doc.statut === 'En attente de diffusion' && 
            !!openDiffusionDialog;
   };

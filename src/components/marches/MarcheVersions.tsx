@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -153,8 +154,9 @@ export default function MarcheVersions({
     });
     
     // STRICTEMENT pour Mandataire uniquement sur version en "En attente de diffusion"
-    // Si l'utilisateur a les deux rôles, nous permettons toujours cette action
+    // Si l'utilisateur est MOE, il ne doit JAMAIS pouvoir diffuser
     return isMandataire() &&
+           !isMOE() && // Restriction explicite: MOE ne peut JAMAIS diffuser
            version.statut === 'En attente de diffusion';
   };
 
@@ -168,7 +170,6 @@ export default function MarcheVersions({
     });
     
     // STRICTEMENT pour MOE uniquement sur versions "Diffusé" ou "En attente de visa" et qui n'ont pas déjà un visa
-    // Si l'utilisateur a les deux rôles, nous permettons toujours cette action pour le rôle MOE
     return isMOE() &&
            (version.statut === 'Diffusé' || version.statut === 'En attente de visa') &&
            !hasVisa(version);
@@ -233,7 +234,7 @@ export default function MarcheVersions({
     } else if (isMOE() && !isMandataire()) {
       return "Connecté comme MOE";
     } else if (isMOE() && isMandataire()) {
-      return "Connecté avec plusieurs rôles (MOE et Mandataire)";
+      return "Connecté avec plusieurs rôles (MOE ne peut pas diffuser)";
     } else {
       return "Connecté";
     }
