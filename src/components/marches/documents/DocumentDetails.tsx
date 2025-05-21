@@ -26,25 +26,52 @@ const DocumentDetails: React.FC<DocumentDetailsProps> = ({ document, formatDate 
     try {
       setIsLoading(true);
       
-      // Vérifier d'abord dans quel bucket se trouve le fichier
+      // Détermine le bucket à utiliser en fonction du chemin du fichier
+      // Les chemins peuvent être stockés avec ou sans le nom du bucket en préfixe
       let bucketName = 'versions';
+      let filePath = document.file_path;
+      
+      // Si le chemin contient déjà le nom du bucket, extrayons le chemin correct
+      if (filePath.startsWith('marches/')) {
+        bucketName = 'marches';
+      }
+      
+      console.log(`Tentative de téléchargement depuis le bucket "${bucketName}" avec le chemin "${filePath}"`);
       
       // Télécharger le fichier depuis Supabase Storage
       const { data, error } = await supabase.storage
         .from(bucketName)
-        .download(document.file_path);
+        .download(filePath);
       
       if (error) {
         console.error('Erreur lors du téléchargement:', error);
-        toast.error("Erreur lors du téléchargement du fichier.");
-        setIsLoading(false);
-        return;
+        
+        // Si le fichier n'est pas trouvé dans le premier bucket, essayons avec un autre
+        if (error.message.includes("not found") && bucketName === 'versions') {
+          console.log('Tentative avec le bucket "marches"...');
+          const secondAttempt = await supabase.storage
+            .from('marches')
+            .download(filePath);
+            
+          if (secondAttempt.error) {
+            console.error('Seconde tentative échouée:', secondAttempt.error);
+            toast.error("Erreur lors du téléchargement du fichier.");
+            setIsLoading(false);
+            return;
+          }
+          
+          data = secondAttempt.data;
+        } else {
+          toast.error("Erreur lors du téléchargement du fichier.");
+          setIsLoading(false);
+          return;
+        }
       }
 
       // Créer un URL blob et déclencher le téléchargement
       const url = URL.createObjectURL(data);
       const link = window.document.createElement('a');
-      const fileName = document.file_path.split('/').pop() || `${document.nom}.pdf`;
+      const fileName = filePath.split('/').pop() || `${document.nom}.pdf`;
       
       link.href = url;
       link.download = fileName;
@@ -71,23 +98,75 @@ const DocumentDetails: React.FC<DocumentDetailsProps> = ({ document, formatDate 
 
     try {
       setIsLoading(true);
-      console.log('Tentative de visualisation du fichier:', document.file_path);
       
-      // Vérifier d'abord dans quel bucket se trouve le fichier
+      // Détermine le bucket à utiliser en fonction du chemin du fichier
       let bucketName = 'versions';
+      let filePath = document.file_path;
+      
+      // Si le chemin contient déjà le nom du bucket, extrayons le chemin correct
+      if (filePath.startsWith('marches/')) {
+        bucketName = 'marches';
+      }
+      
+      console.log(`Tentative de visualisation depuis le bucket "${bucketName}" avec le chemin "${filePath}"`);
       
       // Récupérer l'URL publique ou temporaire du fichier
       const { data, error } = await supabase.storage
         .from(bucketName)
-        .createSignedUrl(document.file_path, 3600); // URL valide pendant 1 heure
+        .createSignedUrl(filePath, 3600); // URL valide pendant 1 heure
       
       if (error) {
         console.error('Erreur lors de la création de l\'URL:', error);
         
+        // Essayer un autre bucket si le premier échoue
+        if (error.message.includes("not found") && bucketName === 'versions') {
+          console.log('Tentative avec le bucket "marches"...');
+          const secondAttempt = await supabase.storage
+            .from('marches')
+            .createSignedUrl(filePath, 3600);
+            
+          if (secondAttempt.error) {
+            // Si la deuxième tentative échoue, essayons d'obtenir une URL publique
+            const publicUrlData = supabase.storage
+              .from(bucketName)
+              .getPublicUrl(filePath);
+              
+            if (publicUrlData && publicUrlData.data && publicUrlData.data.publicUrl) {
+              console.log('URL publique récupérée:', publicUrlData.data.publicUrl);
+              window.open(publicUrlData.data.publicUrl, '_blank');
+              setIsLoading(false);
+              return;
+            }
+            
+            // En dernier recours, essayer l'URL publique dans l'autre bucket
+            const secondPublicUrl = supabase.storage
+              .from('marches')
+              .getPublicUrl(filePath);
+              
+            if (secondPublicUrl && secondPublicUrl.data && secondPublicUrl.data.publicUrl) {
+              console.log('URL publique récupérée du second bucket:', secondPublicUrl.data.publicUrl);
+              window.open(secondPublicUrl.data.publicUrl, '_blank');
+              setIsLoading(false);
+              return;
+            }
+            
+            console.error('Toutes les tentatives ont échoué');
+            toast.error("Erreur lors de l'accès au fichier.");
+            setIsLoading(false);
+            return;
+          }
+          
+          // Ouvrir l'URL de la seconde tentative si réussie
+          console.log('URL générée avec succès (2e tentative):', secondAttempt.data.signedUrl);
+          window.open(secondAttempt.data.signedUrl, '_blank');
+          setIsLoading(false);
+          return;
+        }
+        
         // Essayer de récupérer l'URL publique comme alternative
         const publicUrlData = supabase.storage
           .from(bucketName)
-          .getPublicUrl(document.file_path);
+          .getPublicUrl(filePath);
           
         if (publicUrlData && publicUrlData.data && publicUrlData.data.publicUrl) {
           console.log('URL publique récupérée:', publicUrlData.data.publicUrl);
