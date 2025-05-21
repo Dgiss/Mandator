@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -30,6 +30,10 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { canEdit } = useUserRole(marcheId);
+  
+  // Add fetched IDs tracking to prevent duplicate requests
+  const fetchedIds = useRef<Set<string>>(new Set());
+  const isLoadingRef = useRef<boolean>(false);
 
   const openNewDocumentForm = () => {
     setEditingDocument({
@@ -57,6 +61,8 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
 
   const onDocumentSaved = useCallback(() => {
     setEditingDocument(null);
+    // Clear fetched IDs when we save a new document to force a refresh
+    fetchedIds.current.clear();
     setLoadAttempt(prev => prev + 1);
     toast({
       title: "Succès",
@@ -145,9 +151,16 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
     }
   };
 
-  // Récupérer les documents avec une logique de nouvelle tentative
+  // Récupérer les documents avec logique pour éviter les appels API excessifs
   useEffect(() => {
     const fetchDocuments = async () => {
+      // Skip if already loading or if we've already fetched this market ID
+      if (isLoadingRef.current || (fetchedIds.current.has(marcheId) && loadAttempt === 0)) {
+        console.log(`Skipping fetch for marché: ${marcheId} - already loaded or in progress`);
+        return;
+      }
+      
+      isLoadingRef.current = true;
       setLoading(true);
       setError(null);
       
@@ -166,6 +179,8 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
         if (data) {
           console.log(`Successfully fetched ${data.length} documents`);
           setDocuments(data);
+          // Add to fetched IDs set
+          fetchedIds.current.add(marcheId);
         } else {
           console.log('No documents found (empty data array)');
           setDocuments([]);
@@ -181,22 +196,18 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
         });
       } finally {
         setLoading(false);
+        isLoadingRef.current = false;
       }
     };
 
     // Appeler fetchDocuments immédiatement
     fetchDocuments();
     
-    // Programmer une nouvelle tentative après 5 secondes en cas d'erreur
-    const retryTimer = setTimeout(() => {
-      if (error) {
-        console.log("Retrying document fetch due to previous error...");
-        setLoadAttempt(prev => prev + 1);
-      }
-    }, 5000);
-    
-    return () => clearTimeout(retryTimer);
-  }, [marcheId, loadAttempt, toast, error]);
+    // Clean up function
+    return () => {
+      isLoadingRef.current = false;
+    };
+  }, [marcheId, loadAttempt, toast]);
 
   // Filtrer les documents
   const filteredDocuments = documents.filter(doc => {
@@ -216,6 +227,8 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
   // Fonction pour recharger manuellement les documents
   const handleManualReload = () => {
     setIsReloading(true);
+    // Clear fetched IDs to force a reload
+    fetchedIds.current.clear();
     setLoadAttempt(prev => prev + 1);
     setTimeout(() => setIsReloading(false), 1000); // Show spinner for at least 1 second
   };
@@ -225,26 +238,24 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Documents du marché</h2>
         <div className="flex gap-2">
-          {error && (
-            <Button 
-              variant="outline" 
-              onClick={handleManualReload}
-              className={`flex items-center gap-2 ${isReloading ? 'opacity-50' : ''}`}
-              disabled={isReloading}
-            >
-              {isReloading ? (
-                <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-gray-900"></div>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-refresh-cw">
-                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-                  <path d="M21 3v5h-5"/>
-                  <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
-                  <path d="M3 21v-5h5"/>
-                </svg>
-              )}
-              {isReloading ? 'Chargement...' : 'Actualiser'}
-            </Button>
-          )}
+          <Button 
+            variant="outline" 
+            onClick={handleManualReload}
+            className={`flex items-center gap-2 ${isReloading ? 'opacity-50' : ''}`}
+            disabled={isReloading}
+          >
+            {isReloading ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-gray-900"></div>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-refresh-cw">
+                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                <path d="M21 3v5h-5"/>
+                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                <path d="M3 21v-5h5"/>
+              </svg>
+            )}
+            {isReloading ? 'Chargement...' : 'Actualiser'}
+          </Button>
           {canEdit && (
             <Button 
               variant="default" 
@@ -285,7 +296,6 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
           <div>
             <p className="font-medium">Erreur de chargement</p>
             <p className="text-sm">{error}</p>
-            <p className="text-sm mt-1">Tentative de rechargement automatique en cours...</p>
           </div>
         </div>
       )}
