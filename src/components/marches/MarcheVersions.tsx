@@ -144,14 +144,25 @@ export default function MarcheVersions({
 
   // Vérifier si la version peut être diffusée (pour MANDATAIRE)
   const canDiffuseVersion = (version: Version): boolean => {
+    console.log(`Checking if can diffuse version: ${version.version}, status: ${version.statut}`, {
+      isMandataire: isMandataire(),
+      status: version.statut
+    });
+    
     // Pour Mandataire uniquement sur version en "Brouillon"
     return isMandataire() && version.statut === 'Brouillon';
   };
 
   // Vérifier si la version peut être visée (pour MOE)
   const canVisaVersion = (version: Version): boolean => {
-    // Pour MOE uniquement sur version "Diffusé"
-    return isMOE() && version.statut === 'Diffusé';
+    console.log(`Checking if can visa version: ${version.version}, status: ${version.statut}`, {
+      isMOE: isMOE(),
+      status: version.statut,
+      hasVisa: hasVisa(version)
+    });
+    
+    // Pour MOE uniquement sur version "Diffusé" et qui n'a pas déjà un visa
+    return isMOE() && version.statut === 'Diffusé' && !hasVisa(version);
   };
   
   // Vérifier si la version a déjà un visa appliqué (VSO, VAO ou Refusé)
@@ -209,7 +220,13 @@ export default function MarcheVersions({
   return <div className="pt-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-semibold">Versions des documents</h2>
-        {!roleLoading}
+        {!roleLoading && (
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-500">
+              {isMOE() ? "Connecté comme MOE" : isMandataire() ? "Connecté comme Mandataire" : ""}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="mb-6 relative">
@@ -302,7 +319,7 @@ export default function MarcheVersions({
                       )}
                       
                       {/* 2. Bouton Viser pour MOE sur versions en état Diffusé */}
-                      {canVisaVersion(version) && !hasVisa(version) && (
+                      {canVisaVersion(version) && (
                         <Button 
                           variant="btpPrimary"
                           size="sm"

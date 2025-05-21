@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Table, 
@@ -90,45 +89,37 @@ export const VisasTable: React.FC<VisasTableProps> = ({
 
   // Règles d'affichage du bouton de visa selon rôle et statut
   const canUserViseDocument = (doc: Document) => {
-    // Le bouton de visa n'est affiché que pour les utilisateurs MOE et seulement
-    // pour les documents avec un statut "Diffusé"
-    const userIsMOE = isMOE();
-    const hasCorrectStatus = doc.statut === 'Diffusé';
-    const hasVisaDialog = !!openVisaDialog;
-    const documentHasNoVisa = !hasVisa(doc);
-    
-    console.log(`Viser button conditions for ${doc.nom}:`, {
-      userIsMOE,
+    // Ajout de logs pour débugger
+    console.log(`Viser button check for ${doc.nom}:`, {
+      userIsMOE: isMOE(),
       docStatus: doc.statut,
-      hasCorrectStatus,
-      hasVisaDialog,
-      documentHasNoVisa
+      hasVisaDialog: !!openVisaDialog,
+      hasVisa: hasVisa(doc)
     });
     
     // Un MOE peut viser un document diffusé qui n'a pas déjà un visa
-    return userIsMOE && hasCorrectStatus && hasVisaDialog && documentHasNoVisa;
+    return isMOE() && doc.statut === 'Diffusé' && !!openVisaDialog && !hasVisa(doc);
   };
   
   // Règles d'affichage du bouton de diffusion selon rôle et statut
   const canUserDiffuseDocument = (doc: Document) => {
-    // Le bouton de diffusion n'est affiché que pour les utilisateurs Mandataire et seulement
-    // pour les documents avec un statut "Brouillon"
-    const userIsMandataire = isMandataire();
-    const hasCorrectStatus = doc.statut === 'Brouillon';
-    const hasDiffusionDialog = !!openDiffusionDialog;
+    // Ajout de logs pour débugger
+    console.log(`Diffuser button check for ${doc.nom}:`, {
+      userIsMandataire: isMandataire(),
+      docStatus: doc.statut,
+      hasDiffusionDialog: !!openDiffusionDialog
+    });
     
     // Un Mandataire peut diffuser un document en brouillon
-    return userIsMandataire && hasCorrectStatus && hasDiffusionDialog;
+    return isMandataire() && doc.statut === 'Brouillon' && !!openDiffusionDialog;
   };
 
   // Helper function to convert Document from visas/types to services/types format if needed
   const enrichDocumentIfNeeded = (document: Document) => {
-    // If we're using this from a component expecting marche_id and it doesn't have it, add it
-    // This is a workaround for the type mismatch between different Document interfaces
     if (document && openDiffusionDialog && !('marche_id' in document)) {
       return {
         ...document,
-        marche_id: '',  // Add a default empty string for marche_id
+        marche_id: '',
       };
     }
     return document;
