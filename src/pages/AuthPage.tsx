@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,7 +31,9 @@ export default function AuthPage() {
   const [registerLoading, setRegisterLoading] = useState(false);
   const [error, setError] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [creatingUsers, setCreatingUsers] = useState(false);
+  
+  // Suppression de la variable creatingUsers qui n'est plus nécessaire
+  
   useEffect(() => {
     // Si l'utilisateur est connecté, rediriger vers la page d'accueil
     if (user && !loading) {
@@ -122,22 +125,8 @@ export default function AuthPage() {
       setRegisterLoading(false);
     }
   };
-  const handleSetupTestUsers = async () => {
-    try {
-      setCreatingUsers(true);
 
-      // Importer dynamiquement pour éviter les erreurs de chargement
-      const {
-        setupTestUsers
-      } = await import('@/utils/auth/setupUsers');
-      await setupTestUsers();
-    } catch (error: any) {
-      console.error("Erreur lors de la création des utilisateurs de test:", error);
-      setError(error.message || "Une erreur est survenue lors de la création des utilisateurs de test");
-    } finally {
-      setCreatingUsers(false);
-    }
-  };
+  // Suppression de la fonction handleSetupTestUsers qui n'est plus nécessaire
 
   // Si l'utilisateur est en cours de chargement, afficher un indicateur de chargement
   if (loading) {
@@ -229,21 +218,8 @@ export default function AuthPage() {
                           </> : "Se connecter"}
                       </Button>
                       
-                      <div className="mt-4 text-center text-sm text-gray-500">
-                        <p>Utilisez un des comptes test:</p>
-                        <p className="mt-1">admin@admin.com / password</p>
-                        <p>moe@moe.com / password</p>
-                        
-                      </div>
+                      {/* Section supprimée: comptes test et bouton créer utilisateurs */}
                       
-                      <div className="mt-6 pt-4 border-t border-gray-200">
-                        <Button type="button" variant="outline" className="w-full" onClick={handleSetupTestUsers} disabled={creatingUsers}>
-                          {creatingUsers ? <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Création des utilisateurs...
-                            </> : "Créer les utilisateurs de test"}
-                        </Button>
-                      </div>
                     </form>
                   </CardContent>
                 </Card>
