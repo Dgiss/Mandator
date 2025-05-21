@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
@@ -25,7 +24,6 @@ const FasciculesTable: React.FC<FasciculesTableProps> = ({
   onViewDetails,
   onOpenDocumentForm
 }) => {
-  const [marcheFilter, setMarcheFilter] = useState<string>('all');
   const [societeFilter, setSocieteFilter] = useState<string>('all');
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [uploadingFascicule, setUploadingFascicule] = useState<Fascicule | null>(null);
@@ -35,14 +33,12 @@ const FasciculesTable: React.FC<FasciculesTableProps> = ({
   const { toast } = useToast();
 
   // Extraire les options uniques pour les filtres
-  const marches = Array.from(new Set(fascicules.map(f => f.marche_id || 'inconnu')));
   const societes = Array.from(new Set(fascicules.map(f => f.emetteur || 'Non spécifié')));
 
   // Appliquer les filtres
   const filteredFascicules = fascicules.filter(fascicule => {
-    const matchMarche = marcheFilter === 'all' || fascicule.marche_id === marcheFilter;
     const matchSociete = societeFilter === 'all' || fascicule.emetteur === societeFilter;
-    return matchMarche && matchSociete;
+    return matchSociete;
   });
 
   // Formatter l'affichage de la nomenclature
@@ -183,19 +179,6 @@ const FasciculesTable: React.FC<FasciculesTableProps> = ({
         <div className="flex flex-col sm:flex-row gap-2">
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-gray-500" />
-            <Select value={marcheFilter} onValueChange={setMarcheFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filtrer par marché" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous les marchés</SelectItem>
-                {marches.map((marche, index) => <SelectItem key={index} value={marche}>{marche}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-gray-500" />
             <Select value={societeFilter} onValueChange={setSocieteFilter}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filtrer par société" />
@@ -213,31 +196,23 @@ const FasciculesTable: React.FC<FasciculesTableProps> = ({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[40%]">Fascicule</TableHead>
-              <TableHead>Marché</TableHead>
-              <TableHead>Société</TableHead>
+              <TableHead className="w-[60%]">Fascicule</TableHead>
               <TableHead className="w-[20%]">Progression</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
+                <TableCell colSpan={3} className="h-24 text-center">
                   Chargement des fascicules...
                 </TableCell>
               </TableRow> : filteredFascicules.length === 0 ? <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
+                <TableCell colSpan={3} className="h-24 text-center">
                   Aucun fascicule trouvé
                 </TableCell>
               </TableRow> : filteredFascicules.map(fascicule => <TableRow key={fascicule.id}>
                   <TableCell className="font-medium">
                     {formatNomenclature(fascicule.nom)}
-                  </TableCell>
-                  <TableCell>
-                    {fascicule.marche_id || 'Non spécifié'}
-                  </TableCell>
-                  <TableCell>
-                    {fascicule.emetteur || 'Non spécifié'}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">

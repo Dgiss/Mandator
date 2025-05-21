@@ -13,6 +13,7 @@ import { useUserRole } from '@/hooks/userRole';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { generateDocumentCodification } from '@/utils/documentFormatters';
 
 interface VisasTableProps {
   documents: Document[];
@@ -102,8 +103,8 @@ export const VisasTable: React.FC<VisasTableProps> = ({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[200px]">Document</TableHead>
-              <TableHead>Type</TableHead>
+              <TableHead className="w-[200px]">Designation</TableHead>
+              <TableHead>Codification</TableHead>
               <TableHead>Version</TableHead>
               <TableHead>Statut</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -128,7 +129,9 @@ export const VisasTable: React.FC<VisasTableProps> = ({
                     onClick={() => onDocumentSelect(doc)}
                   >
                     <TableCell className="font-medium">{doc.nom}</TableCell>
-                    <TableCell>{doc.type || 'N/A'}</TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {generateDocumentCodification(doc)}
+                    </TableCell>
                     <TableCell>
                       {latestVersion ? latestVersion.version : 'N/A'}
                     </TableCell>

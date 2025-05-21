@@ -16,6 +16,18 @@ interface DocumentDetailsProps {
 const DocumentDetails: React.FC<DocumentDetailsProps> = ({ document, formatDate }) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
+  // Fonction pour générer la codification complète du document
+  const generateCodification = () => {
+    const geo = document.geographie || '---';
+    const phase = document.phase || '---';
+    const emetteur = document.emetteur || '---';
+    const operation = document.numero_operation || '---';
+    const domaine = document.domaine_technique || '---';
+    const numero = document.numero || '---';
+    
+    return `${geo}-${phase}-${emetteur}-${operation}-${domaine}-${numero}`;
+  };
+
   // Fonction pour télécharger le document
   const handleDownload = async () => {
     if (!document.file_path) {
@@ -288,6 +300,10 @@ const DocumentDetails: React.FC<DocumentDetailsProps> = ({ document, formatDate 
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
+              <p className="text-sm font-medium text-muted-foreground">Codification complète</p>
+              <p className="font-medium font-mono">{generateCodification()}</p>
+            </div>
+            <div>
               <p className="text-sm font-medium text-muted-foreground">Marché</p>
               <p className="font-medium">{document.marche_id || '—'}</p>
             </div>
@@ -371,7 +387,7 @@ const DocumentDetails: React.FC<DocumentDetailsProps> = ({ document, formatDate 
       {document.description && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Description</CardTitle>
+            <CardTitle className="text-lg">Designation</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm">{document.description}</p>
