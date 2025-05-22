@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,12 +37,16 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
     documents.filter(doc => doc.numero).map(doc => doc.numero)
   )).sort() as string[];
   
-  // Enhanced fetch tracking
+  // Add fetched IDs tracking to prevent duplicate requests
+  const fetchedIds = useRef<Set<string>>(new Set());
+  const isLoadingRef = useRef<boolean>(false);
+  const lastFetchTimestampRef = useRef<number>(0);
   const fetchInProgress = useRef<boolean>(false);
-  const lastFetchTimestamp = useRef<number>(0);
-  const COOLDOWN_PERIOD = 5000; // 5 seconds cooldown between manual refreshes
+  const reloadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reloadDisabledRef = useRef<boolean>(false);
+
+  // États pour le rechargement manuel avec protection contre les clics multiples
   const [isReloading, setIsReloading] = useState(false);
-  const [reloadDisabled, setReloadDisabled] = useState(false);
 
   const openNewDocumentForm = () => {
     setEditingDocument({
@@ -74,7 +77,8 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
 
     // Attendre un court délai avant de recharger pour laisser le temps à la base de données de se mettre à jour
     setTimeout(() => {
-      // Forcer un rechargement des données
+      // Forcer un rechargement des données avec un nouveau loadAttempt
+      fetchedIds.current.clear();
       setLoadAttempt(prev => prev + 1);
     }, 500);
     
@@ -165,69 +169,87 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
     }
   };
 
-  // Improved document fetching logic with rate limiting
-  const fetchDocuments = useCallback(async () => {
-    const now = Date.now();
-    
-    // Skip if already fetching or in cooldown period (except initial load)
-    if (fetchInProgress.current || 
-        (now - lastFetchTimestamp.current < COOLDOWN_PERIOD && loadAttempt > 0)) {
-      console.log(`Skipping document fetch - In progress: ${fetchInProgress.current}, Time since last fetch: ${now - lastFetchTimestamp.current}ms`);
-      return;
-    }
-    
-    fetchInProgress.current = true;
-    lastFetchTimestamp.current = now;
-    setLoading(true);
-    setError(null);
-    
-    try {
-      console.log(`Fetching documents for marché: ${marcheId}, attempt: ${loadAttempt}`);
-      
-      const { data, error } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('marche_id', marcheId);
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      if (data) {
-        console.log(`Successfully fetched ${data.length} documents`);
-        setDocuments(data);
-      } else {
-        console.log('No documents found (empty data array)');
-        setDocuments([]);
-      }
-    } catch (error: any) {
-      console.error("Error fetching documents:", error);
-      setError(`Erreur lors de la récupération des documents: ${error.message}`);
-      
-      toast({
-        title: "Erreur",
-        description: `Erreur lors de la récupération des documents: ${error.message}`,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-      
-      // Delay before allowing a new fetch request
-      setTimeout(() => {
-        fetchInProgress.current = false;
-      }, 500);
-    }
-  }, [marcheId, loadAttempt, toast]);
-
-  // Trigger document fetch when loadAttempt changes
+  // Récupérer les documents avec logique pour éviter les appels API excessifs
   useEffect(() => {
+    // Cette fonction contient la logique réelle de chargement des documents
+    const fetchDocuments = async () => {
+      if (fetchInProgress.current) {
+        console.log('Fetch already in progress, skipping duplicate request');
+        return;
+      }
+
+      // Empêcher les appels excessifs
+      const now = Date.now();
+      const minFetchInterval = 2000; // 2 secondes minimum entre les appels
+      
+      // Skip si déjà en chargement ou si on a déjà récupéré ce marché récemment
+      if (isLoadingRef.current || 
+          (fetchedIds.current.has(marcheId) && 
+           now - lastFetchTimestampRef.current < minFetchInterval && 
+           loadAttempt === 0)) {
+        console.log(`Skipping fetch for marché: ${marcheId} - already loaded or in progress or too recent`);
+        return;
+      }
+      
+      isLoadingRef.current = true;
+      fetchInProgress.current = true;
+      lastFetchTimestampRef.current = now;
+      setLoading(true);
+      setError(null);
+      
+      try {
+        console.log(`Fetching documents for marché: ${marcheId}, attempt: ${loadAttempt}`);
+        
+        const { data, error } = await supabase
+          .from('documents')
+          .select('*')
+          .eq('marche_id', marcheId);
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        if (data) {
+          console.log(`Successfully fetched ${data.length} documents`);
+          setDocuments(data);
+          // Add to fetched IDs set
+          fetchedIds.current.add(marcheId);
+        } else {
+          console.log('No documents found (empty data array)');
+          setDocuments([]);
+        }
+      } catch (error: any) {
+        console.error("Error fetching documents:", error);
+        setError(`Erreur lors de la récupération des documents: ${error.message}`);
+        
+        toast({
+          title: "Erreur",
+          description: `Erreur lors de la récupération des documents: ${error.message}`,
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+        isLoadingRef.current = false;
+        
+        // Délai de sécurité avant de permettre une nouvelle requête
+        setTimeout(() => {
+          fetchInProgress.current = false;
+        }, 500);
+      }
+    };
+
+    // Appeler fetchDocuments immédiatement
     fetchDocuments();
     
-    // Cleanup function
+    // Clean up function
     return () => {
+      isLoadingRef.current = false;
       fetchInProgress.current = false;
+      if (reloadTimeoutRef.current) {
+        clearTimeout(reloadTimeoutRef.current);
+      }
     };
-  }, [fetchDocuments]);
+  }, [marcheId, loadAttempt, toast]);
 
   // Filtrer les documents
   const filteredDocuments = documents.filter(doc => {
@@ -248,32 +270,35 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
     );
   });
   
-  // Improved manual reload function with proper debounce
+  // Fonction pour recharger manuellement les documents avec protection contre les appels multiples
   const handleManualReload = useCallback(() => {
-    // Skip if reload is disabled or in progress
-    if (reloadDisabled || isReloading) {
+    // Empêcher les clics multiples pendant le rechargement
+    if (reloadDisabledRef.current || isReloading) {
       console.log('Manual reload disabled or already in progress, ignoring click');
       return;
     }
     
     console.log('Starting manual document reload');
     setIsReloading(true);
-    setReloadDisabled(true);
+    reloadDisabledRef.current = true;
     
-    // Clear fetch status and trigger reload
-    fetchInProgress.current = false;
+    // Clear fetched IDs to force a reload
+    fetchedIds.current.clear();
     setLoadAttempt(prev => prev + 1);
     
-    // Simulate minimum reload time for UI feedback
-    setTimeout(() => {
+    // Forcer un délai minimum pour l'interface utilisateur et éviter les clics multiples
+    reloadTimeoutRef.current = setTimeout(() => {
       setIsReloading(false);
       
-      // Add additional delay before re-enabling the button
+      // Ajouter un délai supplémentaire avant de permettre un nouveau clic
       setTimeout(() => {
-        setReloadDisabled(false);
-      }, COOLDOWN_PERIOD);
+        reloadDisabledRef.current = false;
+        console.log('Manual reload button re-enabled');
+      }, 2000);
+      
+      console.log('Manual reload completed');
     }, 1000);
-  }, [isReloading, reloadDisabled]);
+  }, [isReloading]);
 
   // Réinitialiser les filtres
   const resetFilters = () => {
@@ -289,8 +314,8 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
           <Button 
             variant="outline" 
             onClick={handleManualReload}
-            className={`flex items-center gap-2 ${isReloading || reloadDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-            disabled={isReloading || reloadDisabled}
+            className={`flex items-center gap-2 ${isReloading || reloadDisabledRef.current ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={isReloading || reloadDisabledRef.current}
           >
             {isReloading ? (
               <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-gray-900"></div>
@@ -471,6 +496,7 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
         open={!!viewingDocument} 
         onOpenChange={(open) => !open && setViewingDocument(null)} 
         onDocumentUpdated={() => {
+          fetchedIds.current.clear();
           setLoadAttempt(prev => prev + 1);
         }}
       />
