@@ -1,3 +1,10 @@
+
+// We need to fix line 253 where there's a type mismatch
+// The function is trying to return a Promise<string> where a string is expected
+
+// Find the specific section in the function that has the issue and fix it
+// This is likely in the changePassword function
+
 import { supabase } from '@/lib/supabase';
 import { UserProfileData } from '@/types/auth';
 import { toast } from 'sonner';
@@ -248,9 +255,18 @@ export const changePassword = async (currentPassword: string, newPassword: strin
     console.log("Attempting to change password");
     
     // Première étape: vérifier le mot de passe actuel en tentant de se connecter
+    // Fix the issue here - We can't return a Promise<string> where a string is expected
+    // Get the user's email safely
+    const { data: userData } = await supabase.auth.getUser();
+    const userEmail = userData.user?.email || '';
+    
+    if (!userEmail) {
+      return { error: { message: "Impossible de récupérer l'email de l'utilisateur" } };
+    }
+    
     const { error: signInError } = await withRetry(async () => {
       return await supabase.auth.signInWithPassword({
-        email: supabase.auth.getUser().then(({ data }) => data.user?.email || ''),
+        email: userEmail,
         password: currentPassword
       });
     });

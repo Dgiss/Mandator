@@ -1,11 +1,17 @@
+
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 
-import { MainLayout } from '@/components/layout';
-import { HomePage, AuthPage, MarchesPage, MarketCreationPage, MarcheDetailPage, ProfilePage } from '@/pages';
-import { useAuth } from '@/contexts/AuthContext';
+import { MainLayout } from './components/layout/MainLayout';
+import { HomePage } from './pages/HomePage';
+import { AuthPage } from './pages/AuthPage';
+import { MarchesPage } from './pages/MarchesPage';
+import { MarketCreationPage } from './pages/MarketCreationPage';
+import { MarcheDetailPage } from './pages/MarcheDetailPage';
+import { ProfilePage } from './pages/ProfilePage';
+import { useAuth } from './contexts/AuthContext';
 
 const queryClient = new QueryClient();
 
