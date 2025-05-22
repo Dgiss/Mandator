@@ -1,5 +1,5 @@
 
-// Exporter toutes les pages pour faciliter leur importation
+// Export all pages for easier importing
 export { default as HomePage } from './HomePage';
 export { default as AuthPage } from './AuthPage';
 export { default as MarchesPage } from './MarchesPage';
