@@ -13,13 +13,16 @@ interface ModifyDocumentButtonProps {
 
 const ModifyDocumentButton: React.FC<ModifyDocumentButtonProps> = ({ document, onDocumentUpdated }) => {
   const [isOpen, setIsOpen] = React.useState(false);
+  const [editingDoc, setEditingDoc] = React.useState<Document | null>(null);
 
   const handleClick = () => {
+    setEditingDoc(document);
     setIsOpen(true);
   };
 
   const handleDocumentSaved = () => {
     setIsOpen(false);
+    setEditingDoc(null);
     if (onDocumentUpdated) {
       onDocumentUpdated();
     }
@@ -38,7 +41,10 @@ const ModifyDocumentButton: React.FC<ModifyDocumentButtonProps> = ({ document, o
         <span className="sr-only">Modifier</span>
       </Button>
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog open={isOpen} onOpenChange={(open) => {
+        setIsOpen(open);
+        if (!open) setEditingDoc(null);
+      }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Modifier le document: {document.nom}</DialogTitle>
@@ -48,6 +54,7 @@ const ModifyDocumentButton: React.FC<ModifyDocumentButtonProps> = ({ document, o
             marcheId={document.marche_id}
             onDocumentSaved={handleDocumentSaved}
             editingDocument={isOpen ? document : null}
+            setEditingDocument={setEditingDoc}
           />
         </DialogContent>
       </Dialog>
