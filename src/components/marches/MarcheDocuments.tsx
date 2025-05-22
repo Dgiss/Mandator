@@ -311,7 +311,8 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
               </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Tous les numéros</SelectItem>
+              {/* Fix: use a non-empty string value for the default option */}
+              <SelectItem value="all-documents">Tous les numéros</SelectItem>
               {uniqueNumeros.map((numero) => (
                 <SelectItem key={numero} value={numero}>{numero}</SelectItem>
               ))}
