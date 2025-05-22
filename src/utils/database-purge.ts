@@ -2,6 +2,7 @@
 import { supabaseClient } from '@/lib/supabase-client';
 import { toast } from 'sonner';
 
+// Définir uniquement les tables qui sont reconnues par le client Supabase
 type TableName = 
   | 'profiles'
   | 'droits_marche'
@@ -16,8 +17,7 @@ type TableName =
   | 'prix_nouveaux'
   | 'situations'
   | 'document_attachments'
-  | 'notifications'
-  | 'alertes';
+  | 'notifications';
 
 /**
  * Utilitaire pour purger les données utilisateur et les fichiers stockés
@@ -76,8 +76,7 @@ export const purgeUserData = async (): Promise<{ success: boolean, message: stri
       'prix_nouveaux',
       'situations',
       'document_attachments',
-      'notifications',
-      'alertes'
+      'notifications'
     ];
     
     for (const table of tables) {
@@ -97,7 +96,24 @@ export const purgeUserData = async (): Promise<{ success: boolean, message: stri
       }
     }
     
-    // 3. Supprimer tous les utilisateurs (sauf peut-être un compte administrateur)
+    // 3. Gérer la table 'alertes' séparément (si elle existe)
+    try {
+      // @ts-ignore - Nous ignorons l'erreur de typage car nous savons que cette table existe
+      const { error } = await supabaseClient
+        .from('alertes')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+        
+      if (error) {
+        console.error(`Erreur lors de la purge de la table alertes:`, error);
+      } else {
+        console.log(`Table alertes vidée avec succès`);
+      }
+    } catch (err) {
+      console.error(`Exception lors de la purge de la table alertes:`, err);
+    }
+    
+    // 4. Supprimer tous les utilisateurs (sauf peut-être un compte administrateur)
     console.log('Purge des utilisateurs...');
     
     // Cette partie doit être implémentée via une fonction côté serveur (Edge Function)
