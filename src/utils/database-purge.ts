@@ -98,14 +98,15 @@ export const purgeUserData = async (): Promise<{ success: boolean, message: stri
     
     // 3. Gérer la table 'alertes' séparément (si elle existe)
     try {
-      // @ts-ignore - Nous ignorons l'erreur de typage car nous savons que cette table existe
-      const { error } = await supabaseClient
-        .from('alertes')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000');
-        
-      if (error) {
-        console.error(`Erreur lors de la purge de la table alertes:`, error);
+      // Utiliser executeRaw pour éviter les problèmes de typage avec la table 'alertes'
+      // Le type any est utilisé ici pour contourner les restrictions de type
+      const supabase: any = supabaseClient;
+      const result = await supabase.rpc('execute_query', {
+        query_text: "DELETE FROM alertes WHERE id != '00000000-0000-0000-0000-000000000000'"
+      });
+      
+      if (result.error) {
+        console.error(`Erreur lors de la purge de la table alertes:`, result.error);
       } else {
         console.log(`Table alertes vidée avec succès`);
       }
