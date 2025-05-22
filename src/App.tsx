@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
+import { SidebarProvider } from '@/components/ui/sidebar';
 
 import MainLayout from './components/layout/MainLayout';
 import HomePage from './pages/HomePage';
@@ -35,16 +36,18 @@ function App() {
 
   return (
     <BrowserRouter>
-      <MainLayout>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/auth" element={user ? <Navigate to="/" replace /> : <AuthPage />} />
-          <Route path="/marches" element={!user ? <Navigate to="/auth" replace /> : <MarchesPage />} />
-          <Route path="/marches/create" element={!user ? <Navigate to="/auth" replace /> : <MarketCreationPage />} />
-          <Route path="/marches/:id" element={!user ? <Navigate to="/auth" replace /> : <MarcheDetailPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-        </Routes>
-      </MainLayout>
+      <SidebarProvider defaultOpen={true}>
+        <MainLayout>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/auth" element={user ? <Navigate to="/" replace /> : <AuthPage />} />
+            <Route path="/marches" element={!user ? <Navigate to="/auth" replace /> : <MarchesPage />} />
+            <Route path="/marches/create" element={!user ? <Navigate to="/auth" replace /> : <MarketCreationPage />} />
+            <Route path="/marches/:id" element={!user ? <Navigate to="/auth" replace /> : <MarcheDetailPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+          </Routes>
+        </MainLayout>
+      </SidebarProvider>
       <Toaster />
     </BrowserRouter>
   );
