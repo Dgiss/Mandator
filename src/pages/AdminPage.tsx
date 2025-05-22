@@ -1,211 +1,91 @@
-
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import PageLayout from '@/components/layout/PageLayout';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import React from 'react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ResetDatabaseButton } from '@/components/admin/ResetDatabaseButton';
+import PrivateRoute from '@/components/auth/PrivateRoute';
+import { PageLayout } from '@/components/layout/PageLayout';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
-import { usersService } from '@/services/droits';
-import { useUserRole } from '@/hooks/userRole';
-import { UserRole } from '@/hooks/userRole/types';
-import { Shield, RefreshCw } from 'lucide-react';
+import { setup } from '@supabase/functions-js';
+import { toast } from 'sonner';
 
+/**
+ * Page d'administration avec fonctionnalités pour gérer l'application
+ */
 export default function AdminPage() {
-  const [users, setUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const { toast } = useToast();
-  const navigate = useNavigate();
-  const { role, loading: roleLoading } = useUserRole();
-
-  // Check if user is admin
-  useEffect(() => {
-    if (!roleLoading && role !== 'ADMIN') {
-      navigate('/home');
-      toast({
-        title: "Accès refusé",
-        description: "Vous n'avez pas les autorisations nécessaires pour accéder à cette page.",
-        variant: "destructive",
-      });
-    }
-  }, [role, roleLoading, navigate, toast]);
-
-  // Load users when component mounts
-  useEffect(() => {
-    loadUsers();
-  }, []);
-
-  // Function to load users
-  const loadUsers = async () => {
-    setLoading(true);
-    try {
-      const usersData = await usersService.getUsers();
-      setUsers(usersData || []);
-    } catch (error) {
-      console.error('Erreur lors du chargement des utilisateurs:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger la liste des utilisateurs.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Function to update user's global role
-  const handleRoleChange = async (userId: string, newRole: string) => {
-    try {
-      // Cast the string value to UserRole type since we know the values are constrained by our Select component
-      await usersService.updateGlobalRole(userId, newRole as UserRole);
-      toast({
-        title: "Succès",
-        description: "Le rôle global a été mis à jour avec succès.",
-        variant: "success",
-      });
-      
-      // Refresh user list
-      loadUsers();
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour du rôle:', error);
-      toast({
-        title: "Erreur",
-        description: "Une erreur est survenue lors de la mise à jour du rôle.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Filter users based on search
-  const filteredUsers = users.filter(user => {
-    const searchLower = searchQuery.toLowerCase();
-    const email = (user.email?.toLowerCase() || '');
-    const nom = (user.nom?.toLowerCase() || '');
-    const prenom = (user.prenom?.toLowerCase() || '');
-    const role = (user.role_global?.toLowerCase() || '');
-    
-    return email.includes(searchLower) || 
-           nom.includes(searchLower) || 
-           prenom.includes(searchLower) ||
-           role.includes(searchLower);
-  });
-
-  // If still loading role, show loading state
-  if (roleLoading) {
+  const { user, profile } = useAuth();
+  const isAdmin = profile?.role_global === 'ADMIN';
+  
+  if (!isAdmin) {
     return (
-      <PageLayout
-        title="Administration"
-        description="Chargement..."
-      >
-        <div className="flex justify-center items-center h-64">
-          <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
+      <PageLayout title="Accès refusé">
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+          <h2 className="text-2xl font-bold mb-4">Accès refusé</h2>
+          <p className="text-muted-foreground">Vous n'avez pas les droits nécessaires pour accéder à cette page.</p>
         </div>
       </PageLayout>
     );
   }
-
-  // Only render the page content if user is admin
-  if (role !== 'ADMIN') {
-    return null; // Extra safety check
-  }
-
+  
   return (
-    <PageLayout
-      title="Administration"
-      description="Gérez les utilisateurs et leurs droits d'accès"
-    >
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            <span>Gestion des utilisateurs et des rôles</span>
-          </h2>
-          <Button onClick={loadUsers} variant="outline" size="sm">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Actualiser
-          </Button>
-        </div>
-        
-        <div className="rounded-md border">
-          <div className="p-4 border-b">
-            <Input
-              placeholder="Rechercher un utilisateur..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="max-w-md"
-            />
-          </div>
+    <PrivateRoute>
+      <PageLayout title="Administration">
+        <div className="container mx-auto py-6">
+          <h1 className="text-3xl font-bold mb-6">Administration du système</h1>
           
-          {loading ? (
-            <div className="flex justify-center items-center h-[200px]">
-              <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Nom</TableHead>
-                  <TableHead>Prénom</TableHead>
-                  <TableHead>Rôle global</TableHead>
-                  <TableHead className="w-[200px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                      Aucun utilisateur trouvé.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredUsers.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.nom || '-'}</TableCell>
-                      <TableCell>{user.prenom || '-'}</TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold 
-                          ${user.role_global === 'ADMIN' ? 'bg-red-100 text-red-800' : 
-                            user.role_global === 'MOE' ? 'bg-blue-100 text-blue-800' : 
-                            'bg-green-100 text-green-800'}`}>
-                          {user.role_global || 'STANDARD'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Select 
-                          defaultValue={user.role_global || 'MANDATAIRE'}
-                          onValueChange={(value) => handleRoleChange(user.id, value)}
-                        >
-                          <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Changer le rôle" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="ADMIN">Administrateur</SelectItem>
-                            <SelectItem value="MOE">Maître d'œuvre (MOE)</SelectItem>
-                            <SelectItem value="MANDATAIRE">Mandataire</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          )}
+          <Tabs defaultValue="database" className="w-full">
+            <TabsList className="grid w-full md:w-[400px] grid-cols-2">
+              <TabsTrigger value="database">Base de données</TabsTrigger>
+              <TabsTrigger value="users">Utilisateurs</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="database" className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Gestion de la base de données</CardTitle>
+                  <CardDescription>
+                    Outils pour gérer les données de l'application
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <h3 className="text-lg font-medium mb-4">Réinitialisation complète</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Cette opération va purger toutes les données utilisateurs et fichiers stockés.
+                    Les structures des tables seront conservées mais toutes les données seront effacées.
+                  </p>
+                  
+                  <div className="bg-amber-50 border border-amber-200 rounded-md p-4 mb-6">
+                    <h4 className="text-amber-900 font-medium">⚠️ Attention</h4>
+                    <p className="text-amber-800">
+                      Cette action est irréversible. Toutes les données seront définitivement perdues.
+                      Assurez-vous d'avoir sauvegardé les données importantes avant de continuer.
+                    </p>
+                  </div>
+                  
+                  <ResetDatabaseButton />
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="users" className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Gestion des utilisateurs</CardTitle>
+                  <CardDescription>
+                    Outils pour gérer les utilisateurs de l'application
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {/* Contenu à ajouter pour la gestion des utilisateurs */}
+                  <p className="text-muted-foreground">
+                    Cette section sera développée dans une future mise à jour.
+                  </p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
-        
-        <div className="bg-blue-50 border border-blue-200 rounded-md p-4 text-sm text-blue-700">
-          <p className="font-medium">Informations sur les rôles:</p>
-          <ul className="list-disc list-inside space-y-1 mt-2">
-            <li><strong>Administrateur</strong>: Accès complet au système, peut gérer tous les utilisateurs et tous les marchés.</li>
-            <li><strong>Maître d'œuvre (MOE)</strong>: Peut créer des marchés et attribuer le rôle de Mandataire aux marchés où il est MOE.</li>
-            <li><strong>Mandataire</strong>: Accès limité aux marchés qui lui sont attribués, ne peut pas créer de marchés.</li>
-          </ul>
-        </div>
-      </div>
-    </PageLayout>
+      </PageLayout>
+    </PrivateRoute>
   );
 }
