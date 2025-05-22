@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Document as ProjectDocument } from '@/services/types';
@@ -14,6 +14,7 @@ import DocumentUploader from './DocumentUploader';
 import ModifyDocumentButton from './ModifyDocumentButton';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { supabase } from '@/lib/supabase';
 
 interface DocumentViewerProps {
   document: ProjectDocument | null;
@@ -23,14 +24,15 @@ interface DocumentViewerProps {
 }
 
 const DocumentViewer: React.FC<DocumentViewerProps> = ({
-  document,
+  document: initialDocument,
   open,
   onOpenChange,
   onDocumentUpdated
 }) => {
   const [activeTab, setActiveTab] = useState('apercu');
   const [isUploaderOpen, setIsUploaderOpen] = useState(false);
-  const { canEdit } = useUserRole(document?.marche_id || '');
+  const { canEdit } = useUserRole(initialDocument?.marche_id || '');
+  const [document, setDocument] = useState<ProjectDocument | null>(initialDocument);
 
   // To prevent infinite loop, use a flag to track if an update has been made
   const [updatePending, setUpdatePending] = useState(false);
@@ -45,6 +47,37 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
     }
   };
   
+  // Effect to update the document state when the initialDocument prop changes
+  useEffect(() => {
+    setDocument(initialDocument);
+  }, [initialDocument]);
+  
+  // Effect to fetch the latest document data when needed
+  useEffect(() => {
+    if (open && document?.id && !updatePending) {
+      refreshDocumentData(document.id);
+    }
+  }, [open, document?.id]);
+  
+  // Function to refresh document data
+  const refreshDocumentData = async (documentId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('id', documentId)
+        .single();
+      
+      if (error) throw error;
+      if (data) {
+        console.log('Refreshed document data:', data);
+        setDocument(data as ProjectDocument);
+      }
+    } catch (error) {
+      console.error('Error fetching document details:', error);
+    }
+  };
+  
   if (!document) return null;
   
   const fileUrl = document.file_path 
@@ -55,6 +88,11 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
     // Set the flag to prevent multiple updates
     if (!updatePending && onDocumentUpdated) {
       setUpdatePending(true);
+      
+      // Refresh document data first
+      if (document?.id) {
+        refreshDocumentData(document.id);
+      }
       
       // Add a delay to prevent cascading updates
       setTimeout(() => {
@@ -67,9 +105,18 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
     }
   };
 
-  const handleUploadSuccess = () => {
+  const handleUploadSuccess = async () => {
     setIsUploaderOpen(false);
-    handleDocumentUpdate();
+    
+    // Refresh document data immediately after upload
+    if (document?.id) {
+      await refreshDocumentData(document.id);
+    }
+    
+    // Then trigger the update callback after a brief delay
+    setTimeout(() => {
+      handleDocumentUpdate();
+    }, 500);
   };
 
   return (

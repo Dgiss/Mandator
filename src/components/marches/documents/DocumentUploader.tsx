@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { MultiFileUpload } from '@/components/ui/multi-file-upload';
 import { fileStorage } from '@/services/storage/fileStorage';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { supabase } from '@/lib/supabase';
 
 interface DocumentUploaderProps {
@@ -50,6 +50,7 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
     try {
       // Create bucket if it doesn't exist
       await fileStorage.ensureBucketExists('marches', true);
+      console.log('Bucket marches existe déjà - continuons.');
       
       // Process each file
       for (const file of files) {
@@ -66,7 +67,6 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
           }
           
           // Update document in database with file path
-          // Using a simple update operation without complex refresh triggers
           const { error } = await supabase
             .from('documents')
             .update({
@@ -78,6 +78,8 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
           if (error) {
             throw error;
           }
+          
+          console.log('Document mis à jour avec le fichier:', uploadResult.path);
           
           // Complete progress
           setProgress(prev => ({ ...prev, [file.name]: 100 }));
@@ -96,16 +98,15 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
           description: `${successCount} fichier(s) téléchargé(s) avec succès${errorCount > 0 ? ` (${errorCount} échec(s))` : ''}`,
         });
         
-        // Call onSuccess callback but with a slight delay to prevent immediate refetches
+        // Close dialog first
+        onOpenChange(false);
+        
+        // Call onSuccess callback with a sufficient delay to ensure the document is updated in the database
         if (onSuccess) {
-          // Add delay before triggering the callback to avoid immediate refetches
           setTimeout(() => {
             onSuccess();
-          }, 500);
+          }, 1000);
         }
-        
-        // Close dialog
-        onOpenChange(false);
       } else {
         toast({
           title: "Erreur",
@@ -130,6 +131,9 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Télécharger des fichiers</DialogTitle>
+          <DialogDescription>
+            Sélectionnez un fichier pour l'associer à ce document.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4">
