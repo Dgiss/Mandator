@@ -15,12 +15,12 @@ import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/userRole';
 import { generateDocumentReference } from '@/utils/documentFormatters';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
 interface MarcheDocumentsProps {
   marcheId: string;
 }
-
-export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
+export default function MarcheDocuments({
+  marcheId
+}: MarcheDocumentsProps) {
   const [documents, setDocuments] = useState<ProjectDocument[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [numeroFilter, setNumeroFilter] = useState('all-documents');
@@ -29,14 +29,16 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
   const [loading, setLoading] = useState(true);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
-  const { canEdit } = useUserRole(marcheId);
-  
+  const {
+    toast
+  } = useToast();
+  const {
+    canEdit
+  } = useUserRole(marcheId);
+
   // Collect unique document numbers for filtering
-  const uniqueNumeros = Array.from(new Set(
-    documents.filter(doc => doc.numero).map(doc => doc.numero)
-  )).sort() as string[];
-  
+  const uniqueNumeros = Array.from(new Set(documents.filter(doc => doc.numero).map(doc => doc.numero))).sort() as string[];
+
   // Add fetched IDs tracking to prevent duplicate requests
   const fetchedIds = useRef<Set<string>>(new Set());
   const isLoadingRef = useRef<boolean>(false);
@@ -47,7 +49,6 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
 
   // États pour le rechargement manuel avec protection contre les clics multiples
   const [isReloading, setIsReloading] = useState(false);
-
   const openNewDocumentForm = () => {
     setEditingDocument({
       id: '',
@@ -68,10 +69,9 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
       taille: '',
       file_path: '',
       marche_id: marcheId,
-      created_at: new Date().toISOString(),
+      created_at: new Date().toISOString()
     });
   };
-
   const onDocumentSaved = useCallback(() => {
     setEditingDocument(null);
 
@@ -81,29 +81,26 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
       fetchedIds.current.clear();
       setLoadAttempt(prev => prev + 1);
     }, 500);
-    
     toast({
       title: "Succès",
-      description: "Document sauvegardé avec succès.",
+      description: "Document sauvegardé avec succès."
     });
   }, [toast]);
-
   const downloadDocument = (document: ProjectDocument) => {
     if (!document.file_path) {
       toast({
         title: "Erreur",
         description: "Aucun fichier associé à ce document.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-
     const downloadFile = async () => {
       try {
-        const { data, error } = await supabase.storage
-          .from('marches')
-          .download(document.file_path);
-
+        const {
+          data,
+          error
+        } = await supabase.storage.from('marches').download(document.file_path);
         if (error) {
           throw new Error(error.message);
         }
@@ -117,23 +114,20 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
         link.click();
         window.document.body.removeChild(link);
         URL.revokeObjectURL(url);
-
         toast({
           title: "Téléchargement",
-          description: "Le téléchargement du document a commencé.",
+          description: "Le téléchargement du document a commencé."
         });
       } catch (error: any) {
         toast({
           title: "Erreur",
           description: `Erreur lors du téléchargement du document: ${error.message}`,
-          variant: "destructive",
+          variant: "destructive"
         });
       }
     };
-
     downloadFile();
   };
-
   const viewDocument = (document: ProjectDocument) => {
     setViewingDocument(document);
   };
@@ -142,7 +136,9 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return "—";
     try {
-      return format(new Date(dateString), 'dd/MM/yyyy', { locale: fr });
+      return format(new Date(dateString), 'dd/MM/yyyy', {
+        locale: fr
+      });
     } catch (e) {
       return "—";
     }
@@ -181,34 +177,26 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
       // Empêcher les appels excessifs
       const now = Date.now();
       const minFetchInterval = 2000; // 2 secondes minimum entre les appels
-      
+
       // Skip si déjà en chargement ou si on a déjà récupéré ce marché récemment
-      if (isLoadingRef.current || 
-          (fetchedIds.current.has(marcheId) && 
-           now - lastFetchTimestampRef.current < minFetchInterval && 
-           loadAttempt === 0)) {
+      if (isLoadingRef.current || fetchedIds.current.has(marcheId) && now - lastFetchTimestampRef.current < minFetchInterval && loadAttempt === 0) {
         console.log(`Skipping fetch for marché: ${marcheId} - already loaded or in progress or too recent`);
         return;
       }
-      
       isLoadingRef.current = true;
       fetchInProgress.current = true;
       lastFetchTimestampRef.current = now;
       setLoading(true);
       setError(null);
-      
       try {
         console.log(`Fetching documents for marché: ${marcheId}, attempt: ${loadAttempt}`);
-        
-        const { data, error } = await supabase
-          .from('documents')
-          .select('*')
-          .eq('marche_id', marcheId);
-
+        const {
+          data,
+          error
+        } = await supabase.from('documents').select('*').eq('marche_id', marcheId);
         if (error) {
           throw new Error(error.message);
         }
-
         if (data) {
           console.log(`Successfully fetched ${data.length} documents`);
           setDocuments(data);
@@ -221,16 +209,15 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
       } catch (error: any) {
         console.error("Error fetching documents:", error);
         setError(`Erreur lors de la récupération des documents: ${error.message}`);
-        
         toast({
           title: "Erreur",
           description: `Erreur lors de la récupération des documents: ${error.message}`,
-          variant: "destructive",
+          variant: "destructive"
         });
       } finally {
         setLoading(false);
         isLoadingRef.current = false;
-        
+
         // Délai de sécurité avant de permettre une nouvelle requête
         setTimeout(() => {
           fetchInProgress.current = false;
@@ -240,7 +227,7 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
 
     // Appeler fetchDocuments immédiatement
     fetchDocuments();
-    
+
     // Clean up function
     return () => {
       isLoadingRef.current = false;
@@ -255,21 +242,16 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
   const filteredDocuments = documents.filter(doc => {
     const searchLower = searchTerm.toLowerCase();
     const codification = generateDocumentReference(doc);
-    
+
     // Filtrer par numéro d'abord si un filtre est sélectionné
     if (numeroFilter !== 'all-documents' && doc.numero !== numeroFilter) {
       return false;
     }
-    
+
     // Puis appliquer le filtre de recherche textuelle
-    return (
-      doc.nom.toLowerCase().includes(searchLower) ||
-      (doc.description && doc.description.toLowerCase().includes(searchLower)) ||
-      (doc.type && doc.type.toLowerCase().includes(searchLower)) ||
-      codification.toLowerCase().includes(searchLower)
-    );
+    return doc.nom.toLowerCase().includes(searchLower) || doc.description && doc.description.toLowerCase().includes(searchLower) || doc.type && doc.type.toLowerCase().includes(searchLower) || codification.toLowerCase().includes(searchLower);
   });
-  
+
   // Fonction pour recharger manuellement les documents avec protection contre les appels multiples
   const handleManualReload = useCallback(() => {
     // Empêcher les clics multiples pendant le rechargement
@@ -277,25 +259,23 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
       console.log('Manual reload disabled or already in progress, ignoring click');
       return;
     }
-    
     console.log('Starting manual document reload');
     setIsReloading(true);
     reloadDisabledRef.current = true;
-    
+
     // Clear fetched IDs to force a reload
     fetchedIds.current.clear();
     setLoadAttempt(prev => prev + 1);
-    
+
     // Forcer un délai minimum pour l'interface utilisateur et éviter les clics multiples
     reloadTimeoutRef.current = setTimeout(() => {
       setIsReloading(false);
-      
+
       // Ajouter un délai supplémentaire avant de permettre un nouveau clic
       setTimeout(() => {
         reloadDisabledRef.current = false;
         console.log('Manual reload button re-enabled');
       }, 2000);
-      
       console.log('Manual reload completed');
     }, 1000);
   }, [isReloading]);
@@ -305,36 +285,15 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
     setSearchTerm('');
     setNumeroFilter('all-documents');
   };
-
-  return (
-    <div className="w-full">
+  return <div className="w-full">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Documents du marché</h2>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={handleManualReload}
-            className={`flex items-center gap-2 ${isReloading || reloadDisabledRef.current ? 'opacity-50 cursor-not-allowed' : ''}`}
-            disabled={isReloading || reloadDisabledRef.current}
-          >
-            {isReloading ? (
-              <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-gray-900"></div>
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
-            {isReloading ? 'Chargement...' : 'Actualiser'}
-          </Button>
-          {canEdit && (
-            <Button 
-              variant="default" 
-              onClick={openNewDocumentForm}
-              className="flex items-center gap-2"
-              aria-label="Ajouter un document"
-            >
+          
+          {canEdit && <Button variant="default" onClick={openNewDocumentForm} className="flex items-center gap-2" aria-label="Ajouter un document">
               <Plus size={16} />
               Nouveau document
-            </Button>
-          )}
+            </Button>}
         </div>
       </div>
       
@@ -342,12 +301,7 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Rechercher un document..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+          <Input placeholder="Rechercher un document..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
         </div>
         
         <div className="flex gap-2">
@@ -360,40 +314,30 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all-documents">Tous les numéros</SelectItem>
-              {uniqueNumeros.map((numero) => (
-                <SelectItem key={numero} value={numero}>{numero}</SelectItem>
-              ))}
+              {uniqueNumeros.map(numero => <SelectItem key={numero} value={numero}>{numero}</SelectItem>)}
             </SelectContent>
           </Select>
           
-          {(searchTerm || numeroFilter !== 'all-documents') && (
-            <Button 
-              variant="outline" 
-              onClick={resetFilters}
-              className="flex items-center gap-2"
-            >
+          {(searchTerm || numeroFilter !== 'all-documents') && <Button variant="outline" onClick={resetFilters} className="flex items-center gap-2">
               Réinitialiser
-            </Button>
-          )}
+            </Button>}
         </div>
       </div>
       
       {/* Message d'erreur */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6 flex items-start">
+      {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6 flex items-start">
           <div className="flex-shrink-0 mr-3 mt-0.5">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" x2="12" y1="8" y2="12"/>
-              <line x1="12" x2="12.01" y1="16" y2="16"/>
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" x2="12" y1="8" y2="12" />
+              <line x1="12" x2="12.01" y1="16" y2="16" />
             </svg>
           </div>
           <div>
             <p className="font-medium">Erreur de chargement</p>
             <p className="text-sm">{error}</p>
           </div>
-        </div>
-      )}
+        </div>}
       
       {/* Tableau des documents */}
       <Card>
@@ -410,16 +354,13 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? (
-                <TableRow>
+              {loading ? <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center">
                     <div className="flex justify-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
                     </div>
                   </TableCell>
-                </TableRow>
-              ) : filteredDocuments.length === 0 ? (
-                <TableRow>
+                </TableRow> : filteredDocuments.length === 0 ? <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <FileText className="h-8 w-8 text-gray-400 mb-2" />
@@ -427,10 +368,7 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
                       <p className="text-gray-400 text-sm">Ajoutez de nouveaux documents ou modifiez vos critères de recherche</p>
                     </div>
                   </TableCell>
-                </TableRow>
-              ) : (
-                filteredDocuments.map(document => (
-                  <TableRow key={document.id} className="cursor-pointer hover:bg-gray-50" onClick={() => viewDocument(document)}>
+                </TableRow> : filteredDocuments.map(document => <TableRow key={document.id} className="cursor-pointer hover:bg-gray-50" onClick={() => viewDocument(document)}>
                     <TableCell>
                       <div className="font-medium">{document.description || document.nom}</div>
                     </TableCell>
@@ -445,61 +383,36 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
                     </TableCell>
                     <TableCell>{formatDate(document.date_diffusion || document.created_at)}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end space-x-2" onClick={(e) => e.stopPropagation()}>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            downloadDocument(document);
-                          }}
-                        >
+                      <div className="flex justify-end space-x-2" onClick={e => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={e => {
+                    e.stopPropagation();
+                    downloadDocument(document);
+                  }}>
                           <Download className="h-4 w-4" />
                           <span className="sr-only">Télécharger</span>
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            viewDocument(document);
-                          }}
-                        >
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={e => {
+                    e.stopPropagation();
+                    viewDocument(document);
+                  }}>
                           <Eye className="h-4 w-4" />
                           <span className="sr-only">Voir</span>
                         </Button>
                       </div>
                     </TableCell>
-                  </TableRow>
-                ))
-              )}
+                  </TableRow>)}
             </TableBody>
           </Table>
         </div>
       </Card>
       
       {/* Formulaire de document (modal) */}
-      {editingDocument !== null && (
-        <MarcheDocumentForm 
-          marcheId={marcheId} 
-          editingDocument={editingDocument} 
-          setEditingDocument={setEditingDocument} 
-          onDocumentSaved={onDocumentSaved}
-        />
-      )}
+      {editingDocument !== null && <MarcheDocumentForm marcheId={marcheId} editingDocument={editingDocument} setEditingDocument={setEditingDocument} onDocumentSaved={onDocumentSaved} />}
 
       {/* Visualiseur de document */}
-      <DocumentViewer 
-        document={viewingDocument} 
-        open={!!viewingDocument} 
-        onOpenChange={(open) => !open && setViewingDocument(null)} 
-        onDocumentUpdated={() => {
-          fetchedIds.current.clear();
-          setLoadAttempt(prev => prev + 1);
-        }}
-      />
-    </div>
-  );
+      <DocumentViewer document={viewingDocument} open={!!viewingDocument} onOpenChange={open => !open && setViewingDocument(null)} onDocumentUpdated={() => {
+      fetchedIds.current.clear();
+      setLoadAttempt(prev => prev + 1);
+    }} />
+    </div>;
 }
