@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { MultiFileUpload } from '@/components/ui/multi-file-upload';
 import { fileStorage } from '@/services/storage/fileStorage';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { supabase } from '@/lib/supabase';
 
 interface DocumentUploaderProps {
   documentId: string;
