@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +9,6 @@ import { FileText, Mail, Key, User, Building, Loader2, AlertCircle, WifiOff, Squ
 import { useAuth } from '@/contexts/AuthContext';
 import { validateField } from '@/hooks/form/validation';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-
 export default function AuthPage() {
   const navigate = useNavigate();
   const {
@@ -33,7 +31,6 @@ export default function AuthPage() {
   const [registerLoading, setRegisterLoading] = useState(false);
   const [error, setError] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
-  
   useEffect(() => {
     // Si l'utilisateur est connecté, rediriger vers la page d'accueil
     if (user && !loading) {
@@ -47,7 +44,6 @@ export default function AuthPage() {
       setError(authError);
     }
   }, [authError]);
-
   const validateEmailField = (email: string) => {
     const emailValidation = validateField('email', email, {
       required: true,
@@ -56,7 +52,6 @@ export default function AuthPage() {
     });
     return emailValidation;
   };
-
   const validatePasswordField = (password: string) => {
     return validateField('password', password, {
       required: true,
@@ -64,7 +59,6 @@ export default function AuthPage() {
       errorMessage: "Le mot de passe doit contenir au moins 6 caractères"
     });
   };
-
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
@@ -83,7 +77,6 @@ export default function AuthPage() {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -103,7 +96,6 @@ export default function AuthPage() {
       setError(error.message || "Une erreur est survenue lors de la connexion");
     }
   };
-
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -143,7 +135,6 @@ export default function AuthPage() {
         </div>
       </div>;
   }
-
   return <div className="flex flex-col min-h-screen">
       <header className="bg-white shadow-sm py-4 px-6">
         <div className="container mx-auto flex items-center">
@@ -160,9 +151,7 @@ export default function AuthPage() {
           <div className="absolute inset-0 bg-gradient-to-br from-btp-navy/80 to-btp-blue/40 z-10"></div>
           <img src="https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d" alt="Marchés publics BTP" className="object-cover w-full h-full absolute inset-0" />
           <div className="relative z-10 flex flex-col justify-center items-start h-full p-12">
-            <div className="w-24 h-24 bg-gradient-to-br from-[#5743e9] to-[#7e69c5] flex items-center justify-center rounded-md mb-6">
-              <span className="text-white font-bold text-4xl">M</span>
-            </div>
+            
             <h2 className="text-white text-4xl font-bold mb-6">Simplifiez la gestion<br />de vos marchés publics</h2>
             <p className="text-white/90 text-lg max-w-md">
               Mandator vous accompagne dans chaque étape de vos projets, 
@@ -187,14 +176,12 @@ export default function AuthPage() {
             </div>
             
             {/* Show connectivity warning if there are issues */}
-            {connectionStatus === 'disconnected' && (
-              <Alert variant="destructive" className="mb-6">
+            {connectionStatus === 'disconnected' && <Alert variant="destructive" className="mb-6">
                 <WifiOff className="h-4 w-4" />
                 <AlertDescription>
                   Problème de connexion au serveur. Certaines fonctionnalités pourraient être indisponibles.
                 </AlertDescription>
-              </Alert>
-            )}
+              </Alert>}
             
             <Tabs defaultValue="login" className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-6">
