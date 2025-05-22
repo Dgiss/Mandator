@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,9 +16,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/userRole';
 import { generateDocumentReference } from '@/utils/documentFormatters';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 interface MarcheDocumentsProps {
   marcheId: string;
 }
+
 export default function MarcheDocuments({
   marcheId
 }: MarcheDocumentsProps) {
@@ -29,26 +32,83 @@ export default function MarcheDocuments({
   const [loading, setLoading] = useState(true);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const {
-    toast
-  } = useToast();
-  const {
-    canEdit
-  } = useUserRole(marcheId);
+  const { toast } = useToast();
+  const { canEdit } = useUserRole(marcheId);
 
   // Collect unique document numbers for filtering
   const uniqueNumeros = Array.from(new Set(documents.filter(doc => doc.numero).map(doc => doc.numero))).sort() as string[];
 
-  // Add fetched IDs tracking to prevent duplicate requests
-  const fetchedIds = useRef<Set<string>>(new Set());
+  // Refs for controlling fetch behavior
   const isLoadingRef = useRef<boolean>(false);
   const lastFetchTimestampRef = useRef<number>(0);
-  const fetchInProgress = useRef<boolean>(false);
+  const fetchInProgressRef = useRef<boolean>(false);
   const reloadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reloadDisabledRef = useRef<boolean>(false);
 
-  // États pour le rechargement manuel avec protection contre les clics multiples
+  // State for reload button UI
   const [isReloading, setIsReloading] = useState(false);
+
+  // Debounced fetch function to prevent multiple simultaneous calls
+  const fetchDocuments = useCallback(async () => {
+    // Skip if already loading, a fetch is in progress, or if the last fetch was too recent
+    const now = Date.now();
+    const minFetchInterval = 3000; // 3 seconds minimum between forced fetches
+    
+    if (isLoadingRef.current || fetchInProgressRef.current || (now - lastFetchTimestampRef.current < minFetchInterval && loadAttempt > 0)) {
+      console.log('Skipping fetch - already in progress or too soon');
+      return;
+    }
+    
+    isLoadingRef.current = true;
+    fetchInProgressRef.current = true;
+    lastFetchTimestampRef.current = now;
+    setLoading(true);
+    setError(null);
+    
+    try {
+      console.log(`Fetching documents for marché: ${marcheId}, attempt: ${loadAttempt}`);
+      const { data, error } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('marche_id', marcheId);
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      setDocuments(data || []);
+      console.log(`Successfully fetched ${data?.length || 0} documents`);
+    } catch (error: any) {
+      console.error("Error fetching documents:", error);
+      setError(`Erreur lors de la récupération des documents: ${error.message}`);
+      toast({
+        title: "Erreur",
+        description: `Erreur lors de la récupération des documents: ${error.message}`,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+      isLoadingRef.current = false;
+      
+      // Delay clearing the fetchInProgress flag to prevent rapid consecutive fetches
+      setTimeout(() => {
+        fetchInProgressRef.current = false;
+      }, 1000);
+    }
+  }, [marcheId, loadAttempt, toast]);
+
+  // Initial data fetch on component mount and when dependencies change
+  useEffect(() => {
+    fetchDocuments();
+    
+    // Clean up timeouts on unmount
+    return () => {
+      if (reloadTimeoutRef.current) {
+        clearTimeout(reloadTimeoutRef.current);
+      }
+    };
+  }, [fetchDocuments, marcheId, loadAttempt]);
+
   const openNewDocumentForm = () => {
     setEditingDocument({
       id: '',
@@ -72,20 +132,23 @@ export default function MarcheDocuments({
       created_at: new Date().toISOString()
     });
   };
+
+  // Function called after a document is saved - added a delay to prevent immediate refetches
   const onDocumentSaved = useCallback(() => {
     setEditingDocument(null);
-
-    // Attendre un court délai avant de recharger pour laisser le temps à la base de données de se mettre à jour
+    
+    // Use a controlled setTimeout to prevent rapid consecutive fetches
     setTimeout(() => {
-      // Forcer un rechargement des données avec un nouveau loadAttempt
-      fetchedIds.current.clear();
       setLoadAttempt(prev => prev + 1);
-    }, 500);
+    }, 1000);
+    
     toast({
       title: "Succès",
       description: "Document sauvegardé avec succès."
     });
   }, [toast]);
+
+  // Function to download a document
   const downloadDocument = (document: ProjectDocument) => {
     if (!document.file_path) {
       toast({
@@ -95,17 +158,17 @@ export default function MarcheDocuments({
       });
       return;
     }
+    
     const downloadFile = async () => {
       try {
-        const {
-          data,
-          error
-        } = await supabase.storage.from('marches').download(document.file_path);
+        const { data, error } = await supabase.storage
+          .from('marches')
+          .download(document.file_path);
+        
         if (error) {
           throw new Error(error.message);
         }
 
-        // Create URL and anchor element for download using window.document
         const url = window.URL.createObjectURL(data);
         const link = window.document.createElement('a');
         link.href = url;
@@ -114,6 +177,7 @@ export default function MarcheDocuments({
         link.click();
         window.document.body.removeChild(link);
         URL.revokeObjectURL(url);
+        
         toast({
           title: "Téléchargement",
           description: "Le téléchargement du document a commencé."
@@ -126,25 +190,26 @@ export default function MarcheDocuments({
         });
       }
     };
+    
     downloadFile();
   };
+
+  // Function to view a document
   const viewDocument = (document: ProjectDocument) => {
     setViewingDocument(document);
   };
 
-  // Cette fonction est utilisée pour formater la date
+  // Format date function
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return "—";
     try {
-      return format(new Date(dateString), 'dd/MM/yyyy', {
-        locale: fr
-      });
+      return format(new Date(dateString), 'dd/MM/yyyy', { locale: fr });
     } catch (e) {
       return "—";
     }
   };
 
-  // Obtenir la couleur du badge en fonction du statut
+  // Get color based on document status
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'BPE':
@@ -165,143 +230,103 @@ export default function MarcheDocuments({
     }
   };
 
-  // Récupérer les documents avec logique pour éviter les appels API excessifs
-  useEffect(() => {
-    // Cette fonction contient la logique réelle de chargement des documents
-    const fetchDocuments = async () => {
-      if (fetchInProgress.current) {
-        console.log('Fetch already in progress, skipping duplicate request');
-        return;
-      }
-
-      // Empêcher les appels excessifs
-      const now = Date.now();
-      const minFetchInterval = 2000; // 2 secondes minimum entre les appels
-
-      // Skip si déjà en chargement ou si on a déjà récupéré ce marché récemment
-      if (isLoadingRef.current || fetchedIds.current.has(marcheId) && now - lastFetchTimestampRef.current < minFetchInterval && loadAttempt === 0) {
-        console.log(`Skipping fetch for marché: ${marcheId} - already loaded or in progress or too recent`);
-        return;
-      }
-      isLoadingRef.current = true;
-      fetchInProgress.current = true;
-      lastFetchTimestampRef.current = now;
-      setLoading(true);
-      setError(null);
-      try {
-        console.log(`Fetching documents for marché: ${marcheId}, attempt: ${loadAttempt}`);
-        const {
-          data,
-          error
-        } = await supabase.from('documents').select('*').eq('marche_id', marcheId);
-        if (error) {
-          throw new Error(error.message);
-        }
-        if (data) {
-          console.log(`Successfully fetched ${data.length} documents`);
-          setDocuments(data);
-          // Add to fetched IDs set
-          fetchedIds.current.add(marcheId);
-        } else {
-          console.log('No documents found (empty data array)');
-          setDocuments([]);
-        }
-      } catch (error: any) {
-        console.error("Error fetching documents:", error);
-        setError(`Erreur lors de la récupération des documents: ${error.message}`);
-        toast({
-          title: "Erreur",
-          description: `Erreur lors de la récupération des documents: ${error.message}`,
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
-        isLoadingRef.current = false;
-
-        // Délai de sécurité avant de permettre une nouvelle requête
-        setTimeout(() => {
-          fetchInProgress.current = false;
-        }, 500);
-      }
-    };
-
-    // Appeler fetchDocuments immédiatement
-    fetchDocuments();
-
-    // Clean up function
-    return () => {
-      isLoadingRef.current = false;
-      fetchInProgress.current = false;
-      if (reloadTimeoutRef.current) {
-        clearTimeout(reloadTimeoutRef.current);
-      }
-    };
-  }, [marcheId, loadAttempt, toast]);
-
-  // Filtrer les documents
-  const filteredDocuments = documents.filter(doc => {
-    const searchLower = searchTerm.toLowerCase();
-    const codification = generateDocumentReference(doc);
-
-    // Filtrer par numéro d'abord si un filtre est sélectionné
-    if (numeroFilter !== 'all-documents' && doc.numero !== numeroFilter) {
-      return false;
-    }
-
-    // Puis appliquer le filtre de recherche textuelle
-    return doc.nom.toLowerCase().includes(searchLower) || doc.description && doc.description.toLowerCase().includes(searchLower) || doc.type && doc.type.toLowerCase().includes(searchLower) || codification.toLowerCase().includes(searchLower);
-  });
-
-  // Fonction pour recharger manuellement les documents avec protection contre les appels multiples
+  // Manual reload function with debounce protection
   const handleManualReload = useCallback(() => {
-    // Empêcher les clics multiples pendant le rechargement
     if (reloadDisabledRef.current || isReloading) {
-      console.log('Manual reload disabled or already in progress, ignoring click');
       return;
     }
-    console.log('Starting manual document reload');
+    
     setIsReloading(true);
     reloadDisabledRef.current = true;
-
-    // Clear fetched IDs to force a reload
-    fetchedIds.current.clear();
+    console.log('Starting manual document reload');
+    
     setLoadAttempt(prev => prev + 1);
-
-    // Forcer un délai minimum pour l'interface utilisateur et éviter les clics multiples
+    
+    // Minimum visual feedback time + prevention of rapid consecutive clicks
     reloadTimeoutRef.current = setTimeout(() => {
       setIsReloading(false);
-
-      // Ajouter un délai supplémentaire avant de permettre un nouveau clic
+      
+      // Additional delay before allowing another reload
       setTimeout(() => {
         reloadDisabledRef.current = false;
-        console.log('Manual reload button re-enabled');
-      }, 2000);
-      console.log('Manual reload completed');
+      }, 5000);
     }, 1000);
   }, [isReloading]);
 
-  // Réinitialiser les filtres
+  // Filter documents based on search term and numero filter
+  const filteredDocuments = documents.filter(doc => {
+    const searchLower = searchTerm.toLowerCase();
+    const codification = generateDocumentReference(doc);
+    
+    // First filter by numero if selected
+    if (numeroFilter !== 'all-documents' && doc.numero !== numeroFilter) {
+      return false;
+    }
+    
+    // Then apply text search
+    return doc.nom.toLowerCase().includes(searchLower) || 
+           (doc.description && doc.description.toLowerCase().includes(searchLower)) || 
+           (doc.type && doc.type.toLowerCase().includes(searchLower)) ||
+           codification.toLowerCase().includes(searchLower);
+  });
+
+  // Reset filters function
   const resetFilters = () => {
     setSearchTerm('');
     setNumeroFilter('all-documents');
   };
-  return <div className="w-full">
+
+  // Handle updates from document viewer without triggering infinite loops
+  const handleDocumentUpdated = () => {
+    // Only trigger a reload if another one isn't already in progress
+    if (!fetchInProgressRef.current && !isLoadingRef.current) {
+      // Add a slight delay before triggering reload
+      setTimeout(() => {
+        setLoadAttempt(prev => prev + 1);
+      }, 1000);
+    }
+  };
+
+  return (
+    <div className="w-full">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Documents du marché</h2>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={handleManualReload}
+            disabled={isReloading || reloadDisabledRef.current}
+            className="flex items-center gap-2"
+            title="Rafraîchir les documents"
+          >
+            <RefreshCw size={16} className={isReloading ? "animate-spin" : ""} />
+            Rafraîchir
+          </Button>
           
-          {canEdit && <Button variant="default" onClick={openNewDocumentForm} className="flex items-center gap-2" aria-label="Ajouter un document">
+          {canEdit && (
+            <Button 
+              variant="default" 
+              onClick={openNewDocumentForm}
+              className="flex items-center gap-2"
+              aria-label="Ajouter un document"
+            >
               <Plus size={16} />
               Nouveau document
-            </Button>}
+            </Button>
+          )}
         </div>
       </div>
       
-      {/* Formulaire de recherche et filtres */}
+      {/* Search and filter form */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Rechercher un document..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
+          <Input 
+            placeholder="Rechercher un document..." 
+            value={searchTerm} 
+            onChange={e => setSearchTerm(e.target.value)} 
+            className="pl-10" 
+          />
         </div>
         
         <div className="flex gap-2">
@@ -314,18 +339,27 @@ export default function MarcheDocuments({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all-documents">Tous les numéros</SelectItem>
-              {uniqueNumeros.map(numero => <SelectItem key={numero} value={numero}>{numero}</SelectItem>)}
+              {uniqueNumeros.map(numero => (
+                <SelectItem key={numero} value={numero}>{numero}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
           
-          {(searchTerm || numeroFilter !== 'all-documents') && <Button variant="outline" onClick={resetFilters} className="flex items-center gap-2">
+          {(searchTerm || numeroFilter !== 'all-documents') && (
+            <Button 
+              variant="outline" 
+              onClick={resetFilters}
+              className="flex items-center gap-2"
+            >
               Réinitialiser
-            </Button>}
+            </Button>
+          )}
         </div>
       </div>
       
-      {/* Message d'erreur */}
-      {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6 flex items-start">
+      {/* Error message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6 flex items-start">
           <div className="flex-shrink-0 mr-3 mt-0.5">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
@@ -337,9 +371,10 @@ export default function MarcheDocuments({
             <p className="font-medium">Erreur de chargement</p>
             <p className="text-sm">{error}</p>
           </div>
-        </div>}
+        </div>
+      )}
       
-      {/* Tableau des documents */}
+      {/* Documents table */}
       <Card>
         <div className="rounded-md border">
           <Table>
@@ -354,13 +389,16 @@ export default function MarcheDocuments({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? <TableRow>
+              {loading ? (
+                <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center">
                     <div className="flex justify-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
                     </div>
                   </TableCell>
-                </TableRow> : filteredDocuments.length === 0 ? <TableRow>
+                </TableRow>
+              ) : filteredDocuments.length === 0 ? (
+                <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <FileText className="h-8 w-8 text-gray-400 mb-2" />
@@ -368,7 +406,14 @@ export default function MarcheDocuments({
                       <p className="text-gray-400 text-sm">Ajoutez de nouveaux documents ou modifiez vos critères de recherche</p>
                     </div>
                   </TableCell>
-                </TableRow> : filteredDocuments.map(document => <TableRow key={document.id} className="cursor-pointer hover:bg-gray-50" onClick={() => viewDocument(document)}>
+                </TableRow>
+              ) : (
+                filteredDocuments.map(document => (
+                  <TableRow 
+                    key={document.id} 
+                    className="cursor-pointer hover:bg-gray-50"
+                    onClick={() => viewDocument(document)}
+                  >
                     <TableCell>
                       <div className="font-medium">{document.description || document.nom}</div>
                     </TableCell>
@@ -383,36 +428,61 @@ export default function MarcheDocuments({
                     </TableCell>
                     <TableCell>{formatDate(document.date_diffusion || document.created_at)}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end space-x-2" onClick={e => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={e => {
-                    e.stopPropagation();
-                    downloadDocument(document);
-                  }}>
+                      <div 
+                        className="flex justify-end space-x-2"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8"
+                          onClick={e => {
+                            e.stopPropagation();
+                            downloadDocument(document);
+                          }}
+                        >
                           <Download className="h-4 w-4" />
                           <span className="sr-only">Télécharger</span>
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={e => {
-                    e.stopPropagation();
-                    viewDocument(document);
-                  }}>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8"
+                          onClick={e => {
+                            e.stopPropagation();
+                            viewDocument(document);
+                          }}
+                        >
                           <Eye className="h-4 w-4" />
                           <span className="sr-only">Voir</span>
                         </Button>
                       </div>
                     </TableCell>
-                  </TableRow>)}
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
       </Card>
       
-      {/* Formulaire de document (modal) */}
-      {editingDocument !== null && <MarcheDocumentForm marcheId={marcheId} editingDocument={editingDocument} setEditingDocument={setEditingDocument} onDocumentSaved={onDocumentSaved} />}
-
-      {/* Visualiseur de document */}
-      <DocumentViewer document={viewingDocument} open={!!viewingDocument} onOpenChange={open => !open && setViewingDocument(null)} onDocumentUpdated={() => {
-      fetchedIds.current.clear();
-      setLoadAttempt(prev => prev + 1);
-    }} />
-    </div>;
+      {/* Document form dialog */}
+      {editingDocument !== null && (
+        <MarcheDocumentForm 
+          marcheId={marcheId}
+          editingDocument={editingDocument}
+          setEditingDocument={setEditingDocument}
+          onDocumentSaved={onDocumentSaved}
+        />
+      )}
+      
+      {/* Document viewer */}
+      <DocumentViewer 
+        document={viewingDocument}
+        open={!!viewingDocument}
+        onOpenChange={open => !open && setViewingDocument(null)}
+        onDocumentUpdated={handleDocumentUpdated}
+      />
+    </div>
+  );
 }

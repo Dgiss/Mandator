@@ -1,107 +1,208 @@
 
-import React from 'react';
-import { 
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Document as ProjectDocument } from '@/services/types';
+import { getPublicUrl } from '@/services/storageService';
+import { Download, FileText, ExternalLink, Upload, AlertCircle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Document } from '@/services/types';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { FileText, History, Activity } from 'lucide-react';
+import { useUserRole } from '@/hooks/userRole';
 import DocumentDetails from './DocumentDetails';
-import DocumentVersions from './DocumentVersions';
 import DocumentActivities from './DocumentActivities';
+import DocumentVersions from './DocumentVersions';
+import DocumentUploader from './DocumentUploader';
+import ModifyDocumentButton from './ModifyDocumentButton';
 
 interface DocumentViewerProps {
-  document: Document | null;
+  document: ProjectDocument | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDocumentUpdated?: () => void;
 }
 
-const DocumentViewer: React.FC<DocumentViewerProps> = ({ 
-  document, 
-  open, 
+const DocumentViewer: React.FC<DocumentViewerProps> = ({
+  document,
+  open,
   onOpenChange,
   onDocumentUpdated
 }) => {
-  const [activeTab, setActiveTab] = React.useState('details');
+  const [activeTab, setActiveTab] = useState('apercu');
+  const [isUploaderOpen, setIsUploaderOpen] = useState(false);
+  const { canEdit } = useUserRole(document?.marche_id || '');
 
-  // Reset to details tab when document changes
-  React.useEffect(() => {
-    if (document) {
-      setActiveTab('details');
-    }
-  }, [document?.id]);
-
+  // To prevent infinite loop, use a flag to track if an update has been made
+  const [updatePending, setUpdatePending] = useState(false);
+  
   if (!document) return null;
-
-  // Format date for display
-  const formatDate = (dateString: string | undefined | null) => {
-    if (!dateString) return '—';
-    try {
-      return format(new Date(dateString), 'dd/MM/yyyy', { locale: fr });
-    } catch (error) {
-      return '—';
+  
+  const fileUrl = document.file_path 
+    ? getPublicUrl('marches', document.file_path) 
+    : null;
+  
+  const handleDocumentUpdate = () => {
+    // Set the flag to prevent multiple updates
+    if (!updatePending && onDocumentUpdated) {
+      setUpdatePending(true);
+      
+      // Add a delay to prevent cascading updates
+      setTimeout(() => {
+        onDocumentUpdated();
+        // Reset the flag after a delay to allow future updates
+        setTimeout(() => {
+          setUpdatePending(false);
+        }, 1000);
+      }, 500);
     }
   };
 
+  const handleUploadSuccess = () => {
+    setIsUploaderOpen(false);
+    handleDocumentUpdate();
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            {document.nom}
-          </DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            Référence: {document.numero || '—'}
-          </p>
-        </DialogHeader>
-        
-        <Tabs 
-          value={activeTab} 
-          onValueChange={setActiveTab} 
-          className="flex-1 flex flex-col overflow-hidden"
-        >
-          <TabsList className="grid grid-cols-3">
-            <TabsTrigger value="details" className="flex items-center gap-1">
-              <FileText className="h-4 w-4" />
-              <span>Détails</span>
-            </TabsTrigger>
-            <TabsTrigger value="versions" className="flex items-center gap-1">
-              <History className="h-4 w-4" />
-              <span>Versions</span>
-            </TabsTrigger>
-            <TabsTrigger value="activities" className="flex items-center gap-1">
-              <Activity className="h-4 w-4" />
-              <span>Activités</span>
-            </TabsTrigger>
-          </TabsList>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              <span>{document.nom}</span>
+            </DialogTitle>
+          </DialogHeader>
           
-          <div className="flex-1 overflow-y-auto p-1">
-            <TabsContent value="details" className="h-full">
-              <DocumentDetails 
-                document={document} 
-                formatDate={formatDate} 
-                onDocumentUpdated={onDocumentUpdated}
-              />
-            </TabsContent>
-            
-            <TabsContent value="versions" className="h-full">
-              <DocumentVersions document={document} />
-            </TabsContent>
-            
-            <TabsContent value="activities" className="h-full">
-              <DocumentActivities document={document} />
-            </TabsContent>
+          <div className="mt-4">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="w-full">
+                <TabsTrigger value="apercu" className="flex-1">Aperçu</TabsTrigger>
+                <TabsTrigger value="details" className="flex-1">Détails</TabsTrigger>
+                <TabsTrigger value="versions" className="flex-1">Versions</TabsTrigger>
+                <TabsTrigger value="activites" className="flex-1">Activités</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="apercu" className="mt-4">
+                {fileUrl ? (
+                  <div className="space-y-4">
+                    <div className="flex justify-between">
+                      <Button 
+                        variant="outline"
+                        onClick={() => window.open(fileUrl, '_blank')}
+                        className="flex items-center gap-2"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        Ouvrir dans un nouvel onglet
+                      </Button>
+                      
+                      <Button 
+                        variant="outline"
+                        onClick={() => {
+                          const link = document.createElement('a');
+                          link.href = fileUrl;
+                          link.setAttribute('download', document.nom);
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                        }}
+                        className="flex items-center gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        Télécharger
+                      </Button>
+                    </div>
+                    
+                    {document.file_path && document.file_path.toLowerCase().endsWith('.pdf') ? (
+                      <iframe 
+                        src={`${fileUrl}#view=FitH`} 
+                        className="w-full h-[70vh] border rounded"
+                        title={document.nom}
+                      />
+                    ) : document.file_path && /\.(jpe?g|png|gif|bmp)$/i.test(document.file_path) ? (
+                      <img 
+                        src={fileUrl || ''} 
+                        alt={document.nom} 
+                        className="max-w-full mx-auto max-h-[70vh] object-contain"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-[70vh] bg-gray-100 rounded">
+                        <FileText className="h-16 w-16 text-gray-400 mb-4" />
+                        <p className="text-gray-600">Aperçu non disponible</p>
+                        <p className="text-gray-500 text-sm mt-2">Téléchargez le fichier pour le visualiser</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-8 bg-gray-50 rounded border border-dashed">
+                    <AlertCircle className="h-12 w-12 text-amber-500 mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Aucun fichier associé</h3>
+                    <p className="text-gray-500 text-center mb-4">
+                      Ce document n'a pas de fichier associé. Vous pouvez en télécharger un maintenant.
+                    </p>
+                    
+                    {canEdit && (
+                      <Button 
+                        variant="outline"
+                        onClick={() => setIsUploaderOpen(true)}
+                        className="flex items-center gap-2"
+                      >
+                        <Upload className="h-4 w-4" />
+                        Télécharger un fichier
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="details" className="mt-4">
+                <DocumentDetails 
+                  document={document} 
+                  onUpdate={handleDocumentUpdate}
+                />
+              </TabsContent>
+              
+              <TabsContent value="versions" className="mt-4">
+                <DocumentVersions 
+                  document={document}
+                  onVersionAdded={handleDocumentUpdate}
+                />
+              </TabsContent>
+              
+              <TabsContent value="activites" className="mt-4">
+                <DocumentActivities documentId={document.id} />
+              </TabsContent>
+            </Tabs>
           </div>
-        </Tabs>
-      </DialogContent>
-    </Dialog>
+          
+          {canEdit && (
+            <div className="flex justify-end gap-2 mt-4">
+              {document.file_path && (
+                <Button 
+                  variant="outline"
+                  onClick={() => setIsUploaderOpen(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Upload className="h-4 w-4" />
+                  Remplacer le fichier
+                </Button>
+              )}
+              
+              <ModifyDocumentButton 
+                document={document}
+                onDocumentUpdated={handleDocumentUpdate}
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      {document && (
+        <DocumentUploader
+          documentId={document.id}
+          open={isUploaderOpen}
+          onOpenChange={setIsUploaderOpen}
+          onSuccess={handleUploadSuccess}
+        />
+      )}
+    </>
   );
 };
 

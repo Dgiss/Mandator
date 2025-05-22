@@ -66,6 +66,7 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
           }
           
           // Update document in database with file path
+          // Using a simple update operation without complex refresh triggers
           const { error } = await supabase
             .from('documents')
             .update({
@@ -93,12 +94,14 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
         toast({
           title: "Succès",
           description: `${successCount} fichier(s) téléchargé(s) avec succès${errorCount > 0 ? ` (${errorCount} échec(s))` : ''}`,
-          variant: errorCount > 0 ? "default" : "default",
         });
         
-        // Call onSuccess callback
+        // Call onSuccess callback but with a slight delay to prevent immediate refetches
         if (onSuccess) {
-          onSuccess();
+          // Add delay before triggering the callback to avoid immediate refetches
+          setTimeout(() => {
+            onSuccess();
+          }, 500);
         }
         
         // Close dialog
