@@ -28,6 +28,7 @@ export interface AuthContextType {
     entreprise?: string; 
     email?: string 
   }) => Promise<{ error: any | null }>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<{ error: any | null }>;
   refreshProfile?: () => void;
 }
 

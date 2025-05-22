@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase';
 import { UserProfileData } from '@/types/auth';
 import { toast } from 'sonner';
@@ -235,6 +234,58 @@ export const fetchUserProfile = async (userId: string) => {
   } catch (err) {
     console.error("Exception in fetchUserProfile:", err);
     return { error: err };
+  }
+};
+
+/**
+ * Changement de mot de passe pour un utilisateur connecté
+ * @param currentPassword Mot de passe actuel
+ * @param newPassword Nouveau mot de passe
+ * @returns Le résultat du changement de mot de passe
+ */
+export const changePassword = async (currentPassword: string, newPassword: string) => {
+  try {
+    console.log("Attempting to change password");
+    
+    // Première étape: vérifier le mot de passe actuel en tentant de se connecter
+    const { error: signInError } = await withRetry(async () => {
+      return await supabase.auth.signInWithPassword({
+        email: supabase.auth.getUser().then(({ data }) => data.user?.email || ''),
+        password: currentPassword
+      });
+    });
+    
+    if (signInError) {
+      console.error("Current password verification failed:", signInError);
+      return { error: { message: "Le mot de passe actuel est incorrect" } };
+    }
+    
+    // Deuxième étape: mettre à jour le mot de passe
+    const { error } = await withRetry(async () => {
+      return await supabase.auth.updateUser({
+        password: newPassword
+      });
+    });
+    
+    if (error) {
+      console.error("Password update error:", error);
+      return { error };
+    }
+    
+    console.log("Password updated successfully");
+    return { error: null, success: true };
+  } catch (err) {
+    console.error("Exception in changePassword:", err);
+    
+    let userMessage = "Erreur lors du changement de mot de passe. Veuillez réessayer.";
+    
+    if (err instanceof Error) {
+      if (err.message?.includes("weak password")) {
+        userMessage = "Le nouveau mot de passe est trop faible. Utilisez un mot de passe plus fort.";
+      }
+    }
+    
+    return { error: { message: userMessage, originalError: err } };
   }
 };
 

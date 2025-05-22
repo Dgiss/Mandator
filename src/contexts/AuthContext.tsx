@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AuthContextType } from '@/types/auth';
 import { useAuthState } from '@/hooks/useAuthState';
@@ -7,7 +6,8 @@ import {
   signUpWithEmail, 
   signOutUser, 
   updateUserProfile,
-  checkSupabaseConnection
+  checkSupabaseConnection,
+  changePassword
 } from '@/services/authService';
 import { toast } from 'sonner';
 
@@ -173,6 +173,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Change password function with improved error handling
+  const handleChangePassword = async (currentPassword: string, newPassword: string) => {
+    try {
+      if (!user) {
+        toast.error("Aucun utilisateur connecté");
+        return { error: { message: "Aucun utilisateur connecté" } };
+      }
+
+      console.log("Changing password for user:", user.id);
+      const result = await changePassword(currentPassword, newPassword);
+      
+      // Handle password change error or success
+      if (result.error) {
+        console.error("Password change error:", result.error);
+        toast.error(result.error.message || "Erreur lors du changement de mot de passe");
+        return { error: result.error };
+      } else {
+        // Success message
+        console.log("Password change successful");
+        toast.success("Mot de passe mis à jour avec succès");
+        return { error: null };
+      }
+    } catch (error) {
+      console.error("Error during password change:", error);
+      toast.error("Erreur inattendue lors du changement de mot de passe");
+      return { error };
+    }
+  };
+
   return (
     <AuthContext.Provider 
       value={{ 
@@ -186,6 +215,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signUp, 
         signOut, 
         updateProfile,
+        changePassword: handleChangePassword,
         refreshProfile,
         connectionStatus
       }}

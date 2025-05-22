@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import AIAssistantButton from '@/components/ai-assistant/AIAssistantButton';
 import { useUserRole } from '@/hooks/userRole';
 import { SquareM } from 'lucide-react';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem, Avatar, AvatarFallback, Button, User, LogOut } from '@radix-ui/react-dropdown-menu';
 
 // You may need to adjust this component based on your existing NavBar structure
 const NavBar: React.FC = () => {
@@ -24,6 +25,37 @@ const NavBar: React.FC = () => {
             {/* Existing navbar items */}
             <AIAssistantButton />
             {/* User profile and other items */}
+            {user && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback>{profile?.prenom?.charAt(0) || profile?.nom?.charAt(0) || user?.email?.charAt(0) || 'U'}</AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{profile?.prenom} {profile?.nom}</p>
+                      <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile">
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Profil</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => signOut()}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Déconnexion</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
       </div>
