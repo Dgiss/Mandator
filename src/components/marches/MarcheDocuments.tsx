@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
-import { FileText, Plus, Search, Download, Eye } from 'lucide-react';
+import { FileText, Plus, Search, Download, Eye, Filter } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Document as ProjectDocument } from '@/services/types';
 import { supabase } from '@/lib/supabase';
@@ -14,6 +15,7 @@ import DocumentViewer from './documents/DocumentViewer';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/userRole';
 import { generateDocumentReference } from '@/utils/documentFormatters';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface MarcheDocumentsProps {
   marcheId: string;
@@ -22,6 +24,7 @@ interface MarcheDocumentsProps {
 export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
   const [documents, setDocuments] = useState<ProjectDocument[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [numeroFilter, setNumeroFilter] = useState('');
   const [editingDocument, setEditingDocument] = useState<ProjectDocument | null>(null);
   const [viewingDocument, setViewingDocument] = useState<ProjectDocument | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,6 +32,11 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { canEdit } = useUserRole(marcheId);
+  
+  // Collect unique document numbers for filtering
+  const uniqueNumeros = Array.from(new Set(
+    documents.filter(doc => doc.numero).map(doc => doc.numero)
+  )).sort() as string[];
   
   // Add fetched IDs tracking to prevent duplicate requests
   const fetchedIds = useRef<Set<string>>(new Set());
@@ -212,8 +220,15 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
   const filteredDocuments = documents.filter(doc => {
     const searchLower = searchTerm.toLowerCase();
     const codification = generateDocumentReference(doc);
+    
+    // Filtrer par numéro d'abord si un filtre est sélectionné
+    if (numeroFilter && doc.numero !== numeroFilter) {
+      return false;
+    }
+    
+    // Puis appliquer le filtre de recherche textuelle
     return (
-      doc.description || doc.nom.toLowerCase().includes(searchLower) ||
+      doc.nom.toLowerCase().includes(searchLower) ||
       (doc.description && doc.description.toLowerCase().includes(searchLower)) ||
       (doc.type && doc.type.toLowerCase().includes(searchLower)) ||
       codification.toLowerCase().includes(searchLower)
@@ -230,6 +245,12 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
     fetchedIds.current.clear();
     setLoadAttempt(prev => prev + 1);
     setTimeout(() => setIsReloading(false), 1000); // Show spinner for at least 1 second
+  };
+
+  // Réinitialiser les filtres
+  const resetFilters = () => {
+    setSearchTerm('');
+    setNumeroFilter('');
   };
 
   return (
@@ -279,6 +300,33 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
           />
+        </div>
+        
+        <div className="flex gap-2">
+          <Select value={numeroFilter} onValueChange={setNumeroFilter}>
+            <SelectTrigger className="w-[200px]">
+              <div className="flex items-center">
+                <Filter className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="Filtrer par numéro" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Tous les numéros</SelectItem>
+              {uniqueNumeros.map((numero) => (
+                <SelectItem key={numero} value={numero}>{numero}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          {(searchTerm || numeroFilter) && (
+            <Button 
+              variant="outline" 
+              onClick={resetFilters}
+              className="flex items-center gap-2"
+            >
+              Réinitialiser
+            </Button>
+          )}
         </div>
       </div>
       
@@ -399,6 +447,10 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
         document={viewingDocument} 
         open={!!viewingDocument} 
         onOpenChange={(open) => !open && setViewingDocument(null)} 
+        onDocumentUpdated={() => {
+          fetchedIds.current.clear();
+          setLoadAttempt(prev => prev + 1);
+        }}
       />
     </div>
   );

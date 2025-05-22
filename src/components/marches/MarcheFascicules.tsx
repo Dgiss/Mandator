@@ -10,7 +10,7 @@ import MarcheFasciculeForm from './MarcheFasciculeForm';
 import FasciculesTable from './FasciculesTable';
 import FasciculeDashboardModal from './FasciculeDashboardModal';
 import MarcheDocumentForm from './MarcheDocumentForm';
-import type { Fascicule } from '@/services/types';
+import type { Fascicule, Document } from '@/services/types';
 
 interface MarcheFasciculesProps {
   marcheId: string;
@@ -23,6 +23,7 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
   const [selectedFascicule, setSelectedFascicule] = useState<Fascicule | null>(null);
   const [showDashboard, setShowDashboard] = useState<boolean>(false);
   const [showDocumentForm, setShowDocumentForm] = useState<boolean>(false);
+  const [editingDocument, setEditingDocument] = useState<Document | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { canCreateFascicule, isAdmin } = useUserRole(marcheId);
@@ -121,12 +122,14 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
   // Handler for opening document form
   const handleOpenDocumentForm = (fascicule: Fascicule) => {
     setSelectedFascicule(fascicule);
+    setEditingDocument(null);
     setShowDocumentForm(true);
   };
 
   // Handler for closing document form
   const handleCloseDocumentForm = (refreshNeeded: boolean = false) => {
     setShowDocumentForm(false);
+    setEditingDocument(null);
     if (refreshNeeded) {
       setTimeout(() => {
         setLoadAttempt(prev => prev + 1);
@@ -212,17 +215,16 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
         onClose={handleCloseDashboard}
       />
 
-      {/* Document form modal with correct props based on the DocumentFormProps interface */}
-      {showDocumentForm && selectedFascicule && (
+      {/* Document form modal with correct props */}
+      {showDocumentForm && (
         <MarcheDocumentForm
           marcheId={marcheId}
-          editingDocument={null}
-          setEditingDocument={() => {
-            handleCloseDocumentForm(true);
-          }}
+          editingDocument={editingDocument}
+          setEditingDocument={setEditingDocument}
           onDocumentSaved={() => {
             handleCloseDocumentForm(true);
           }}
+          fasciculeId={selectedFascicule?.id}
         />
       )}
     </div>
