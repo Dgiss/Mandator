@@ -9,7 +9,6 @@ import { FileText, Mail, Key, User, Building, Loader2, AlertCircle, WifiOff } fr
 import { useAuth } from '@/contexts/AuthContext';
 import { validateField } from '@/hooks/form/validation';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-
 export default function AuthPage() {
   const navigate = useNavigate();
   const {
@@ -153,9 +152,7 @@ export default function AuthPage() {
           <img src="https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d" alt="Marchés publics BTP" className="object-cover w-full h-full absolute inset-0" />
           <div className="relative z-10 flex flex-col justify-center items-start h-full p-12">
             <div className="mb-8">
-              <div className="w-20 h-20 bg-gradient-to-br from-[#5743e9] to-[#7e69c5] flex items-center justify-center rounded-md">
-                <span className="text-white font-bold text-3xl">M</span>
-              </div>
+              
             </div>
             <h2 className="text-white text-4xl font-bold mb-6">Simplifiez la gestion<br />de vos marchés publics</h2>
             <p className="text-white/90 text-lg max-w-md">
