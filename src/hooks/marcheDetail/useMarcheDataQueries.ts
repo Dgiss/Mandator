@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { fetchMarcheById } from '@/services/marches';
 import { marcheExists, userHasAccessToMarche } from '@/utils/auth/accessControl';
@@ -15,6 +16,19 @@ export const useMarcheDataQueries = (id: string | undefined) => {
   const lastFetched = useRef<Record<string, number>>({});
   const minFetchInterval = 5000; // Minimum 5 seconds between identical fetches (increased from 3s)
   const fetchCount = useRef<Record<string, number>>({});
+  const idRef = useRef<string | undefined>(id);
+  
+  // Mettre à jour la référence d'ID quand l'ID change
+  useEffect(() => {
+    if (id !== idRef.current) {
+      console.log(`ID du marché a changé: ${idRef.current} -> ${id}`);
+      idRef.current = id;
+      // Réinitialiser les compteurs quand l'ID change
+      lastFetched.current = {};
+      fetchCount.current = {};
+      queriesRunning.current = false;
+    }
+  }, [id]);
   
   // Clean up function to prevent stale references
   useEffect(() => {
@@ -61,6 +75,8 @@ export const useMarcheDataQueries = (id: string | undefined) => {
         console.error(`Erreur lors de la vérification de l'existence du marché:`, error);
         // Par défaut, permettre l'accès en cas d'erreur en mode développement
         return import.meta.env.DEV ? true : false;
+      } finally {
+        queriesRunning.current = false;
       }
     },
     enabled: !!id,
@@ -81,6 +97,8 @@ export const useMarcheDataQueries = (id: string | undefined) => {
       } catch (error) {
         console.error("Exception lors de la vérification d'accès:", error);
         return import.meta.env.DEV ? true : false;
+      } finally {
+        queriesRunning.current = false;
       }
     },
     enabled: !!id && existsQuery.isSuccess && existsQuery.data === true,
@@ -151,6 +169,8 @@ export const useMarcheDataQueries = (id: string | undefined) => {
       } catch (error) {
         console.error("Exception lors de la récupération des visas:", error);
         return [];
+      } finally {
+        queriesRunning.current = false;
       }
     },
     enabled: !!id && marcheQuery.isSuccess && !!marcheQuery.data,
@@ -182,6 +202,8 @@ export const useMarcheDataQueries = (id: string | undefined) => {
       } catch (error) {
         console.error("Exception lors de la récupération des documents:", error);
         return [];
+      } finally {
+        queriesRunning.current = false;
       }
     },
     enabled: !!id && marcheQuery.isSuccess && !!marcheQuery.data,
@@ -210,6 +232,8 @@ export const useMarcheDataQueries = (id: string | undefined) => {
       } catch (error) {
         console.error("Exception lors de la récupération des fascicules:", error);
         return [];
+      } finally {
+        queriesRunning.current = false;
       }
     },
     enabled: !!id && marcheQuery.isSuccess && !!marcheQuery.data,
@@ -230,6 +254,13 @@ export const useMarcheDataQueries = (id: string | undefined) => {
     visasQuery,
     documentsQuery,
     fasciculesQuery,
-    shouldContinue
+    shouldContinue,
+    // Fonction pour invalider les requêtes spécifiques
+    invalidateQuery: (queryName: string) => {
+      if (queryName in lastFetched.current) {
+        lastFetched.current[queryName] = 0;
+        console.log(`Invalidating '${queryName}' query cache`);
+      }
+    }
   };
 };

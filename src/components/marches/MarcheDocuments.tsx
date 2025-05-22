@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
-import { FileText, Plus, Search, Download, Eye, Filter } from 'lucide-react';
+import { FileText, Plus, Search, Download, Eye, Filter, RefreshCw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Document as ProjectDocument } from '@/services/types';
 import { supabase } from '@/lib/supabase';
@@ -40,8 +40,13 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
   // Add fetched IDs tracking to prevent duplicate requests
   const fetchedIds = useRef<Set<string>>(new Set());
   const isLoadingRef = useRef<boolean>(false);
-  const reloadInProgressRef = useRef<boolean>(false);
   const lastFetchTimestampRef = useRef<number>(0);
+  const fetchInProgress = useRef<boolean>(false);
+  const reloadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reloadDisabledRef = useRef<boolean>(false);
+
+  // États pour le rechargement manuel avec protection contre les clics multiples
+  const [isReloading, setIsReloading] = useState(false);
 
   const openNewDocumentForm = () => {
     setEditingDocument({
@@ -69,9 +74,14 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
 
   const onDocumentSaved = useCallback(() => {
     setEditingDocument(null);
-    // Clear fetched IDs when we save a new document to force a refresh
-    fetchedIds.current.clear();
-    setLoadAttempt(prev => prev + 1);
+
+    // Attendre un court délai avant de recharger pour laisser le temps à la base de données de se mettre à jour
+    setTimeout(() => {
+      // Forcer un rechargement des données avec un nouveau loadAttempt
+      fetchedIds.current.clear();
+      setLoadAttempt(prev => prev + 1);
+    }, 500);
+    
     toast({
       title: "Succès",
       description: "Document sauvegardé avec succès.",
@@ -161,7 +171,13 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
 
   // Récupérer les documents avec logique pour éviter les appels API excessifs
   useEffect(() => {
+    // Cette fonction contient la logique réelle de chargement des documents
     const fetchDocuments = async () => {
+      if (fetchInProgress.current) {
+        console.log('Fetch already in progress, skipping duplicate request');
+        return;
+      }
+
       // Empêcher les appels excessifs
       const now = Date.now();
       const minFetchInterval = 2000; // 2 secondes minimum entre les appels
@@ -176,6 +192,7 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
       }
       
       isLoadingRef.current = true;
+      fetchInProgress.current = true;
       lastFetchTimestampRef.current = now;
       setLoading(true);
       setError(null);
@@ -213,6 +230,11 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
       } finally {
         setLoading(false);
         isLoadingRef.current = false;
+        
+        // Délai de sécurité avant de permettre une nouvelle requête
+        setTimeout(() => {
+          fetchInProgress.current = false;
+        }, 500);
       }
     };
 
@@ -222,6 +244,10 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
     // Clean up function
     return () => {
       isLoadingRef.current = false;
+      fetchInProgress.current = false;
+      if (reloadTimeoutRef.current) {
+        clearTimeout(reloadTimeoutRef.current);
+      }
     };
   }, [marcheId, loadAttempt, toast]);
 
@@ -243,33 +269,36 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
       codification.toLowerCase().includes(searchLower)
     );
   });
-
-  // État pour le rechargement manuel
-  const [isReloading, setIsReloading] = useState(false);
   
   // Fonction pour recharger manuellement les documents avec protection contre les appels multiples
   const handleManualReload = useCallback(() => {
     // Empêcher les clics multiples pendant le rechargement
-    if (reloadInProgressRef.current) {
-      console.log('Manual reload already in progress, ignoring click');
+    if (reloadDisabledRef.current || isReloading) {
+      console.log('Manual reload disabled or already in progress, ignoring click');
       return;
     }
     
     console.log('Starting manual document reload');
     setIsReloading(true);
-    reloadInProgressRef.current = true;
+    reloadDisabledRef.current = true;
     
     // Clear fetched IDs to force a reload
     fetchedIds.current.clear();
     setLoadAttempt(prev => prev + 1);
     
-    // Forcer un délai minimum pour l'interface utilisateur
-    setTimeout(() => {
+    // Forcer un délai minimum pour l'interface utilisateur et éviter les clics multiples
+    reloadTimeoutRef.current = setTimeout(() => {
       setIsReloading(false);
-      reloadInProgressRef.current = false;
+      
+      // Ajouter un délai supplémentaire avant de permettre un nouveau clic
+      setTimeout(() => {
+        reloadDisabledRef.current = false;
+        console.log('Manual reload button re-enabled');
+      }, 2000);
+      
       console.log('Manual reload completed');
     }, 1000);
-  }, []);
+  }, [isReloading]);
 
   // Réinitialiser les filtres
   const resetFilters = () => {
@@ -285,18 +314,13 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
           <Button 
             variant="outline" 
             onClick={handleManualReload}
-            className={`flex items-center gap-2 ${isReloading ? 'opacity-50 cursor-not-allowed' : ''}`}
-            disabled={isReloading}
+            className={`flex items-center gap-2 ${isReloading || reloadDisabledRef.current ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={isReloading || reloadDisabledRef.current}
           >
             {isReloading ? (
               <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-gray-900"></div>
             ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-refresh-cw">
-                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-                <path d="M21 3v5h-5"/>
-                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
-                <path d="M3 21v-5h5"/>
-              </svg>
+              <RefreshCw className="h-4 w-4" />
             )}
             {isReloading ? 'Chargement...' : 'Actualiser'}
           </Button>

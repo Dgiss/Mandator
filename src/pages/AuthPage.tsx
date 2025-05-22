@@ -5,10 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, Mail, Key, User, Building, Loader2, AlertCircle, WifiOff, SquareM } from 'lucide-react';
+import { FileText, Mail, Key, User, Building, Loader2, AlertCircle, WifiOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { validateField } from '@/hooks/form/validation';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+
 export default function AuthPage() {
   const navigate = useNavigate();
   const {
@@ -151,7 +152,11 @@ export default function AuthPage() {
           <div className="absolute inset-0 bg-gradient-to-br from-btp-navy/80 to-btp-blue/40 z-10"></div>
           <img src="https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d" alt="Marchés publics BTP" className="object-cover w-full h-full absolute inset-0" />
           <div className="relative z-10 flex flex-col justify-center items-start h-full p-12">
-            
+            <div className="mb-8">
+              <div className="w-20 h-20 bg-gradient-to-br from-[#5743e9] to-[#7e69c5] flex items-center justify-center rounded-md">
+                <span className="text-white font-bold text-3xl">M</span>
+              </div>
+            </div>
             <h2 className="text-white text-4xl font-bold mb-6">Simplifiez la gestion<br />de vos marchés publics</h2>
             <p className="text-white/90 text-lg max-w-md">
               Mandator vous accompagne dans chaque étape de vos projets, 
