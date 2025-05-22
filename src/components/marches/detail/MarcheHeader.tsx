@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Marche } from '@/services/types';
-import { ArrowLeft, Download, Calendar, MapPin, User, Building, BarChart } from 'lucide-react';
+import { ArrowLeft, Download, Calendar, MapPin, User, Building, BarChart, SquareM } from 'lucide-react';
 import { useUserRole } from '@/hooks/userRole';
 import { Badge } from '@/components/ui/badge';
 import { MarcheSpecificRole } from '@/hooks/userRole/types';
@@ -68,13 +68,17 @@ const MarcheHeader: React.FC<MarcheHeaderProps> = ({ marche, getStatusColor, for
 
       <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-4">
-          {marche.logo && (
+          {marche.logo ? (
             <div className="flex-shrink-0 w-12 h-12 rounded-md overflow-hidden">
               <img 
                 src={marche.logo} 
                 alt={`Logo ${marche.titre}`}
                 className="w-full h-full object-contain"
               />
+            </div>
+          ) : (
+            <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-[#5743e9] to-[#7e69c5] rounded-md flex items-center justify-center">
+              <SquareM className="h-6 w-6 text-white" />
             </div>
           )}
           <div>

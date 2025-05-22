@@ -122,7 +122,28 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
   // Handler for opening document form
   const handleOpenDocumentForm = (fascicule: Fascicule) => {
     setSelectedFascicule(fascicule);
-    setEditingDocument(null);
+    setEditingDocument({
+      id: '',
+      nom: '',
+      description: '',
+      type: '',
+      numero: '',
+      domaine_technique: '',
+      type_operation: '',
+      dateupload: new Date().toISOString(),
+      date_diffusion: new Date().toISOString(),
+      date_bpe: new Date().toISOString(),
+      phase: '',
+      emetteur: '',
+      geographie: '',
+      statut: '',
+      version: '',
+      taille: '',
+      file_path: '',
+      marche_id: marcheId,
+      fascicule_id: fascicule?.id,
+      created_at: new Date().toISOString(),
+    });
     setShowDocumentForm(true);
   };
 
@@ -215,7 +236,7 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
         onClose={handleCloseDashboard}
       />
 
-      {/* Document form modal with correct props */}
+      {/* Document form modal */}
       {showDocumentForm && (
         <MarcheDocumentForm
           marcheId={marcheId}

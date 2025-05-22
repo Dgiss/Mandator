@@ -24,7 +24,7 @@ interface MarcheDocumentsProps {
 export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
   const [documents, setDocuments] = useState<ProjectDocument[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [numeroFilter, setNumeroFilter] = useState('');
+  const [numeroFilter, setNumeroFilter] = useState('all-documents');
   const [editingDocument, setEditingDocument] = useState<ProjectDocument | null>(null);
   const [viewingDocument, setViewingDocument] = useState<ProjectDocument | null>(null);
   const [loading, setLoading] = useState(true);
@@ -222,7 +222,7 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
     const codification = generateDocumentReference(doc);
     
     // Filtrer par numéro d'abord si un filtre est sélectionné
-    if (numeroFilter && doc.numero !== numeroFilter) {
+    if (numeroFilter !== 'all-documents' && doc.numero !== numeroFilter) {
       return false;
     }
     
@@ -250,7 +250,7 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
   // Réinitialiser les filtres
   const resetFilters = () => {
     setSearchTerm('');
-    setNumeroFilter('');
+    setNumeroFilter('all-documents');
   };
 
   return (
@@ -311,7 +311,6 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
               </div>
             </SelectTrigger>
             <SelectContent>
-              {/* Fix: use a non-empty string value for the default option */}
               <SelectItem value="all-documents">Tous les numéros</SelectItem>
               {uniqueNumeros.map((numero) => (
                 <SelectItem key={numero} value={numero}>{numero}</SelectItem>
@@ -319,7 +318,7 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
             </SelectContent>
           </Select>
           
-          {(searchTerm || numeroFilter) && (
+          {(searchTerm || numeroFilter !== 'all-documents') && (
             <Button 
               variant="outline" 
               onClick={resetFilters}

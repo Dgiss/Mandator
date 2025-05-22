@@ -1,8 +1,8 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import AIAssistantButton from '@/components/ai-assistant/AIAssistantButton';
 import { useUserRole } from '@/hooks/userRole';
+import { SquareM } from 'lucide-react';
 
 // You may need to adjust this component based on your existing NavBar structure
 const NavBar: React.FC = () => {
@@ -14,6 +14,9 @@ const NavBar: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center justify-start">
             <Link to="/" className="text-xl font-bold flex items-center lg:ml-2.5">
+              <div className="w-8 h-8 bg-gradient-to-br from-[#5743e9] to-[#7e69c5] flex items-center justify-center rounded-md mr-2">
+                <SquareM className="h-6 w-6 text-white" />
+              </div>
               <span className="self-center whitespace-nowrap">Mandator</span>
             </Link>
           </div>
