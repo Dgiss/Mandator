@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 
 import MainLayout from './components/layout/MainLayout';
@@ -12,8 +11,6 @@ import MarketCreationPage from './pages/MarketCreationPage';
 import MarcheDetailPage from './pages/MarcheDetailPage';
 import ProfilePage from './pages/ProfilePage';
 import { useAuth } from './contexts/AuthContext';
-
-const queryClient = new QueryClient();
 
 function App() {
   const { session, user, loading } = useAuth();
@@ -37,21 +34,19 @@ function App() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <MainLayout>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/auth" element={user ? <Navigate to="/" replace /> : <AuthPage />} />
-            <Route path="/marches" element={!user ? <Navigate to="/auth" replace /> : <MarchesPage />} />
-            <Route path="/marches/create" element={!user ? <Navigate to="/auth" replace /> : <MarketCreationPage />} />
-            <Route path="/marches/:id" element={!user ? <Navigate to="/auth" replace /> : <MarcheDetailPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-          </Routes>
-        </MainLayout>
-      </BrowserRouter>
+    <BrowserRouter>
+      <MainLayout>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/auth" element={user ? <Navigate to="/" replace /> : <AuthPage />} />
+          <Route path="/marches" element={!user ? <Navigate to="/auth" replace /> : <MarchesPage />} />
+          <Route path="/marches/create" element={!user ? <Navigate to="/auth" replace /> : <MarketCreationPage />} />
+          <Route path="/marches/:id" element={!user ? <Navigate to="/auth" replace /> : <MarcheDetailPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+        </Routes>
+      </MainLayout>
       <Toaster />
-    </QueryClientProvider>
+    </BrowserRouter>
   );
 }
 
