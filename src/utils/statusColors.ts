@@ -10,7 +10,7 @@ export const getStatusBadgeColor = (statut: string = ''): string => {
   if (!statut) return 'bg-gray-500 text-white';
   
   switch(statut.toLowerCase()) {
-    case 'en cours': return 'bg-btp-blue text-white';
+    case 'en cours': return 'bg-green-500 text-white'; // Changed from btp-blue to green-500
     case 'terminé': return 'bg-green-500 text-white';
     case 'en attente': return 'bg-amber-500 text-white';
     default: return 'bg-gray-500 text-white';
@@ -24,7 +24,7 @@ export const getStatusDotColor = (statut: string = ''): string => {
   if (!statut) return 'bg-gray-500';
   
   switch(statut.toLowerCase()) {
-    case 'en cours': return 'bg-btp-blue';
+    case 'en cours': return 'bg-green-500'; // Changed from btp-blue to green-500
     case 'terminé': return 'bg-green-500';
     case 'en attente': return 'bg-amber-500';
     default: return 'bg-gray-500';
@@ -39,7 +39,7 @@ export const getStatusTextWithDot = (statut: string = ''): { dotClass: string, t
   
   switch(statut.toLowerCase()) {
     case 'en cours': 
-      return { dotClass: 'bg-btp-blue', textClass: 'text-btp-blue' };
+      return { dotClass: 'bg-green-500', textClass: 'text-green-600' }; // Changed from btp-blue to green
     case 'terminé': 
       return { dotClass: 'bg-green-500', textClass: 'text-green-600' };
     case 'en attente': 
