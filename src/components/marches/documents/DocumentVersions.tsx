@@ -19,9 +19,10 @@ import { toast } from 'sonner';
 
 interface DocumentVersionsProps {
   document: Document;
+  onVersionAdded?: () => void;
 }
 
-const DocumentVersions: React.FC<DocumentVersionsProps> = ({ document }) => {
+const DocumentVersions: React.FC<DocumentVersionsProps> = ({ document, onVersionAdded }) => {
   const [versions, setVersions] = useState<Version[]>([]);
   const [loading, setLoading] = useState(true);
 

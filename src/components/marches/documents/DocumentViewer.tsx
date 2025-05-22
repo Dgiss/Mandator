@@ -12,6 +12,8 @@ import DocumentActivities from './DocumentActivities';
 import DocumentVersions from './DocumentVersions';
 import DocumentUploader from './DocumentUploader';
 import ModifyDocumentButton from './ModifyDocumentButton';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 interface DocumentViewerProps {
   document: ProjectDocument | null;
@@ -32,6 +34,16 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
   // To prevent infinite loop, use a flag to track if an update has been made
   const [updatePending, setUpdatePending] = useState(false);
+  
+  // Format date for display - add here since DocumentDetails expects it
+  const formatDate = (dateString: string | undefined | null) => {
+    if (!dateString) return '—';
+    try {
+      return format(new Date(dateString), 'dd MMMM yyyy', { locale: fr });
+    } catch (error) {
+      return '—';
+    }
+  };
   
   if (!document) return null;
   
@@ -96,12 +108,12 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                       <Button 
                         variant="outline"
                         onClick={() => {
-                          const link = document.createElement('a');
+                          const link = window.document.createElement('a');
                           link.href = fileUrl;
                           link.setAttribute('download', document.nom);
-                          document.body.appendChild(link);
+                          window.document.body.appendChild(link);
                           link.click();
-                          document.body.removeChild(link);
+                          window.document.body.removeChild(link);
                         }}
                         className="flex items-center gap-2"
                       >
@@ -154,8 +166,9 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
               
               <TabsContent value="details" className="mt-4">
                 <DocumentDetails 
-                  document={document} 
-                  onUpdate={handleDocumentUpdate}
+                  document={document}
+                  formatDate={formatDate}
+                  onDocumentUpdated={handleDocumentUpdate}
                 />
               </TabsContent>
               
@@ -167,7 +180,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
               </TabsContent>
               
               <TabsContent value="activites" className="mt-4">
-                <DocumentActivities documentId={document.id} />
+                <DocumentActivities document={document} />
               </TabsContent>
             </Tabs>
           </div>
