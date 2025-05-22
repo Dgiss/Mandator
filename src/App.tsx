@@ -1,55 +1,92 @@
 
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'sonner';
-import { SidebarProvider } from '@/components/ui/sidebar';
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/sonner";
 
-import MainLayout from './components/layout/MainLayout';
-import HomePage from './pages/HomePage';
-import AuthPage from './pages/AuthPage';
-import MarchesPage from './pages/MarchesPage';
-import MarketCreationPage from './pages/MarketCreationPage';
-import MarcheDetailPage from './pages/MarcheDetailPage';
-import ProfilePage from './pages/ProfilePage';
-import { useAuth } from './contexts/AuthContext';
+import HomePage from "./pages/HomePage"; 
+import MarketCreationPage from "./pages/MarketCreationPage";
+import MarchesPage from "./pages/MarchesPage";
+import MarcheDetailPage from "./pages/MarcheDetailPage";
+import QuestionsReponsesPage from "./pages/QuestionsReponsesPage";
+import NotFound from "./pages/NotFound";
+import AuthPage from "./pages/AuthPage";
+import AdminPage from "./pages/AdminPage";
 
-function App() {
-  const { session, user, loading } = useAuth();
-  const [isHydrated, setIsHydrated] = useState(false);
+import { useEffect, useCallback } from "react";
+import { CRMProvider } from "./contexts/CRMContext";
+import { AppSettingsProvider } from "./contexts/AppSettingsContext";
+import { AuthProvider } from "./contexts/AuthContext";
+import PrivateRoute from "./components/auth/PrivateRoute";
+import { trackPageView } from "./utils/analytics";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
+// Router change handler component
+const RouterChangeHandler = () => {
+  const location = useLocation();
+  
+  // Debounced page view tracking to prevent excessive calls
+  const debouncedTrackPageView = useCallback(() => {
+    let timeoutId: number | null = null;
+    
+    return (pageName: string) => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      
+      timeoutId = window.setTimeout(() => {
+        trackPageView(pageName);
+        timeoutId = null;
+      }, 500); // 500ms debounce
+    };
+  }, [])();
+  
   useEffect(() => {
-    // Wait for the auth state to be initialized before rendering the app
-    // This prevents a flash of unauthenticated content
-    if (!loading) {
-      setIsHydrated(true);
-    }
-  }, [loading]);
+    // Scroll to top on route change
+    window.scrollTo(0, 0);
+    
+    // Track page view for analytics with debounce
+    const currentPath = window.location.pathname;
+    const pageName = currentPath === '/' ? 'home' : currentPath.replace(/^\//, '');
+    debouncedTrackPageView(pageName);
+  }, [location.pathname, debouncedTrackPageView]);
+  
+  return null;
+};
 
-  if (!isHydrated) {
-    // You can replace this with a loading spinner or any other appropriate UI
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <p className="text-gray-500">Chargement...</p>
-      </div>
-    );
-  }
+// Import the AI Assistant Provider
+import { AIAssistantProvider } from '@/components/layout/AIAssistantProvider';
 
+// Application main component with properly nested providers
+function App() {
   return (
-    <BrowserRouter>
-      <SidebarProvider defaultOpen={true}>
-        <MainLayout>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/auth" element={user ? <Navigate to="/" replace /> : <AuthPage />} />
-            <Route path="/marches" element={!user ? <Navigate to="/auth" replace /> : <MarchesPage />} />
-            <Route path="/marches/create" element={!user ? <Navigate to="/auth" replace /> : <MarketCreationPage />} />
-            <Route path="/marches/:id" element={!user ? <Navigate to="/auth" replace /> : <MarcheDetailPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-          </Routes>
-        </MainLayout>
-      </SidebarProvider>
-      <Toaster />
-    </BrowserRouter>
+    // Wrap the entire app with AIAssistantProvider
+    <AIAssistantProvider>
+      <AppSettingsProvider>
+        <AuthProvider>
+          <CRMProvider>
+            <TooltipProvider>
+              <RouterChangeHandler />
+              <Routes>
+                <Route path="/" element={<Navigate to="/home" replace />} />
+                <Route path="/auth" element={<AuthPage />} />
+                <Route path="/home" element={<PrivateRoute><HomePage /></PrivateRoute>} />
+                <Route path="/marches" element={<PrivateRoute><MarchesPage /></PrivateRoute>} />
+                <Route path="/marches/:id" element={<PrivateRoute><MarcheDetailPage /></PrivateRoute>} />
+                <Route path="/marches/creation" element={<PrivateRoute><MarketCreationPage /></PrivateRoute>} />
+                <Route path="/questions-reponses" element={<PrivateRoute><QuestionsReponsesPage /></PrivateRoute>} />
+                <Route path="/admin" element={<PrivateRoute><AdminPage /></PrivateRoute>} />
+                <Route path="/parametres" element={
+                  <PrivateRoute>
+                    <div className="container mx-auto p-6"><h1 className="text-2xl font-bold">Paramètres</h1></div>
+                  </PrivateRoute>
+                } />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <Toaster />
+            </TooltipProvider>
+          </CRMProvider>
+        </AuthProvider>
+      </AppSettingsProvider>
+    </AIAssistantProvider>
   );
 }
 

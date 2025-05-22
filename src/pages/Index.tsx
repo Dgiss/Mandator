@@ -1,7 +1,28 @@
-// Exporter toutes les pages pour faciliter leur importation
-export { default as HomePage } from './HomePage';
-export { default as AuthPage } from './AuthPage';
-export { default as MarchesPage } from './MarchesPage';
-export { default as MarketCreationPage } from './MarketCreationPage';
-export { default as MarcheDetailPage } from './MarcheDetailPage';
-export { default as ProfilePage } from './ProfilePage';
+
+import React from 'react'
+import { Button } from '../components/ui/button'
+import { Link } from 'react-router-dom'
+import MainLayout from '../components/layout/MainLayout'
+
+export default function Index() {
+  return (
+    <MainLayout>
+      <div className="container mx-auto p-6">
+        <div className="text-center py-12">
+          <h1 className="text-4xl font-bold text-btp-navy mb-4">Bienvenue sur Mandator</h1>
+          <p className="max-w-2xl mx-auto text-btp-gray mb-8">
+            Votre plateforme de gestion des marchés publics pour le secteur du BTP.
+          </p>
+          <div className="flex flex-wrap gap-4 justify-center">
+            <Button variant="btpPrimary" asChild>
+              <Link to="/dashboard">Accéder au tableau de bord</Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link to="/marches">Voir les marchés</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    </MainLayout>
+  )
+}
