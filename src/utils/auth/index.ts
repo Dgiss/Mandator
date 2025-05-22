@@ -1,4 +1,5 @@
-import { Document } from "@/services/types";
+
+import { Document, Fascicule } from "@/services/types";
 import { supabase } from "@/lib/supabase";
 
 export const marcheExists = async (marcheId: string): Promise<boolean> => {
@@ -78,4 +79,15 @@ export const createDocumentSafely = async (documentData: {
     console.error("Erreur lors de la création sécurisée du document:", error);
     throw error;
   }
+};
+
+// Ajout de la fonction enrichFasciculeData manquante
+export const enrichFasciculeData = (fascicule: Fascicule): Fascicule => {
+  // S'assurer que les champs requis sont présents
+  return {
+    ...fascicule,
+    nombredocuments: fascicule.nombredocuments || 0,
+    progression: fascicule.progression || 0,
+    datemaj: fascicule.datemaj || new Date().toISOString(),
+  };
 };

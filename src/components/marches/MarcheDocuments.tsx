@@ -42,7 +42,7 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
       type: '',
       numero: '',
       domaine_technique: '',
-      numero_operation: '',
+      type_operation: '',
       dateupload: new Date().toISOString(),
       date_diffusion: new Date().toISOString(),
       date_bpe: new Date().toISOString(),

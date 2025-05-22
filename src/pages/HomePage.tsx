@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { checkAuth } from '@/utils/authUtils';
+import { checkAuth } from '@/utils/auth/checkAuth';
 import PageLayout from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
 import { FileText } from 'lucide-react';
