@@ -13,12 +13,15 @@ export const useMarcheDataQueries = (id: string | undefined) => {
   const { toast } = useToast();
   const queriesRunning = useRef<boolean>(false);
   const lastFetched = useRef<Record<string, number>>({});
-  const minFetchInterval = 3000; // Minimum 3 seconds between identical fetches
+  const minFetchInterval = 5000; // Minimum 5 seconds between identical fetches (increased from 3s)
+  const fetchCount = useRef<Record<string, number>>({});
   
   // Clean up function to prevent stale references
   useEffect(() => {
     return () => {
       queriesRunning.current = false;
+      // Reset fetch counters when component unmounts
+      fetchCount.current = {};
     };
   }, []);
 
@@ -29,11 +32,19 @@ export const useMarcheDataQueries = (id: string | undefined) => {
     const now = Date.now();
     const lastRun = lastFetched.current[queryName] || 0;
     
+    // Increment fetch counter
+    fetchCount.current[queryName] = (fetchCount.current[queryName] || 0) + 1;
+    
+    // Log fetch attempts
+    console.log(`Query '${queryName}' attempt ${fetchCount.current[queryName]}, last run: ${new Date(lastRun).toISOString()}`);
+    
     if (now - lastRun < minFetchInterval) {
+      console.log(`Skipping '${queryName}' query - too soon (${Math.round((now - lastRun)/1000)}s < ${minFetchInterval/1000}s)`);
       return false;
     }
     
     lastFetched.current[queryName] = now;
+    console.log(`Running '${queryName}' query at ${new Date(now).toISOString()}`);
     return true;
   };
 
@@ -53,9 +64,9 @@ export const useMarcheDataQueries = (id: string | undefined) => {
       }
     },
     enabled: !!id,
-    staleTime: 5 * 60 * 1000, // 5 minutes de cache
+    staleTime: 10 * 60 * 1000, // 10 minutes de cache (was 5 minutes)
     retry: 1, // Réduire le nombre de tentatives
-    gcTime: 10 * 60 * 1000, // Garder en cache 10 minutes
+    gcTime: 15 * 60 * 1000, // Garder en cache 15 minutes (was 10 minutes)
   });
 
   // Contrôle d'accès utilisant notre nouvelle politique non-récursive

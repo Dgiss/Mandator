@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +40,8 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
   // Add fetched IDs tracking to prevent duplicate requests
   const fetchedIds = useRef<Set<string>>(new Set());
   const isLoadingRef = useRef<boolean>(false);
+  const reloadInProgressRef = useRef<boolean>(false);
+  const lastFetchTimestampRef = useRef<number>(0);
 
   const openNewDocumentForm = () => {
     setEditingDocument({
@@ -161,13 +162,21 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
   // Récupérer les documents avec logique pour éviter les appels API excessifs
   useEffect(() => {
     const fetchDocuments = async () => {
-      // Skip if already loading or if we've already fetched this market ID
-      if (isLoadingRef.current || (fetchedIds.current.has(marcheId) && loadAttempt === 0)) {
-        console.log(`Skipping fetch for marché: ${marcheId} - already loaded or in progress`);
+      // Empêcher les appels excessifs
+      const now = Date.now();
+      const minFetchInterval = 2000; // 2 secondes minimum entre les appels
+      
+      // Skip si déjà en chargement ou si on a déjà récupéré ce marché récemment
+      if (isLoadingRef.current || 
+          (fetchedIds.current.has(marcheId) && 
+           now - lastFetchTimestampRef.current < minFetchInterval && 
+           loadAttempt === 0)) {
+        console.log(`Skipping fetch for marché: ${marcheId} - already loaded or in progress or too recent`);
         return;
       }
       
       isLoadingRef.current = true;
+      lastFetchTimestampRef.current = now;
       setLoading(true);
       setError(null);
       
@@ -238,14 +247,29 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
   // État pour le rechargement manuel
   const [isReloading, setIsReloading] = useState(false);
   
-  // Fonction pour recharger manuellement les documents
-  const handleManualReload = () => {
+  // Fonction pour recharger manuellement les documents avec protection contre les appels multiples
+  const handleManualReload = useCallback(() => {
+    // Empêcher les clics multiples pendant le rechargement
+    if (reloadInProgressRef.current) {
+      console.log('Manual reload already in progress, ignoring click');
+      return;
+    }
+    
+    console.log('Starting manual document reload');
     setIsReloading(true);
+    reloadInProgressRef.current = true;
+    
     // Clear fetched IDs to force a reload
     fetchedIds.current.clear();
     setLoadAttempt(prev => prev + 1);
-    setTimeout(() => setIsReloading(false), 1000); // Show spinner for at least 1 second
-  };
+    
+    // Forcer un délai minimum pour l'interface utilisateur
+    setTimeout(() => {
+      setIsReloading(false);
+      reloadInProgressRef.current = false;
+      console.log('Manual reload completed');
+    }, 1000);
+  }, []);
 
   // Réinitialiser les filtres
   const resetFilters = () => {
@@ -261,7 +285,7 @@ export default function MarcheDocuments({ marcheId }: MarcheDocumentsProps) {
           <Button 
             variant="outline" 
             onClick={handleManualReload}
-            className={`flex items-center gap-2 ${isReloading ? 'opacity-50' : ''}`}
+            className={`flex items-center gap-2 ${isReloading ? 'opacity-50 cursor-not-allowed' : ''}`}
             disabled={isReloading}
           >
             {isReloading ? (
