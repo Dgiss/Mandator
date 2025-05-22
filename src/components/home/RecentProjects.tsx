@@ -1,10 +1,10 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { ChevronRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUserRole } from '@/hooks/useUserRole';
+import { getStatusTextWithDot } from '@/utils/statusColors';
 
 type ProjectItem = {
   id: string | number;
@@ -34,28 +34,14 @@ const RecentProjects: React.FC<RecentProjectsProps> = ({ projects, loading = fal
       </span>
     );
     
-    const statusLower = status.toLowerCase();
-    if (statusLower === "en cours") {
-      return <span className="inline-flex items-center">
-        <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-        <span className="text-sm text-gray-600">{status}</span>
-      </span>;
-    } else if (statusLower === "en attente") {
-      return <span className="inline-flex items-center">
-        <span className="w-2 h-2 bg-amber-500 rounded-full mr-2"></span>
-        <span className="text-sm text-gray-600">{status}</span>
-      </span>;
-    } else if (statusLower === "terminé") {
-      return <span className="inline-flex items-center">
-        <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-        <span className="text-sm text-gray-600">{status}</span>
-      </span>;
-    } else {
-      return <span className="inline-flex items-center">
-        <span className="w-2 h-2 bg-gray-500 rounded-full mr-2"></span>
-        <span className="text-sm text-gray-600">{status}</span>
-      </span>;
-    }
+    const { dotClass, textClass } = getStatusTextWithDot(status);
+    
+    return (
+      <span className="inline-flex items-center">
+        <span className={`w-2 h-2 ${dotClass} rounded-full mr-2`}></span>
+        <span className={`text-sm ${textClass}`}>{status}</span>
+      </span>
+    );
   };
 
   return (

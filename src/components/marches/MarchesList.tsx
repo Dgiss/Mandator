@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { FileText } from 'lucide-react';
@@ -6,6 +5,7 @@ import { Marche } from '@/services/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { getStatusDotColor } from '@/utils/statusColors';
 
 interface MarchesListProps {
   marches: Marche[];
@@ -30,18 +30,6 @@ const MarchesList: React.FC<MarchesListProps> = ({
     } catch (error) {
       console.warn('Erreur lors du formatage de la date:', dateString);
       return dateString || '';
-    }
-  };
-
-  const getStatusColor = (statut: string = '') => {
-    // Protection contre les valeurs nulles ou undefined
-    if (!statut) return 'bg-gray-500';
-
-    switch(statut.toLowerCase()) {
-      case 'en cours': return 'bg-btp-blue';
-      case 'terminé': return 'bg-btp-success';
-      case 'en attente': return 'bg-btp-warning';
-      default: return 'bg-gray-500';
     }
   };
 
@@ -178,7 +166,7 @@ const MarchesList: React.FC<MarchesListProps> = ({
               <TableCell className="hidden md:table-cell">{marche.budget || 'Non défini'}</TableCell>
               <TableCell>
                 <div className="flex items-center">
-                  <div className={`h-2.5 w-2.5 rounded-full ${getStatusColor(marche.statut)} mr-2 flex-shrink-0`}></div>
+                  <div className={`h-2.5 w-2.5 rounded-full ${getStatusDotColor(marche.statut)} mr-2 flex-shrink-0`}></div>
                   <span>{marche.statut || 'Non défini'}</span>
                 </div>
               </TableCell>

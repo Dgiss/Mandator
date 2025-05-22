@@ -2,6 +2,7 @@
 import React from 'react';
 import { FileText, CheckCircle, FilePen, XCircle } from 'lucide-react';
 import { Visa, Version } from './types';
+import { getStatusTextWithDot } from '@/utils/statusColors';
 
 interface VisaStatusBadgeProps {
   statut: Visa['statut'] | Version['statut'];
@@ -44,9 +45,12 @@ export const VisaStatusBadge = ({ statut }: VisaStatusBadgeProps) => {
           icon: <XCircle className="h-4 w-4 mr-1.5" />
         };
       default:
+        // Pour les statuts standard comme "En cours", utiliser notre utilitaire standardisé
+        const { dotClass, textClass } = getStatusTextWithDot(statut);
+        const baseColor = dotClass.replace('bg-', '');
         return {
-          bgColor: 'bg-gray-100',
-          textColor: 'text-gray-700',
+          bgColor: `bg-${baseColor.split('-')[0]}-100`,
+          textColor: textClass,
           icon: <FileText className="h-4 w-4 mr-1.5" />
         };
     }
