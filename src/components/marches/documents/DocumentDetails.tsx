@@ -75,6 +75,10 @@ const DocumentDetails: React.FC<DocumentDetailsProps> = ({
             <TableCell>{document.domaine_technique || '—'}</TableCell>
           </TableRow>
           <TableRow>
+            <TableCell className="font-medium">Type d'opération</TableCell>
+            <TableCell>{document.type_operation || '—'}</TableCell>
+          </TableRow>
+          <TableRow>
             <TableCell className="font-medium">Description</TableCell>
             <TableCell>{document.description || '—'}</TableCell>
           </TableRow>

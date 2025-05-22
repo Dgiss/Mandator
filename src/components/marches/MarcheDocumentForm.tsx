@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger 
@@ -60,7 +59,7 @@ const documentFormSchema = z.object({
   designation: z.string().optional(),
   geographie: z.string().optional(),
   phase: z.string().optional(),
-  numero_operation: z.string().optional(),
+  type_operation: z.string().optional(),
   domaine_technique: z.string().optional(),
   numero: z.string().optional(),
   date_diffusion: z.date().optional().nullable(),
@@ -140,7 +139,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
       designation: '',
       geographie: '',
       phase: '',
-      numero_operation: '',
+      type_operation: '',
       domaine_technique: '',
       numero: '',
       date_diffusion: null,
@@ -160,7 +159,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
         designation: editingDocument.designation || '',
         geographie: editingDocument.geographie || '',
         phase: editingDocument.phase || '',
-        numero_operation: editingDocument.numero_operation || '',
+        type_operation: editingDocument.type_operation || '',
         domaine_technique: editingDocument.domaine_technique || '',
         numero: editingDocument.numero || '',
         date_diffusion: editingDocument.date_diffusion ? new Date(editingDocument.date_diffusion) : null,
@@ -295,10 +294,10 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
             designation: values.designation || null,
             geographie: values.geographie || null,
             phase: values.phase || null,
-            numero_operation: values.numero_operation || null,
+            emetteur: emetteur,
+            type_operation: values.type_operation || null,
             domaine_technique: values.domaine_technique || null,
             numero: values.numero || null,
-            emetteur: emetteur,
             date_diffusion: values.date_diffusion,
             date_bpe: values.date_bpe,
             dateupload: new Date().toISOString()
@@ -326,7 +325,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
             designation: values.designation || '',
             geographie: values.geographie || '',
             phase: values.phase || '',
-            numero_operation: values.numero_operation || '',
+            type_operation: values.type_operation || '',
             domaine_technique: values.domaine_technique || '',
             numero: values.numero || '',
             emetteur: emetteur,
@@ -353,7 +352,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
               designation: values.designation || null,
               geographie: values.geographie || null,
               phase: values.phase || null,
-              numero_operation: values.numero_operation || null,
+              type_operation: values.type_operation || null,
               domaine_technique: values.domaine_technique || null,
               numero: values.numero || null,
               emetteur: emetteur,
@@ -668,10 +667,10 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="numero_operation"
+                name="type_operation"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Numéro d'opération</FormLabel>
+                    <FormLabel>Type d'opération</FormLabel>
                     <FormControl>
                       <Input placeholder="Ex: OP-2023-01" {...field} />
                     </FormControl>

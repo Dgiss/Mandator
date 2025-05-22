@@ -1,4 +1,3 @@
-
 // Type pour un marché
 export interface Marche {
   id: string;
@@ -109,7 +108,7 @@ export interface Document {
   geographie?: string;
   phase?: string;
   emetteur?: string; // Gardé dans le type mais sera rempli automatiquement
-  numero_operation?: string;
+  type_operation?: string; // Adaptée pour correspondre à la colonne dans la BD
   domaine_technique?: string;
   numero?: string;
   date_diffusion?: string;
