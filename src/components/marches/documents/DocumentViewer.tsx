@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Document } from '@/services/types';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { FileText, Code, Settings, CalendarDays, LayoutList, History, Activity } from 'lucide-react';
+import { FileText, History, Activity } from 'lucide-react';
 import DocumentDetails from './DocumentDetails';
 import DocumentVersions from './DocumentVersions';
 import DocumentActivities from './DocumentActivities';
@@ -19,12 +19,14 @@ interface DocumentViewerProps {
   document: Document | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onDocumentUpdated?: () => void;
 }
 
 const DocumentViewer: React.FC<DocumentViewerProps> = ({ 
   document, 
   open, 
-  onOpenChange 
+  onOpenChange,
+  onDocumentUpdated
 }) => {
   const [activeTab, setActiveTab] = React.useState('details');
 
@@ -67,7 +69,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
         >
           <TabsList className="grid grid-cols-3">
             <TabsTrigger value="details" className="flex items-center gap-1">
-              <LayoutList className="h-4 w-4" />
+              <FileText className="h-4 w-4" />
               <span>Détails</span>
             </TabsTrigger>
             <TabsTrigger value="versions" className="flex items-center gap-1">
@@ -82,7 +84,11 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
           
           <div className="flex-1 overflow-y-auto p-1">
             <TabsContent value="details" className="h-full">
-              <DocumentDetails document={document} formatDate={formatDate} />
+              <DocumentDetails 
+                document={document} 
+                formatDate={formatDate} 
+                onDocumentUpdated={onDocumentUpdated}
+              />
             </TabsContent>
             
             <TabsContent value="versions" className="h-full">

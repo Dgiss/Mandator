@@ -3,23 +3,24 @@ import React from 'react';
 import { Document } from '@/services/types';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
-import { FileText } from 'lucide-react';
 import ModifyDocumentButton from './ModifyDocumentButton';
 
 interface DocumentDetailsProps {
   document: Document;
   formatDate: (date: string | undefined | null) => string;
+  onDocumentUpdated?: () => void;
 }
 
 const DocumentDetails: React.FC<DocumentDetailsProps> = ({ 
   document, 
-  formatDate 
+  formatDate,
+  onDocumentUpdated
 }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-medium">Informations générales</h3>
-        <ModifyDocumentButton document={document} />
+        <ModifyDocumentButton document={document} onDocumentUpdated={onDocumentUpdated} />
       </div>
       
       <Table>
@@ -60,6 +61,18 @@ const DocumentDetails: React.FC<DocumentDetailsProps> = ({
           <TableRow>
             <TableCell className="font-medium">Émetteur</TableCell>
             <TableCell>{document.emetteur || '—'}</TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell className="font-medium">Géographie</TableCell>
+            <TableCell>{document.geographie || '—'}</TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell className="font-medium">Phase</TableCell>
+            <TableCell>{document.phase || '—'}</TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell className="font-medium">Domaine technique</TableCell>
+            <TableCell>{document.domaine_technique || '—'}</TableCell>
           </TableRow>
           <TableRow>
             <TableCell className="font-medium">Description</TableCell>

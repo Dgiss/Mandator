@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { PencilLine } from 'lucide-react';
 import { Document } from '@/services/types';
 import MarcheDocumentForm from '../MarcheDocumentForm';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface ModifyDocumentButtonProps {
   document: Document;
@@ -11,13 +12,14 @@ interface ModifyDocumentButtonProps {
 }
 
 const ModifyDocumentButton: React.FC<ModifyDocumentButtonProps> = ({ document, onDocumentUpdated }) => {
-  const [editingDocument, setEditingDocument] = React.useState<Document | null>(null);
+  const [isOpen, setIsOpen] = React.useState(false);
 
   const handleClick = () => {
-    setEditingDocument(document);
+    setIsOpen(true);
   };
 
   const handleDocumentSaved = () => {
+    setIsOpen(false);
     if (onDocumentUpdated) {
       onDocumentUpdated();
     }
@@ -36,12 +38,19 @@ const ModifyDocumentButton: React.FC<ModifyDocumentButtonProps> = ({ document, o
         <span className="sr-only">Modifier</span>
       </Button>
 
-      <MarcheDocumentForm 
-        marcheId={document.marche_id}
-        onDocumentSaved={handleDocumentSaved}
-        editingDocument={editingDocument}
-        setEditingDocument={setEditingDocument}
-      />
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Modifier le document: {document.nom}</DialogTitle>
+          </DialogHeader>
+          
+          <MarcheDocumentForm 
+            marcheId={document.marche_id}
+            onDocumentSaved={handleDocumentSaved}
+            editingDocument={isOpen ? document : null}
+          />
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
