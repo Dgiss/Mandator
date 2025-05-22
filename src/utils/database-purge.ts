@@ -2,6 +2,23 @@
 import { supabaseClient } from '@/lib/supabase-client';
 import { toast } from 'sonner';
 
+type TableName = 
+  | 'profiles'
+  | 'droits_marche'
+  | 'marches'
+  | 'documents'
+  | 'versions'
+  | 'fascicules'
+  | 'visas'
+  | 'questions'
+  | 'reponses'
+  | 'ordres_service'
+  | 'prix_nouveaux'
+  | 'situations'
+  | 'document_attachments'
+  | 'notifications'
+  | 'alertes';
+
 /**
  * Utilitaire pour purger les données utilisateur et les fichiers stockés
  * sans supprimer les structures des tables dans Supabase
@@ -45,7 +62,7 @@ export const purgeUserData = async (): Promise<{ success: boolean, message: stri
     console.log('Purge des données des tables personnalisées...');
     // Cette approche est plus sûre que d'utiliser des commandes SQL directes
     // car elle utilise les RLS policies configirées
-    const tables = [
+    const tables: TableName[] = [
       'profiles',
       'droits_marche',
       'marches',
@@ -83,32 +100,8 @@ export const purgeUserData = async (): Promise<{ success: boolean, message: stri
     // 3. Supprimer tous les utilisateurs (sauf peut-être un compte administrateur)
     console.log('Purge des utilisateurs...');
     
-    // Récupérer tous les utilisateurs
-    const { data: users, error: usersError } = await supabaseClient.auth.admin.listUsers();
-    
-    if (usersError) {
-      console.error('Erreur lors de la récupération des utilisateurs:', usersError);
-      return { 
-        success: false, 
-        message: 'La purge a réussi partiellement. Impossible de supprimer les utilisateurs.'
-      };
-    }
-    
-    // Supprimer chaque utilisateur
-    if (users?.users) {
-      for (const user of users.users) {
-        try {
-          const { error } = await supabaseClient.auth.admin.deleteUser(user.id);
-          if (error) {
-            console.error(`Erreur lors de la suppression de l'utilisateur ${user.id}:`, error);
-          } else {
-            console.log(`Utilisateur ${user.id} supprimé avec succès`);
-          }
-        } catch (err) {
-          console.error(`Exception lors de la suppression de l'utilisateur ${user.id}:`, err);
-        }
-      }
-    }
+    // Cette partie doit être implémentée via une fonction côté serveur (Edge Function)
+    // car l'API JavaScript côté client n'a pas accès à la suppression des utilisateurs
     
     console.log('Purge complète des données terminée');
     

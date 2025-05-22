@@ -1,12 +1,12 @@
+
 import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ResetDatabaseButton } from '@/components/admin/ResetDatabaseButton';
 import PrivateRoute from '@/components/auth/PrivateRoute';
-import { PageLayout } from '@/components/layout/PageLayout';
+import PageLayout from '@/components/layout/PageLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { setup } from '@supabase/functions-js';
 import { toast } from 'sonner';
 
 /**
