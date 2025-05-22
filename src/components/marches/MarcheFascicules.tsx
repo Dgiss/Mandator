@@ -30,17 +30,27 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
   const [loadAttempt, setLoadAttempt] = useState<number>(0);
   const loadingRef = useRef<boolean>(false);
   const lastFetched = useRef<number>(0);
-  const minFetchInterval = 2000; // Minimum 2 seconds between fetches
+  const minFetchInterval = 5000; // Increase to 5 seconds to prevent excessive fetching
+  const fetchTimerRef = useRef<number | null>(null);
 
-  // Fonction mémorisée pour éviter des rendus en cascade
+  // Fonction mémorisée pour éviter des rendus en cascade avec un dedup
   const loadFascicules = useCallback(async () => {
     // Prevent fetching if ID is missing or already loading
-    if (!marcheId || loadingRef.current) return;
+    if (!marcheId || loadingRef.current) {
+      console.log('Skipping fetch: already loading or missing marcheId');
+      return;
+    }
     
     // Prevent excessive fetching within short time intervals
     const now = Date.now();
     if (now - lastFetched.current < minFetchInterval) {
+      console.log(`Skipping fetch: too frequent (${now - lastFetched.current}ms < ${minFetchInterval}ms)`);
       return;
+    }
+    
+    // Clear any existing timers
+    if (fetchTimerRef.current) {
+      clearTimeout(fetchTimerRef.current);
     }
     
     loadingRef.current = true;
@@ -73,17 +83,29 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
       setTimeout(() => {
         setLoading(false);
         loadingRef.current = false;
-      }, 100);
+      }, 200);
     }
   }, [marcheId, toast]);
 
   // Effet pour charger les fascicules une seule fois ou après une modification
+  // avec limitation des appels multiples
   useEffect(() => {
-    const timer = setTimeout(() => {
-      loadFascicules();
-    }, 200);
+    // Clear any existing timers when the component mounts or the dependencies change
+    if (fetchTimerRef.current) {
+      clearTimeout(fetchTimerRef.current);
+    }
     
-    return () => clearTimeout(timer);
+    // Set a new timer for loading fascicules
+    fetchTimerRef.current = window.setTimeout(() => {
+      loadFascicules();
+    }, 500); // Delay to prevent excessive loading
+    
+    // Cleanup function to clear the timer when the component unmounts or dependencies change
+    return () => {
+      if (fetchTimerRef.current) {
+        clearTimeout(fetchTimerRef.current);
+      }
+    };
   }, [loadFascicules, loadAttempt]);
 
   const handleCreateClick = () => {
@@ -99,15 +121,25 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
   const handleFormClose = (refreshNeeded: boolean = false) => {
     setShowForm(false);
     if (refreshNeeded) {
-      // Forcer un rechargement sans boucle infinie
-      setTimeout(() => {
+      // Force reload with debounce to prevent excessive calls
+      if (fetchTimerRef.current) {
+        clearTimeout(fetchTimerRef.current);
+      }
+      
+      fetchTimerRef.current = window.setTimeout(() => {
         setLoadAttempt(prev => prev + 1);
-      }, 500);
+      }, 1000);
     }
   };
 
   const handleRetry = () => {
-    setLoadAttempt(prev => prev + 1); 
+    if (fetchTimerRef.current) {
+      clearTimeout(fetchTimerRef.current);
+    }
+    
+    fetchTimerRef.current = window.setTimeout(() => {
+      setLoadAttempt(prev => prev + 1);
+    }, 1000);
   };
 
   const handleViewDetails = (fascicule: Fascicule) => {
@@ -152,9 +184,14 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
     setShowDocumentForm(false);
     setEditingDocument(null);
     if (refreshNeeded) {
-      setTimeout(() => {
+      // Use debounced approach to prevent excessive calls
+      if (fetchTimerRef.current) {
+        clearTimeout(fetchTimerRef.current);
+      }
+      
+      fetchTimerRef.current = window.setTimeout(() => {
         setLoadAttempt(prev => prev + 1);
-      }, 500);
+      }, 1000);
     }
   };
 

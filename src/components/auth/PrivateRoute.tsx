@@ -11,11 +11,14 @@ export default function PrivateRoute({ children }: PrivateRouteProps) {
   const { user, loading } = useAuth();
   const location = useLocation();
 
-  // Si l'authentification est en cours de chargement, afficher un indicateur de chargement
+  // Si l'authentification est en cours de chargement, afficher un indicateur de chargement avec le logo
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <p>Chargement...</p>
+      <div className="flex flex-col justify-center items-center min-h-screen">
+        <div className="w-16 h-16 mb-4 bg-gradient-to-br from-[#5743e9] to-[#7e69c5] flex items-center justify-center rounded-md">
+          <span className="text-white font-bold text-2xl">M</span>
+        </div>
+        <p className="text-lg font-medium">Chargement...</p>
       </div>
     );
   }

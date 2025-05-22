@@ -15,7 +15,7 @@ const NavBar: React.FC = () => {
           <div className="flex items-center justify-start">
             <Link to="/" className="text-xl font-bold flex items-center lg:ml-2.5">
               <div className="w-8 h-8 bg-gradient-to-br from-[#5743e9] to-[#7e69c5] flex items-center justify-center rounded-md mr-2">
-                <SquareM className="h-6 w-6 text-white" />
+                <span className="text-white font-bold">M</span>
               </div>
               <span className="self-center whitespace-nowrap">Mandator</span>
             </Link>

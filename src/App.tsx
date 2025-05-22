@@ -1,3 +1,4 @@
+
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -10,7 +11,7 @@ import NotFound from "./pages/NotFound";
 import AuthPage from "./pages/AuthPage";
 import AdminPage from "./pages/AdminPage";
 
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { CRMProvider } from "./contexts/CRMContext";
 import { AppSettingsProvider } from "./contexts/AppSettingsContext";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -22,15 +23,31 @@ import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 const RouterChangeHandler = () => {
   const location = useLocation();
   
+  // Debounced page view tracking to prevent excessive calls
+  const debouncedTrackPageView = useCallback(() => {
+    let timeoutId: number | null = null;
+    
+    return (pageName: string) => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      
+      timeoutId = window.setTimeout(() => {
+        trackPageView(pageName);
+        timeoutId = null;
+      }, 500); // 500ms debounce
+    };
+  }, [])();
+  
   useEffect(() => {
     // Scroll to top on route change
     window.scrollTo(0, 0);
     
-    // Track page view for analytics
+    // Track page view for analytics with debounce
     const currentPath = window.location.pathname;
     const pageName = currentPath === '/' ? 'home' : currentPath.replace(/^\//, '');
-    trackPageView(pageName);
-  }, [location.pathname]);
+    debouncedTrackPageView(pageName);
+  }, [location.pathname, debouncedTrackPageView]);
   
   return null;
 };

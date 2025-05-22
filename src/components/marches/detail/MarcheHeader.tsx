@@ -78,7 +78,7 @@ const MarcheHeader: React.FC<MarcheHeaderProps> = ({ marche, getStatusColor, for
             </div>
           ) : (
             <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-[#5743e9] to-[#7e69c5] rounded-md flex items-center justify-center">
-              <SquareM className="h-6 w-6 text-white" />
+              <span className="text-white font-bold">M</span>
             </div>
           )}
           <div>

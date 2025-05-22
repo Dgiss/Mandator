@@ -1,4 +1,3 @@
-
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../ui/button'
@@ -12,8 +11,8 @@ export default function Footer() {
           {/* Colonne 1 - Logo et informations */}
           <div className="space-y-4">
             <Link to="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-white rounded flex items-center justify-center text-btp-blue font-bold">
-                MP
+              <div className="w-8 h-8 bg-gradient-to-br from-[#5743e9] to-[#7e69c5] rounded flex items-center justify-center text-white">
+                <span className="font-bold">M</span>
               </div>
               <span className="text-xl font-heading font-bold text-white">Mandator<span className="text-btp-blue">BTP</span></span>
             </Link>

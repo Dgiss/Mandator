@@ -77,7 +77,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         
         <SidebarHeader className="flex items-center border-b px-6 py-4">
           <Link to="/" className="flex items-center">
-            <FileText className="h-6 w-6 text-btp-blue mr-3" />
+            <div className="w-8 h-8 bg-gradient-to-br from-[#5743e9] to-[#7e69c5] flex items-center justify-center rounded-md mr-2">
+              <span className="text-white font-bold">M</span>
+            </div>
             <span className="text-xl font-bold">Mandator</span>
           </Link>
           
@@ -189,7 +191,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 )}
               </SidebarTrigger>
               <Link to="/" className="flex items-center md:hidden">
-                <FileText className="h-5 w-5 text-btp-blue mr-2" />
+                <div className="w-5 h-5 bg-gradient-to-br from-[#5743e9] to-[#7e69c5] flex items-center justify-center rounded mr-2">
+                  <span className="text-white font-bold text-xs">M</span>
+                </div>
                 <span className="text-lg font-bold">Mandator</span>
               </Link>
             </div>
