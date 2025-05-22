@@ -13,6 +13,14 @@ import { supabase } from '@/lib/supabase';
 import { Document } from '@/services/types';
 import { createDocumentSafely } from '@/utils/auth';
 import { format } from 'date-fns';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage
+} from '@/components/ui/form';
 
 export interface DocumentFormProps {
   marcheId: string;
@@ -253,7 +261,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
                   id="nom" 
                   {...register('nom', { required: "Le nom est obligatoire" })} 
                   placeholder="Nom du document"
-                  error={errors.nom?.message}
+                  className={errors.nom ? "border-red-500" : ""}
                 />
                 {errors.nom && <span className="text-sm text-red-500">{errors.nom.message}</span>}
               </div>
@@ -263,7 +271,7 @@ const MarcheDocumentForm: React.FC<DocumentFormProps> = ({
                 <select 
                   id="type" 
                   {...register('type', { required: "Le type est obligatoire" })} 
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className={`w-full px-3 py-2 border rounded-md ${errors.type ? "border-red-500" : "border-gray-300"}`}
                 >
                   <option value="">Sélectionner un type</option>
                   {documentTypes.map(type => (
