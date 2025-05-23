@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Table, 
   TableHeader, 
@@ -14,6 +13,9 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { generateDocumentReference } from '@/utils/documentFormatters';
+import { Eye } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { VisaViewDialog } from './VisaViewDialog';
 
 interface VisasTableProps {
   documents: Document[];
@@ -34,6 +36,9 @@ export const VisasTable: React.FC<VisasTableProps> = ({
   visas = [],
   showHistoricalVisas = false
 }) => {
+  const [selectedVisa, setSelectedVisa] = useState<Visa | null>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState<boolean>(false);
+  
   // Get user roles information with the marcheId from the first document (if available)
   const marcheId = documents.length > 0 && documents[0].marche_id ? documents[0].marche_id : undefined;
   const { isMOE, isMandataire } = useUserRole(marcheId);
@@ -87,6 +92,12 @@ export const VisasTable: React.FC<VisasTableProps> = ({
   const hasVisa = (doc: Document) => {
     const visaStatuses = ['VSO', 'VAO', 'Refusé', 'BPE'];
     return visaStatuses.includes(doc.statut);
+  };
+
+  // Handle viewing a visa
+  const handleViewVisa = (visa: Visa) => {
+    setSelectedVisa(visa);
+    setViewDialogOpen(true);
   };
 
   // Règles d'affichage du bouton de visa selon rôle (MOE UNIQUEMENT)
@@ -232,12 +243,13 @@ export const VisasTable: React.FC<VisasTableProps> = ({
               <TableHead>Par</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Commentaire</TableHead>
+              <TableHead className="w-[80px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {visas.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                   Aucun visa historique trouvé
                 </TableCell>
               </TableRow>
@@ -289,6 +301,19 @@ export const VisasTable: React.FC<VisasTableProps> = ({
                         {cleanComment || 'Aucun commentaire'}
                       </div>
                     </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end">
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleViewVisa(visa)}
+                          title="Voir le visa"
+                        >
+                          <Eye className="h-4 w-4" />
+                          <span className="sr-only">Voir</span>
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 );
               })
@@ -296,6 +321,13 @@ export const VisasTable: React.FC<VisasTableProps> = ({
           </TableBody>
         </Table>
       )}
+
+      {/* Visa Viewer Dialog */}
+      <VisaViewDialog 
+        visa={selectedVisa} 
+        open={viewDialogOpen} 
+        onOpenChange={setViewDialogOpen} 
+      />
     </div>
   );
 }
