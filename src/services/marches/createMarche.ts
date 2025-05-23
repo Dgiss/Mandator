@@ -1,7 +1,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { Marche, MarcheCreateData } from './types';
-import { fileStorage } from '../storage/fileStorage';
+import { fileStorage } from '../storage/fileStorage.ts';
 import { clearRoleCache } from '@/hooks/userRole/roleCache';
 
 /**

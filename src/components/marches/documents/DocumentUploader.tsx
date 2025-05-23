@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { MultiFileUpload } from '@/components/ui/multi-file-upload';
-import { fileStorage } from '@/services/storage/fileStorage';
+import { fileStorage } from '@/services/storage/fileStorage.ts';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { supabase } from '@/lib/supabase';
 import { AlertCircle } from 'lucide-react';

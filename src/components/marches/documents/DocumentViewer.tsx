@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Document as ProjectDocument } from '@/services/types';
-import { fileStorage } from '@/services/storage/fileStorage';
+import { fileStorage } from '@/services/storage/fileStorage.ts';
 import { Download, FileText, ExternalLink, Upload, AlertCircle, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useUserRole } from '@/hooks/userRole';
