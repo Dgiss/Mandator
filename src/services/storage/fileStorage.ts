@@ -22,25 +22,65 @@ export const fileStorage = {
       }
       
       // Check if bucket already exists
-      if (buckets && !buckets.some(b => b.name === bucketName)) {
+      const bucketExists = buckets && buckets.some(b => b.name === bucketName);
+      
+      if (!bucketExists) {
         console.log(`Bucket ${bucketName} doesn't exist, creating...`);
-        const { error } = await supabase.storage.createBucket(bucketName, {
-          public: isPublic,
-          fileSizeLimit: 52428800 // 50MB limit
-        });
-        
-        if (error) {
-          console.error(`Error creating bucket ${bucketName}: ${error.message}`);
-          return false;
+        try {
+          const { error } = await supabase.storage.createBucket(bucketName, {
+            public: isPublic,
+            fileSizeLimit: 52428800 // 50MB limit
+          });
+          
+          if (error) {
+            // If the error is not "resource already exists", it's a real error
+            if (!error.message.includes('already exists')) {
+              console.error(`Error creating bucket ${bucketName}: ${error.message}`);
+              return false;
+            } else {
+              // The bucket exists despite not being in our list - this is fine
+              console.log(`Bucket ${bucketName} already exists (concurrent creation detected)`);
+            }
+          } else {
+            console.log(`Bucket ${bucketName} created successfully`);
+          }
+        } catch (createError: any) {
+          // Another special case for "already exists" error thrown as exception
+          if (createError.message && !createError.message.includes('already exists')) {
+            console.error(`Exception creating bucket ${bucketName}: ${createError.message}`);
+            return false;
+          } else {
+            console.log(`Bucket ${bucketName} already exists (exception handled)`);
+          }
         }
-        console.log(`Bucket ${bucketName} created successfully`);
       } else {
-        console.log(`Bucket ${bucketName} already exists`);
+        console.log(`Bucket ${bucketName} already exists in bucket listing`);
+      }
+      
+      // Verify permissions on the bucket
+      try {
+        const authData = await supabase.auth.getSession();
+        console.log(`Current auth status: ${authData.data.session ? 'Authenticated' : 'Not authenticated'}`);
+        
+        // Try a simple list operation to verify access
+        const { error: testError } = await supabase.storage
+          .from(bucketName)
+          .list('', { limit: 1 });
+        
+        if (testError) {
+          console.warn(`Access test to bucket ${bucketName} failed: ${testError.message}`);
+          // Don't fail here, the user might have read but not list permissions
+        } else {
+          console.log(`Successfully verified access to bucket ${bucketName}`);
+        }
+      } catch (testError: any) {
+        console.warn(`Error testing bucket access: ${testError.message}`);
+        // Continue anyway as we might still be able to upload/download
       }
       
       return true;
-    } catch (error) {
-      console.error('Unexpected error ensuring bucket exists:', error);
+    } catch (error: any) {
+      console.error(`Unexpected error ensuring bucket exists: ${error.message || error}`);
       return false;
     }
   },
@@ -54,12 +94,26 @@ export const fileStorage = {
    */
   async uploadFile(bucketName: string, prefix: string, file: File): Promise<{ path: string; url: string } | null> {
     try {
+      console.log(`Starting uploadFile for ${file.name} (${file.size} bytes) to ${bucketName}/${prefix}`);
+      
+      // Ensure bucket exists before uploading
+      const bucketReady = await this.ensureBucketExists(bucketName, true);
+      if (!bucketReady) {
+        console.error(`Cannot proceed with upload - bucket ${bucketName} not accessible`);
+        throw new Error(`Impossible de créer ou d'accéder au bucket '${bucketName}'`);
+      }
+      
       // Generate a unique file name
       const timestamp = Date.now();
       const fileName = `${timestamp}_${file.name.replace(/\s+/g, '_')}`;
       const filePath = `${prefix}/${fileName}`;
       
+      // Check authentication status
+      const { data: authData } = await supabase.auth.getSession();
+      console.log(`Upload authorization check: ${authData.session ? 'User is authenticated' : 'No active session'}`);
+      
       // Upload the file
+      console.log(`Attempting to upload file to ${bucketName}/${filePath}`);
       const { data, error } = await supabase.storage
         .from(bucketName)
         .upload(filePath, file, {
@@ -76,17 +130,21 @@ export const fileStorage = {
         throw new Error("Upload returned no data path");
       }
       
+      console.log(`File uploaded successfully: ${data.path}`);
+      
       // Get the public URL
       const { data: urlData } = supabase.storage
         .from(bucketName)
         .getPublicUrl(data.path);
+      
+      console.log(`Generated public URL: ${urlData.publicUrl}`);
       
       return { 
         path: data.path, 
         url: urlData.publicUrl 
       };
     } catch (error: any) {
-      console.error(`Error in uploadFile: ${error.message}`);
+      console.error(`Error in uploadFile: ${error.message || JSON.stringify(error)}`);
       return null;
     }
   },
@@ -106,6 +164,13 @@ export const fileStorage = {
       
       console.log(`Attempting to download file: ${bucketName}/${filePath}`);
       
+      // Verify bucket exists
+      await this.ensureBucketExists(bucketName, true);
+      
+      // Check authentication status
+      const { data: authData } = await supabase.auth.getSession();
+      console.log(`Download authorization check: ${authData.session ? 'User is authenticated' : 'No active session'}`);
+      
       const { data, error } = await supabase.storage
         .from(bucketName)
         .download(filePath);
@@ -120,9 +185,10 @@ export const fileStorage = {
         return null;
       }
       
+      console.log(`File downloaded successfully, size: ${data.size} bytes`);
       return data;
     } catch (error: any) {
-      console.error(`Error in downloadFile: ${error.message}`);
+      console.error(`Error in downloadFile: ${error.message || JSON.stringify(error)}`);
       return null;
     }
   },
@@ -137,12 +203,22 @@ export const fileStorage = {
     try {
       if (!filePath) return false;
       
+      console.log(`Checking if file exists: ${bucketName}/${filePath}`);
+      
+      // First ensure the bucket exists
+      await this.ensureBucketExists(bucketName, true);
+      
+      // Extract folder path and filename
+      const pathParts = filePath.split('/');
+      const filename = pathParts.pop() || '';
+      const folderPath = pathParts.join('/');
+      
       // Get information about the path
       const { data, error } = await supabase.storage
         .from(bucketName)
-        .list(filePath.split('/').slice(0, -1).join('/'), {
+        .list(folderPath, {
           limit: 100,
-          search: filePath.split('/').pop()
+          search: filename
         });
       
       if (error) {
@@ -150,9 +226,15 @@ export const fileStorage = {
         return false;
       }
       
-      return data && data.length > 0;
-    } catch (error) {
-      console.error(`Error in fileExists: ${error}`);
+      const exists = data && data.length > 0 && data.some(item => 
+        item.name === filename || 
+        `${folderPath}/${item.name}` === filePath
+      );
+      
+      console.log(`File ${bucketName}/${filePath} exists: ${exists}`);
+      return exists;
+    } catch (error: any) {
+      console.error(`Error in fileExists: ${error.message || JSON.stringify(error)}`);
       return false;
     }
   },
@@ -175,8 +257,8 @@ export const fileStorage = {
         .getPublicUrl(filePath);
       
       return data.publicUrl;
-    } catch (error) {
-      console.error(`Error getting public URL: ${error}`);
+    } catch (error: any) {
+      console.error(`Error getting public URL: ${error.message || JSON.stringify(error)}`);
       return null;
     }
   }

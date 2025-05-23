@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -53,7 +52,17 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
     let errorCount = 0;
 
     try {
+      // Check authentication status first
+      const { data: authData, error: authError } = await supabase.auth.getSession();
+      console.log("Authentication check:", authData.session ? "User is authenticated" : "No active session");
+      
+      if (authError || !authData.session) {
+        console.error("Auth check failed:", authError);
+        throw new Error("Vous n'êtes pas authentifié. Veuillez vous reconnecter.");
+      }
+      
       // Create bucket if it doesn't exist
+      console.log("Verifying 'marches' bucket exists");
       const bucketExists = await fileStorage.ensureBucketExists('marches', true);
       if (!bucketExists) {
         throw new Error("Impossible de créer ou d'accéder au bucket 'marches'");
@@ -67,6 +76,8 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
         setProgress(prev => ({ ...prev, [file.name]: 10 }));
         
         try {
+          console.log(`Processing file: ${file.name} (${file.size} bytes)`);
+          
           // Upload file using our improved service
           const uploadResult = await fileStorage.uploadFile('marches', documentId, file);
           setProgress(prev => ({ ...prev, [file.name]: 50 }));
@@ -76,6 +87,7 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
           }
           
           // Update document in database with file path
+          console.log(`Updating document record with file path: ${uploadResult.path}`);
           const { error } = await supabase
             .from('documents')
             .update({
@@ -85,6 +97,7 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
             .eq('id', documentId);
             
           if (error) {
+            console.error(`Error updating document record:`, error);
             throw error;
           }
           
