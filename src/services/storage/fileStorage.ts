@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { sanitizeFileName } from '@/utils/storage-setup';
 
 /**
  * Service for managing file storage operations
@@ -113,10 +114,18 @@ export const fileStorage = {
         throw new Error(`Impossible de créer ou d'accéder au bucket '${bucketName}'`);
       }
       
-      // Generate a unique file name
+      // Sanitize the filename to remove special characters
       const timestamp = Date.now();
-      const fileName = `${timestamp}_${file.name.replace(/\s+/g, '_')}`;
-      const filePath = `${prefix}/${fileName}`;
+      const sanitized = sanitizeFileName(file.name);
+      const fileName = `${timestamp}_${sanitized}`;
+      
+      // Sanitize prefix to be a simple string without special characters or forward slashes
+      const safePrefix = prefix.replace(/[^a-zA-Z0-9-]/g, '');
+      
+      // Create a clean file path
+      const filePath = safePrefix ? `${safePrefix}/${fileName}` : fileName;
+      
+      console.log(`Using sanitized file path: ${filePath}`);
       
       // Check authentication status
       const { data: authData } = await supabase.auth.getSession();
@@ -142,9 +151,6 @@ export const fileStorage = {
       }
       
       console.log(`File uploaded successfully: ${data.path}`);
-      
-      // Verify that the uploaded file has the correct MIME type
-      console.log(`Verifying uploaded file MIME type...`);
       
       // Get the public URL
       const { data: urlData } = supabase.storage

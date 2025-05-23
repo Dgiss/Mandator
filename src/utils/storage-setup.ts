@@ -71,7 +71,13 @@ export async function checkBucket(name: string) {
 }
 
 // Utility function to sanitize file names
-export const sanitizeFileName = (name: string) => name
-  .normalize('NFD')
-  .replace(/[\u0300-\u036f]/g, '')
-  .replace(/[^a-zA-Z0-9.]/g, '-');
+export const sanitizeFileName = (name: string) => {
+  if (!name) return 'file';
+  
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/[']/g, '') // Remove apostrophes specifically
+    .replace(/[^a-zA-Z0-9._-]/g, '_') // Replace other special chars with underscores
+    .replace(/_{2,}/g, '_'); // Replace multiple consecutive underscores with a single one
+};

@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { fileStorage } from '@/services/storage/fileStorage.ts';
 import { useUserRole } from '@/hooks/userRole';
+import { sanitizeFileName } from '@/utils/storage-setup';
 
 interface DocumentUploaderProps {
   documentId: string;
@@ -121,21 +121,23 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
 
       setUploadProgress(60);
 
+      // Sanitize the file name to avoid issues with special characters
+      const sanitizedFileName = sanitizeFileName(selectedFile.name);
+      
       // Définir le chemin de destination dans le bucket
-      const prefix = `documents/${document.marche_id}`;
+      // Simplifie le chemin pour éviter les problèmes de buckets imbriqués
+      const folderPath = document.marche_id;
+      
+      console.log(`Uploading file ${sanitizedFileName} to marche_id ${folderPath}`);
       
       // Utiliser notre service fileStorage pour l'upload
-      console.log(`Uploading file ${selectedFile.name} to prefix ${prefix}`);
-      const uploadResult = await fileStorage.uploadFile('marches', prefix, selectedFile);
+      const uploadResult = await fileStorage.uploadFile('marches', folderPath, selectedFile);
       
       if (!uploadResult) {
         throw new Error("Échec de l'upload du fichier");
       }
 
       setUploadProgress(80);
-
-      // Si un ancien fichier existe, nous pourrions le supprimer ici
-      // Cela nécessiterait d'implémenter une fonction deleteFile dans fileStorage
       
       // Mettre à jour le document avec le nouveau chemin de fichier
       const { error: updateError } = await supabase
