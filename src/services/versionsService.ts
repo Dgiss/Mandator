@@ -1,6 +1,6 @@
 
 import { supabase } from '@/lib/supabase';
-import { Document } from './types';
+import { Document, Version } from './types';
 import { fileStorage } from './storage/fileStorage.ts';
 
 interface VersionData {
@@ -15,6 +15,57 @@ interface VersionData {
 }
 
 export const versionsService = {
+  /**
+   * Récupère toutes les versions associées à un marché spécifique
+   */
+  async getVersionsByMarcheId(marcheId: string): Promise<Version[]> {
+    try {
+      console.log(`Fetching versions for marche ID: ${marcheId}`);
+      
+      // Récupérer toutes les versions pour ce marché avec les informations des documents associés
+      const { data, error } = await supabase
+        .from('versions')
+        .select(`
+          *,
+          documents:document_id (*)
+        `)
+        .eq('marche_id', marcheId)
+        .order('date_creation', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching versions:', error);
+        return [];
+      }
+      
+      console.log(`Retrieved ${data?.length || 0} versions`);
+      return data as Version[] || [];
+    } catch (error: any) {
+      console.error('Exception in getVersionsByMarcheId:', error.message);
+      return [];
+    }
+  },
+  
+  /**
+   * Télécharge le fichier associé à une version
+   */
+  async downloadVersionFile(filePath: string): Promise<Blob> {
+    try {
+      console.log(`Downloading file from path: ${filePath}`);
+      
+      // Utiliser notre service fileStorage pour le téléchargement
+      const fileData = await fileStorage.downloadFile('marches', filePath);
+      
+      if (!fileData) {
+        throw new Error("Échec du téléchargement du fichier");
+      }
+      
+      return fileData;
+    } catch (error: any) {
+      console.error('Error downloading version file:', error);
+      throw new Error(`Erreur lors du téléchargement: ${error.message}`);
+    }
+  },
+
   /**
    * Crée une version initiale pour un document
    */
