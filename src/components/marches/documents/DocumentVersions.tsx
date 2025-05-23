@@ -102,15 +102,17 @@ const DocumentVersions: React.FC<DocumentVersionsProps> = ({ document, onVersion
         throw new Error("Impossible de télécharger la version");
       }
       
-      // Extract original filename from path or use fallback
-      const originalFilename = version.file_path.split('/').pop() || 
-                              `${document.nom} - v${version.version}.pdf`;
+      // Extract original filename from path and ensure it has extension
+      const originalPath = version.file_path.split('/').pop() || '';
+      const filenameBase = originalPath.split('_').slice(1).join('_') || `${document.nom} - v${version.version}`;
+      const fileExtension = originalPath.split('.').pop()?.toLowerCase() || 'pdf';
+      const finalFilename = filenameBase.includes(`.${fileExtension}`) ? filenameBase : `${filenameBase}.${fileExtension}`;
       
       // Create download link with proper MIME type
       const url = URL.createObjectURL(fileData);
       const link = window.document.createElement('a');
       link.href = url;
-      link.download = originalFilename;
+      link.download = finalFilename;
       window.document.body.appendChild(link);
       link.click();
       link.remove();

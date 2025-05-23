@@ -82,26 +82,21 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
             return;
           }
           
-          // Determine file type from extension
+          // Determine file type from extension more reliably
           const fileExtension = document.file_path.split('.').pop()?.toLowerCase() || '';
+          const mimeType = fileStorage.getMimeTypeFromExtension(fileExtension);
           
-          switch (fileExtension) {
-            case 'pdf':
-              setFileType('pdf');
-              break;
-            case 'jpg':
-            case 'jpeg':
-            case 'png':
-            case 'gif':
-            case 'bmp':
-              setFileType('image');
-              break;
-            default:
-              setFileType('other');
+          console.log(`File exists with extension .${fileExtension} and detected MIME type: ${mimeType}`);
+          
+          if (mimeType.startsWith('image/')) {
+            setFileType('image');
+          } else if (mimeType === 'application/pdf') {
+            setFileType('pdf');
+          } else {
+            setFileType('other');
           }
           
-          console.log(`File exists and type determined as: ${fileType} based on extension .${fileExtension}`);
-          
+          console.log(`File type determined as: ${fileType} based on MIME type: ${mimeType}`);
         } catch (error) {
           console.error("Error checking if file exists:", error);
           setFileError("Erreur lors de la vérification du fichier.");
@@ -198,11 +193,17 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
       // Extract the original filename from the path
       const originalFilename = document.file_path.split('/').pop()?.split('_').slice(1).join('_') || document.nom || "document";
       
+      // Get file extension and ensure filename has correct extension
+      const fileExtension = document.file_path.split('.').pop()?.toLowerCase() || '';
+      const finalFilename = originalFilename.includes(`.${fileExtension}`) 
+        ? originalFilename 
+        : `${originalFilename}.${fileExtension}`;
+      
       // Create a download link using the global window.document
       const url = URL.createObjectURL(fileData);
       const link = window.document.createElement('a');
       link.href = url;
-      link.download = originalFilename;
+      link.download = finalFilename;
       window.document.body.appendChild(link);
       link.click();
       window.document.body.removeChild(link);
@@ -210,7 +211,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
       
       toast({
         title: "Succès",
-        description: `Téléchargement de "${originalFilename}" réussi`,
+        description: `Téléchargement de "${finalFilename}" réussi`,
       });
     } catch (error: any) {
       console.error("Error downloading file:", error);
@@ -290,24 +291,44 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                     ) : null}
                     
                     {fileType === 'pdf' ? (
-                      <iframe 
-                        src={`${fileUrl}#view=FitH`} 
-                        className="w-full h-[70vh] border rounded"
-                        title={document.nom}
-                        onError={() => setFileError("Impossible d'afficher le fichier PDF.")}
-                      />
+                      <>
+                        <iframe 
+                          src={`${fileUrl}#view=FitH`} 
+                          className="w-full h-[70vh] border rounded"
+                          title={document.nom}
+                          onError={(e) => {
+                            console.error("Error loading PDF in iframe:", e);
+                            setFileError("Impossible d'afficher le fichier PDF. Essayez de le télécharger.");
+                          }}
+                        />
+                        {/* Fallback if iframe doesn't display correctly */}
+                        <p className="text-center text-sm text-gray-500 mt-2">
+                          Si le PDF ne s'affiche pas correctement, utilisez les boutons ci-dessus pour l'ouvrir ou le télécharger.
+                        </p>
+                      </>
                     ) : fileType === 'image' ? (
                       <img 
                         src={fileUrl || ''} 
                         alt={document.nom} 
                         className="max-w-full mx-auto max-h-[70vh] object-contain"
-                        onError={() => setFileError("Impossible d'afficher l'image.")}
+                        onError={() => {
+                          console.error("Error loading image");
+                          setFileError("Impossible d'afficher l'image. Essayez de la télécharger.");
+                        }}
                       />
                     ) : (
                       <div className="flex flex-col items-center justify-center h-[70vh] bg-gray-100 rounded">
                         <FileText className="h-16 w-16 text-gray-400 mb-4" />
                         <p className="text-gray-600">Aperçu non disponible</p>
                         <p className="text-gray-500 text-sm mt-2">Ce type de fichier ne peut pas être prévisualisé. Veuillez télécharger le fichier pour le consulter.</p>
+                        <Button 
+                          variant="outline"
+                          onClick={handleDownload}
+                          className="mt-4 flex items-center gap-2"
+                        >
+                          <Download className="h-4 w-4" />
+                          Télécharger
+                        </Button>
                       </div>
                     )}
                   </div>

@@ -79,6 +79,11 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
         try {
           console.log(`Processing file: ${file.name} (${file.size} bytes) with type: ${file.type}`);
           
+          // Log the file's MIME type
+          const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+          const detectedType = file.type || fileStorage.getMimeTypeFromExtension(fileExtension);
+          console.log(`File extension: .${fileExtension}, Detected MIME type: ${detectedType}`);
+          
           // Upload file using our improved service with MIME type handling
           const uploadResult = await fileStorage.uploadFile('marches', documentId, file);
           setProgress(prev => ({ ...prev, [file.name]: 50 }));

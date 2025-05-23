@@ -113,14 +113,22 @@ export const fileStorage = {
       const { data: authData } = await supabase.auth.getSession();
       console.log(`Upload authorization check: ${authData.session ? 'User is authenticated' : 'No active session'}`);
       
+      // Determine content type based on file name if not provided by the browser
+      let contentType = file.type;
+      if (!contentType || contentType === 'application/octet-stream') {
+        const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+        contentType = this.getMimeTypeFromExtension(fileExtension);
+        console.log(`Auto-assigned MIME type: ${contentType} based on extension .${fileExtension}`);
+      }
+      
       // Upload the file with explicit content type from the file object
-      console.log(`Attempting to upload file to ${bucketName}/${filePath} with MIME type: ${file.type}`);
+      console.log(`Attempting to upload file to ${bucketName}/${filePath} with MIME type: ${contentType}`);
       const { data, error } = await supabase.storage
         .from(bucketName)
         .upload(filePath, file, {
           cacheControl: '3600',
           upsert: true,
-          contentType: file.type // Explicitly set the content type based on the file's type
+          contentType: contentType // Explicitly set the content type
         });
       
       if (error) {
@@ -197,39 +205,50 @@ export const fileStorage = {
       
       console.log(`File downloaded successfully, size: ${data.size} bytes, type: ${data.type}`);
       
-      // If the blob doesn't have the correct type (often generic "application/octet-stream"),
-      // we create a new one with the right type based on the file extension
-      if (data.type === 'application/octet-stream' || data.type === 'application/json') {
-        const fileExtension = filePath.split('.').pop()?.toLowerCase() || '';
-        let mimeType = data.type;
-        
-        // Map common file extensions to proper MIME types
-        switch (fileExtension) {
-          case 'pdf': mimeType = 'application/pdf'; break;
-          case 'jpg':
-          case 'jpeg': mimeType = 'image/jpeg'; break;
-          case 'png': mimeType = 'image/png'; break;
-          case 'gif': mimeType = 'image/gif'; break;
-          case 'doc': mimeType = 'application/msword'; break;
-          case 'docx': mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'; break;
-          case 'xls': mimeType = 'application/vnd.ms-excel'; break;
-          case 'xlsx': mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'; break;
-          case 'ppt': mimeType = 'application/vnd.ms-powerpoint'; break;
-          case 'pptx': mimeType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation'; break;
-          case 'txt': mimeType = 'text/plain'; break;
-          // Add more file types as needed
-        }
-        
-        console.log(`Correcting file MIME type from ${data.type} to ${mimeType} based on extension .${fileExtension}`);
-        
-        // Create a new blob with the correct MIME type
-        return new Blob([data], { type: mimeType });
-      }
+      // Always create a new blob with the correct type based on file extension
+      const fileExtension = filePath.split('.').pop()?.toLowerCase() || '';
+      let mimeType = this.getMimeTypeFromExtension(fileExtension);
       
-      return data;
+      console.log(`Original blob type: ${data.type}, corrected type: ${mimeType} based on extension .${fileExtension}`);
+      
+      // Create a new blob with the correct MIME type to ensure proper handling
+      return new Blob([data], { type: mimeType });
     } catch (error: any) {
       console.error(`Error in downloadFile: ${error.message || JSON.stringify(error)}`);
       return null;
+    }
+  },
+  
+  /**
+   * Get the MIME type based on file extension
+   * @param fileExtension File extension without dot
+   * @returns Appropriate MIME type
+   */
+  getMimeTypeFromExtension(fileExtension: string): string {
+    switch (fileExtension.toLowerCase()) {
+      case 'pdf': return 'application/pdf';
+      case 'jpg':
+      case 'jpeg': return 'image/jpeg';
+      case 'png': return 'image/png';
+      case 'gif': return 'image/gif';
+      case 'svg': return 'image/svg+xml';
+      case 'doc': return 'application/msword';
+      case 'docx': return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      case 'xls': return 'application/vnd.ms-excel';
+      case 'xlsx': return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      case 'ppt': return 'application/vnd.ms-powerpoint';
+      case 'pptx': return 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+      case 'txt': return 'text/plain';
+      case 'csv': return 'text/csv';
+      case 'json': return 'application/json';
+      case 'xml': return 'application/xml';
+      case 'zip': return 'application/zip';
+      case 'rar': return 'application/x-rar-compressed';
+      case '7z': return 'application/x-7z-compressed';
+      case 'mp4': return 'video/mp4';
+      case 'mp3': return 'audio/mpeg';
+      case 'wav': return 'audio/wav';
+      default: return 'application/octet-stream';
     }
   },
   
