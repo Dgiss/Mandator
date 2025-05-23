@@ -92,8 +92,8 @@ const DocumentVersions: React.FC<DocumentVersionsProps> = ({ document, onVersion
         throw new Error('Le chemin du fichier est introuvable');
       }
 
-      // Determine bucket to use - versions might be in a different bucket
-      const bucket = version.bucket || 'marches';
+      // Use default bucket 'marches' since Version type doesn't have a bucket property
+      const bucket = 'marches';
       
       // Use our improved download method with MIME type handling
       const fileData = await fileStorage.downloadFile(bucket, version.file_path);
