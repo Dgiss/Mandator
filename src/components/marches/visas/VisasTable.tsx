@@ -149,8 +149,10 @@ export const VisasTable: React.FC<VisasTableProps> = ({
     
     // Now safely add marche_id if needed
     if (openDiffusionDialog && !('marche_id' in document) && marcheId) {
+      // Create a plain object from document to ensure it's spreadable
+      const docObject = { ...Object(document) };
       return {
-        ...document,
+        ...docObject,
         marche_id: marcheId,
       };
     }

@@ -10,7 +10,8 @@ export async function ensureStorageBucketExists() {
       'documents',
       'fascicule-attachments',
       'attachments',
-      'marches'
+      'marches',
+      'visas'  // Add visas bucket to the list
     ];
     
     const existingBuckets = buckets?.map(b => b.name) || [];
@@ -21,7 +22,7 @@ export async function ensureStorageBucketExists() {
         try {
           console.log(`Creating bucket: ${bucketName}`);
           const { error } = await supabase.storage.createBucket(bucketName, {
-            public: false,
+            public: bucketName === 'marches' || bucketName === 'visas', // Make marches and visas buckets public
             fileSizeLimit: 20971520 // 20MB limit
           });
           
@@ -51,7 +52,7 @@ export async function checkBucket(name: string) {
       try {
         console.log(`Creating bucket: ${name}`);
         await supabase.storage.createBucket(name, {
-          public: false,
+          public: name === 'marches' || name === 'visas', // Make marches and visas buckets public
           fileSizeLimit: 20971520 // 20MB
         });
       } catch (createError: any) {

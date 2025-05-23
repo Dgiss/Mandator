@@ -54,6 +54,19 @@ export const initializeStorageBuckets = async () => {
         name: 'marches',
         isPublic: true,
         fileSizeLimit: 10485760 // 10MB
+      },
+      // Add visas bucket
+      {
+        name: 'visas',
+        isPublic: true,
+        fileSizeLimit: 20971520, // 20MB
+        allowedMimeTypes: [
+          'application/pdf', 
+          'application/msword', 
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'image/jpeg',
+          'image/png'
+        ]
       }
     ];
     
@@ -62,24 +75,35 @@ export const initializeStorageBuckets = async () => {
       if (!bucketNames.includes(bucket.name)) {
         console.log(`Creating bucket: ${bucket.name}`);
         
-        const { error } = await supabase.storage.createBucket(bucket.name, {
-          public: bucket.isPublic,
-          fileSizeLimit: bucket.fileSizeLimit,
-          allowedMimeTypes: bucket.allowedMimeTypes
-        });
-        
-        if (error) {
-          if (error.message === 'The resource already exists') {
-            console.log(`Bucket ${bucket.name} already exists`);
-          } else {
-            console.error(`Failed to create ${bucket.name} bucket:`, error);
-          }
-        } else {
-          console.log(`${bucket.name} bucket created successfully`);
+        try {
+          const { error } = await supabase.storage.createBucket(bucket.name, {
+            public: bucket.isPublic,
+            fileSizeLimit: bucket.fileSizeLimit,
+            allowedMimeTypes: bucket.allowedMimeTypes
+          });
           
-          // Note about public buckets
-          if (bucket.isPublic) {
-            console.log(`Note: For public buckets like "${bucket.name}", you may need to configure storage policies through the Supabase dashboard.`);
+          if (error) {
+            // Check if it's just a concurrent creation error
+            if (error.message === 'The resource already exists') {
+              console.log(`Bucket ${bucket.name} already exists (concurrent creation detected)`);
+            } else {
+              console.error(`Failed to create ${bucket.name} bucket:`, error);
+            }
+          } else {
+            console.log(`${bucket.name} bucket created successfully`);
+            
+            // Note about public buckets
+            if (bucket.isPublic) {
+              console.log(`Note: For public buckets like "${bucket.name}", you may need to configure storage policies through the Supabase dashboard.`);
+            }
+          }
+        } catch (bucketError: any) {
+          // Handle any other errors that might occur during bucket creation
+          // This could be due to network issues, permissions, etc.
+          if (bucketError?.message?.includes('already exists')) {
+            console.log(`Bucket ${bucket.name} already exists (error caught)`);
+          } else {
+            console.error(`Error creating bucket ${bucket.name}:`, bucketError);
           }
         }
       } else {
