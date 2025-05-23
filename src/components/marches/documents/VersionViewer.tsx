@@ -51,7 +51,7 @@ const VersionViewer: React.FC<VersionViewerProps> = ({
   // Effect to check file existence and prepare for display
   useEffect(() => {
     const checkFileExists = async () => {
-      if (!open || !version?.file_path) return;
+      if (!open || (!version?.file_path && !document.file_path)) return;
 
       setIsFileChecking(true);
       setFileError(null);
@@ -59,29 +59,43 @@ const VersionViewer: React.FC<VersionViewerProps> = ({
       setPdfDataUrl(null);
       
       try {
+        // Use version file_path if available, otherwise fallback to document file_path
+        const filePath = version?.file_path || document.file_path;
+        
+        if (!filePath) {
+          setFileError("Aucun fichier associé à cette version ou au document parent.");
+          setIsFileChecking(false);
+          return;
+        }
+        
+        console.log(`Checking file path: ${filePath}`);
+        
         // Check if file exists
-        const exists = await fileStorage.fileExists('marches', version.file_path);
+        const exists = await fileStorage.fileExists('marches', filePath);
         
         if (!exists) {
+          console.error(`File does not exist: ${filePath}`);
           setFileError("Le fichier associé à cette version n'existe pas ou n'est pas accessible.");
           setIsFileChecking(false);
           return;
         }
         
         // Get public URL
-        const url = fileStorage.getPublicUrl('marches', version.file_path);
+        const url = fileStorage.getPublicUrl('marches', filePath);
         setFileUrl(url);
+        console.log(`File URL: ${url}`);
         
         // Determine file type from extension
-        const fileExtension = version.file_path.split('.').pop()?.toLowerCase() || '';
+        const fileExtension = filePath.split('.').pop()?.toLowerCase() || '';
         const mimeType = fileStorage.getMimeTypeFromExtension(fileExtension);
+        console.log(`File extension: ${fileExtension}, MIME type: ${mimeType}`);
         
         if (mimeType.startsWith('image/')) {
           setFileType('image');
         } else if (mimeType === 'application/pdf') {
           setFileType('pdf');
           // For PDFs, create a data URL to avoid MIME type issues
-          await loadPdfAsDataUrl(version.file_path);
+          await loadPdfAsDataUrl(filePath);
         } else {
           setFileType('other');
         }
@@ -94,7 +108,7 @@ const VersionViewer: React.FC<VersionViewerProps> = ({
     };
     
     checkFileExists();
-  }, [open, version?.file_path]);
+  }, [open, version?.file_path, document.file_path]);
 
   // Function to load PDF as data URL
   const loadPdfAsDataUrl = async (filePath: string) => {
@@ -132,7 +146,19 @@ const VersionViewer: React.FC<VersionViewerProps> = ({
 
   // Function to download the version file
   const handleDownload = async () => {
-    if (!version || !version.file_path) {
+    if (!version) {
+      toast({
+        title: "Erreur",
+        description: "Version non disponible.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Use version file path if available, otherwise fallback to document file path
+    const filePath = version.file_path || document.file_path;
+    
+    if (!filePath) {
       toast({
         title: "Erreur",
         description: "Aucun fichier associé à cette version.",
@@ -145,17 +171,17 @@ const VersionViewer: React.FC<VersionViewerProps> = ({
     
     try {
       // Use our improved download method with proper MIME type handling
-      const fileData = await fileStorage.downloadFile('marches', version.file_path);
+      const fileData = await fileStorage.downloadFile('marches', filePath);
       
       if (!fileData) {
         throw new Error("Impossible de télécharger le fichier");
       }
       
       // Extract the original filename from the path
-      const originalFilename = version.file_path.split('/').pop()?.split('_').slice(1).join('_') || `version_${version.version}.pdf`;
+      const originalFilename = filePath.split('/').pop()?.split('_').slice(1).join('_') || `version_${version.version}.pdf`;
       
       // Get file extension and ensure filename has correct extension
-      const fileExtension = version.file_path.split('.').pop()?.toLowerCase() || '';
+      const fileExtension = filePath.split('.').pop()?.toLowerCase() || '';
       const finalFilename = originalFilename.includes(`.${fileExtension}`) 
         ? originalFilename 
         : `${originalFilename}.${fileExtension}`;
@@ -210,6 +236,9 @@ const VersionViewer: React.FC<VersionViewerProps> = ({
   };
 
   if (!version) return null;
+
+  const displayFilePath = version.file_path || document.file_path;
+  const hasFileToDisplay = !!displayFilePath;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -266,6 +295,12 @@ const VersionViewer: React.FC<VersionViewerProps> = ({
                   <TableCell className="font-medium">Taille</TableCell>
                   <TableCell>{version.taille || '—'}</TableCell>
                 </TableRow>
+                {!version.file_path && document.file_path && (
+                  <TableRow>
+                    <TableCell className="font-medium">Source du fichier</TableCell>
+                    <TableCell>Document parent (version principale)</TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
@@ -302,7 +337,7 @@ const VersionViewer: React.FC<VersionViewerProps> = ({
                       <Button 
                         variant="outline"
                         onClick={handleDownload}
-                        disabled={isDownloading || !version.file_path}
+                        disabled={isDownloading || !hasFileToDisplay}
                         className="flex items-center gap-2"
                       >
                         {isDownloading ? (

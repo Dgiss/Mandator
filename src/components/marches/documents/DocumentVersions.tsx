@@ -49,6 +49,8 @@ const DocumentVersions: React.FC<DocumentVersionsProps> = ({
           
         if (error) throw error;
         
+        // Log fetched data to debug
+        console.log('Fetched versions:', data);
         setVersions(data || []);
       } catch (error) {
         console.error('Error fetching versions:', error);
@@ -102,22 +104,25 @@ const DocumentVersions: React.FC<DocumentVersionsProps> = ({
 
   const handleDownloadVersion = async (version: Version) => {
     try {
-      if (!version.file_path) {
-        throw new Error('Le chemin du fichier est introuvable');
+      // Use version file path if available, otherwise use document file path as fallback
+      const filePath = version.file_path || document.file_path;
+      
+      if (!filePath) {
+        throw new Error('Aucun fichier associé à cette version');
       }
 
       // Use default bucket 'marches' since Version type doesn't have a bucket property
       const bucket = 'marches';
       
       // Use our improved download method with MIME type handling
-      const fileData = await fileStorage.downloadFile(bucket, version.file_path);
+      const fileData = await fileStorage.downloadFile(bucket, filePath);
       
       if (!fileData) {
         throw new Error("Impossible de télécharger la version");
       }
       
       // Extract original filename from path and ensure it has extension
-      const originalPath = version.file_path.split('/').pop() || '';
+      const originalPath = filePath.split('/').pop() || '';
       const filenameBase = originalPath.split('_').slice(1).join('_') || `${document.nom} - v${version.version}`;
       const fileExtension = originalPath.split('.').pop()?.toLowerCase() || 'pdf';
       const finalFilename = filenameBase.includes(`.${fileExtension}`) ? filenameBase : `${filenameBase}.${fileExtension}`;
@@ -141,6 +146,7 @@ const DocumentVersions: React.FC<DocumentVersionsProps> = ({
 
   // Function to handle viewing a version
   const handleViewVersion = (version: Version) => {
+    console.log('Viewing version:', version);
     setViewingVersion(version);
   };
 
@@ -165,7 +171,7 @@ const DocumentVersions: React.FC<DocumentVersionsProps> = ({
           </TableHeader>
           <TableBody>
             {versions.map((version) => (
-              <TableRow key={version.id}>
+              <TableRow key={version.id} className="cursor-pointer" onClick={() => handleViewVersion(version)}>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-1.5">
                     <span>{version.version}</span>
@@ -191,7 +197,7 @@ const DocumentVersions: React.FC<DocumentVersionsProps> = ({
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  <div className="flex justify-end space-x-2">
+                  <div className="flex justify-end space-x-2" onClick={(e) => e.stopPropagation()}>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -199,7 +205,10 @@ const DocumentVersions: React.FC<DocumentVersionsProps> = ({
                             variant="ghost" 
                             size="sm"
                             className="h-8 w-8 p-0"
-                            onClick={() => handleViewVersion(version)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewVersion(version);
+                            }}
                           >
                             <Eye className="h-4 w-4" />
                             <span className="sr-only">Visualiser</span>
@@ -224,7 +233,10 @@ const DocumentVersions: React.FC<DocumentVersionsProps> = ({
                             variant="ghost" 
                             size="sm"
                             className="h-8 w-8 p-0"
-                            onClick={() => handleDownloadVersion(version)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownloadVersion(version);
+                            }}
                             title="Télécharger la version"
                           >
                             <Download className="h-4 w-4" />
