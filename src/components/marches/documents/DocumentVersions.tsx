@@ -17,15 +17,22 @@ import { Download, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { fileStorage } from '@/services/storage/fileStorage.ts';
+import VersionViewer from './VersionViewer';
 
 interface DocumentVersionsProps {
   document: Document;
   onVersionAdded?: () => void;
+  isMandataire: boolean;
 }
 
-const DocumentVersions: React.FC<DocumentVersionsProps> = ({ document, onVersionAdded }) => {
+const DocumentVersions: React.FC<DocumentVersionsProps> = ({ 
+  document, 
+  onVersionAdded,
+  isMandataire 
+}) => {
   const [versions, setVersions] = useState<Version[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewingVersion, setViewingVersion] = useState<Version | null>(null);
 
   useEffect(() => {
     const fetchVersions = async () => {
@@ -125,6 +132,11 @@ const DocumentVersions: React.FC<DocumentVersionsProps> = ({ document, onVersion
     }
   };
 
+  // Function to handle viewing a version
+  const handleViewVersion = (version: Version) => {
+    setViewingVersion(version);
+  };
+
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-medium">Historique des versions</h3>
@@ -161,7 +173,18 @@ const DocumentVersions: React.FC<DocumentVersionsProps> = ({ document, onVersion
                       variant="ghost" 
                       size="sm"
                       className="h-8 w-8 p-0"
+                      onClick={() => handleViewVersion(version)}
+                      title="Visualiser la version"
+                    >
+                      <Eye className="h-4 w-4" />
+                      <span className="sr-only">Visualiser</span>
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      className="h-8 w-8 p-0"
                       onClick={() => handleDownloadVersion(version)}
+                      title="Télécharger la version"
                     >
                       <Download className="h-4 w-4" />
                       <span className="sr-only">Télécharger</span>
@@ -172,6 +195,16 @@ const DocumentVersions: React.FC<DocumentVersionsProps> = ({ document, onVersion
             ))}
           </TableBody>
         </Table>
+      )}
+
+      {viewingVersion && (
+        <VersionViewer 
+          version={viewingVersion}
+          document={document}
+          open={!!viewingVersion}
+          onOpenChange={(open) => !open && setViewingVersion(null)}
+          isMandataire={isMandataire}
+        />
       )}
     </div>
   );

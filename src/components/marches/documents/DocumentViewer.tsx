@@ -431,6 +431,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                 <DocumentVersions 
                   document={document}
                   onVersionAdded={handleDocumentUpdate}
+                  isMandataire={isMandataire} // Pass isMandataire to DocumentVersions
                 />
               </TabsContent>
               

@@ -492,7 +492,7 @@ export default function MarcheDocuments({
         />
       )}
       
-      {/* Document viewer - Pass isMandataire as a prop */}
+      {/* Document viewer - Pass isMandataire as a boolean prop */}
       <DocumentViewer 
         document={viewingDocument}
         open={!!viewingDocument}
