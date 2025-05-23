@@ -2,103 +2,64 @@
 import { supabase } from '@/lib/supabase';
 
 /**
- * Service de gestion des fichiers avec Supabase Storage
- * Version améliorée avec gestion de la réutilisation des buckets existants
+ * Service for managing file storage operations
  */
 export const fileStorage = {
   /**
-   * Vérifie si un bucket existe déjà
-   * @param bucketName Nom du bucket à vérifier
-   * @returns true si le bucket existe
+   * Ensures a bucket exists before attempting operations on it
+   * @param bucketName Name of the bucket to check/create
+   * @param isPublic Whether the bucket should be public
+   * @returns Promise that resolves to true if the bucket exists or was created
    */
-  async bucketExists(bucketName: string): Promise<boolean> {
+  async ensureBucketExists(bucketName: string, isPublic: boolean = false): Promise<boolean> {
     try {
-      const { data, error } = await supabase.storage.getBucket(bucketName);
-      return !error && !!data;
+      // List all buckets
+      const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+      
+      if (listError) {
+        console.error(`Error listing buckets: ${listError.message}`);
+        return false;
+      }
+      
+      // Check if bucket already exists
+      if (buckets && !buckets.some(b => b.name === bucketName)) {
+        console.log(`Bucket ${bucketName} doesn't exist, creating...`);
+        const { error } = await supabase.storage.createBucket(bucketName, {
+          public: isPublic,
+          fileSizeLimit: 52428800 // 50MB limit
+        });
+        
+        if (error) {
+          console.error(`Error creating bucket ${bucketName}: ${error.message}`);
+          return false;
+        }
+        console.log(`Bucket ${bucketName} created successfully`);
+      } else {
+        console.log(`Bucket ${bucketName} already exists`);
+      }
+      
+      return true;
     } catch (error) {
-      console.error(`Erreur lors de la vérification du bucket ${bucketName}:`, error);
+      console.error('Unexpected error ensuring bucket exists:', error);
       return false;
     }
   },
-
-  /**
-   * Crée un bucket s'il n'existe pas déjà
-   * @param bucketName Nom du bucket à créer
-   * @param isPublic Si le bucket doit être public
-   */
-  async ensureBucketExists(bucketName: string, isPublic: boolean = false): Promise<void> {
-    try {
-      // Vérifier si le bucket existe déjà
-      const exists = await this.bucketExists(bucketName);
-      
-      if (exists) {
-        console.log(`Le bucket ${bucketName} existe déjà.`);
-        return;
-      }
-      
-      // Créer le bucket s'il n'existe pas
-      const { error } = await supabase.storage.createBucket(bucketName, {
-        public: isPublic,
-        fileSizeLimit: 50 * 1024 * 1024, // 50MB limit
-        allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'application/pdf']
-      });
-      
-      if (error) {
-        // Ignorer l'erreur si c'est juste que le bucket existe déjà
-        if (error.message === 'The resource already exists') {
-          console.log(`Bucket ${bucketName} existe déjà - continuons.`);
-          return;
-        }
-        throw error;
-      }
-      
-      console.log(`Bucket ${bucketName} créé avec succès.`);
-      
-      // Pour les buckets publics, nous ne pouvons pas définir des politiques directement
-      // via l'API JS, donc nous allons juste logger l'information
-      if (isPublic) {
-        console.log(`Bucket ${bucketName} a été créé comme public. Des configurations supplémentaires peuvent être nécessaires via la console Supabase.`);
-      }
-    } catch (error) {
-      console.error(`Erreur lors de la création/vérification du bucket ${bucketName}:`, error);
-      // Ne pas bloquer l'application pour une erreur de bucket - on va essayer d'utiliser le bucket existant
-    }
-  },
   
   /**
-   * Configure les politiques nécessaires pour un bucket public
-   * Note: Cette fonction est conservée pour la compatibilité ascendante mais
-   * les politiques devraient être configurées via l'interface Supabase ou SQL
+   * Uploads a file to a specified bucket and path
+   * @param bucketName Name of the bucket to upload to
+   * @param prefix Path prefix to use (folder)
+   * @param file The file to upload
+   * @returns The path and URL of the uploaded file, or null if failed
    */
-  async setupPublicBucketPolicies(bucketName: string): Promise<void> {
+  async uploadFile(bucketName: string, prefix: string, file: File): Promise<{ path: string; url: string } | null> {
     try {
-      console.log(`Pour configurer des politiques pour le bucket ${bucketName}, veuillez utiliser l'interface Supabase ou des scripts SQL.`);
-      console.log(`Les politiques ne peuvent pas être configurées directement via l'API JavaScript.`);
+      // Generate a unique file name
+      const timestamp = Date.now();
+      const fileName = `${timestamp}_${file.name.replace(/\s+/g, '_')}`;
+      const filePath = `${prefix}/${fileName}`;
       
-      // Note: La création de politiques via l'API JavaScript n'est pas disponible
-      // Les politiques doivent être configurées via l'interface Supabase ou des scripts SQL
-      
-      console.log(`Bucket ${bucketName} : des configurations manuelles de politiques peuvent être nécessaires.`);
-    } catch (error) {
-      console.warn(`Erreur lors de la configuration des politiques pour ${bucketName}:`, error);
-      // Ne pas bloquer l'application pour une erreur de politique
-    }
-  },
-  
-  /**
-   * Upload un fichier dans un bucket avec une meilleure gestion des erreurs
-   */
-  async uploadFile(bucketName: string, folder: string, file: File): Promise<{path: string, id: string, fullPath: string} | null> {
-    try {
-      // Assurer que le bucket existe
-      await this.ensureBucketExists(bucketName, true);
-      
-      // Générer un nom de fichier unique
-      const fileExt = file.name.split('.').pop();
-      const uniqueId = Math.random().toString(36).substring(2, 10);
-      const filePath = `${folder}/${uniqueId}.${fileExt}`;
-      
-      // Upload du fichier
+      // Upload the file
       const { data, error } = await supabase.storage
         .from(bucketName)
         .upload(filePath, file, {
@@ -107,65 +68,116 @@ export const fileStorage = {
         });
       
       if (error) {
+        console.error(`Error uploading file ${fileName}: ${error.message}`);
         throw error;
       }
       
-      return {
-        path: data.path,
-        id: data.id,
-        fullPath: `${bucketName}/${data.path}`
+      if (!data) {
+        throw new Error("Upload returned no data path");
+      }
+      
+      // Get the public URL
+      const { data: urlData } = supabase.storage
+        .from(bucketName)
+        .getPublicUrl(data.path);
+      
+      return { 
+        path: data.path, 
+        url: urlData.publicUrl 
       };
-    } catch (error) {
-      console.error(`Erreur lors de l'upload dans ${bucketName}/${folder}:`, error);
+    } catch (error: any) {
+      console.error(`Error in uploadFile: ${error.message}`);
       return null;
     }
   },
   
   /**
-   * Récupère l'URL publique d'un fichier
+   * Downloads a file with proper error handling and CORS compatibility
+   * @param bucketName Name of the bucket containing the file
+   * @param filePath Path to the file within the bucket
+   * @returns The file data or null if download failed
    */
-  getPublicUrl(bucketName: string, filePath: string): string {
-    const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath);
-    return data.publicUrl;
-  },
-  
-  /**
-   * Liste les fichiers dans un bucket/dossier
-   */
-  async listFiles(bucketName: string, folder?: string): Promise<string[]> {
+  async downloadFile(bucketName: string, filePath: string): Promise<Blob | null> {
     try {
-      const { data, error } = await supabase.storage
-        .from(bucketName)
-        .list(folder || '');
-      
-      if (error) {
-        throw error;
+      if (!filePath) {
+        console.error('Invalid file path: Empty path');
+        return null;
       }
       
-      return (data || []).map(item => item.name);
-    } catch (error) {
-      console.error(`Erreur lors de la liste des fichiers dans ${bucketName}/${folder || ''}:`, error);
-      return [];
+      console.log(`Attempting to download file: ${bucketName}/${filePath}`);
+      
+      const { data, error } = await supabase.storage
+        .from(bucketName)
+        .download(filePath);
+      
+      if (error) {
+        console.error(`Error downloading file: ${error.message}`);
+        return null;
+      }
+      
+      if (!data) {
+        console.error('Download returned no data');
+        return null;
+      }
+      
+      return data;
+    } catch (error: any) {
+      console.error(`Error in downloadFile: ${error.message}`);
+      return null;
     }
   },
   
   /**
-   * Supprime un fichier
+   * Checks if a file exists in storage
+   * @param bucketName Name of the bucket containing the file
+   * @param filePath Path to the file within the bucket
+   * @returns Promise resolving to true if file exists, false otherwise
    */
-  async deleteFile(bucketName: string, filePath: string): Promise<boolean> {
+  async fileExists(bucketName: string, filePath: string): Promise<boolean> {
     try {
-      const { error } = await supabase.storage
+      if (!filePath) return false;
+      
+      // Get information about the path
+      const { data, error } = await supabase.storage
         .from(bucketName)
-        .remove([filePath]);
+        .list(filePath.split('/').slice(0, -1).join('/'), {
+          limit: 100,
+          search: filePath.split('/').pop()
+        });
       
       if (error) {
-        throw error;
+        console.error(`Error checking if file exists: ${error.message}`);
+        return false;
       }
       
-      return true;
+      return data && data.length > 0;
     } catch (error) {
-      console.error(`Erreur lors de la suppression de ${bucketName}/${filePath}:`, error);
+      console.error(`Error in fileExists: ${error}`);
       return false;
+    }
+  },
+  
+  /**
+   * Gets the public URL for a file with error handling
+   * @param bucketName Name of the bucket containing the file
+   * @param filePath Path to the file within the bucket
+   * @returns The public URL or null if operation failed
+   */
+  getPublicUrl(bucketName: string, filePath: string): string | null {
+    try {
+      if (!filePath) {
+        console.error('Invalid file path: Empty path');
+        return null;
+      }
+      
+      const { data } = supabase.storage
+        .from(bucketName)
+        .getPublicUrl(filePath);
+      
+      return data.publicUrl;
+    } catch (error) {
+      console.error(`Error getting public URL: ${error}`);
+      return null;
     }
   }
 };

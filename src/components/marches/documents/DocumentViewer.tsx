@@ -3,8 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Document as ProjectDocument } from '@/services/types';
-import { getPublicUrl } from '@/services/storageService';
-import { Download, FileText, ExternalLink, Upload, AlertCircle } from 'lucide-react';
+import { fileStorage } from '@/services/storage/fileStorage';
+import { Download, FileText, ExternalLink, Upload, AlertCircle, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useUserRole } from '@/hooks/userRole';
 import DocumentDetails from './DocumentDetails';
@@ -15,6 +15,8 @@ import ModifyDocumentButton from './ModifyDocumentButton';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { supabase } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface DocumentViewerProps {
   document: ProjectDocument | null;
@@ -33,6 +35,10 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
   const [isUploaderOpen, setIsUploaderOpen] = useState(false);
   const { canEdit } = useUserRole(initialDocument?.marche_id || '');
   const [document, setDocument] = useState<ProjectDocument | null>(initialDocument);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [isFileChecking, setIsFileChecking] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const { toast } = useToast();
 
   // To prevent infinite loop, use a flag to track if an update has been made
   const [updatePending, setUpdatePending] = useState(false);
@@ -59,6 +65,29 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
     }
   }, [open, document?.id]);
   
+  // Effect to check if the file exists when viewing the document
+  useEffect(() => {
+    const checkFileExists = async () => {
+      if (open && document?.file_path) {
+        setIsFileChecking(true);
+        setFileError(null);
+        try {
+          const exists = await fileStorage.fileExists('marches', document.file_path);
+          if (!exists) {
+            setFileError("Le fichier associé à ce document n'existe pas ou n'est pas accessible.");
+          }
+        } catch (error) {
+          console.error("Error checking if file exists:", error);
+          setFileError("Erreur lors de la vérification du fichier.");
+        } finally {
+          setIsFileChecking(false);
+        }
+      }
+    };
+    
+    checkFileExists();
+  }, [open, document?.file_path]);
+  
   // Function to refresh document data
   const refreshDocumentData = async (documentId: string) => {
     try {
@@ -81,7 +110,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
   if (!document) return null;
   
   const fileUrl = document.file_path 
-    ? getPublicUrl('marches', document.file_path) 
+    ? fileStorage.getPublicUrl('marches', document.file_path) 
     : null;
   
   const handleDocumentUpdate = () => {
@@ -107,6 +136,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
   const handleUploadSuccess = async () => {
     setIsUploaderOpen(false);
+    setFileError(null);
     
     // Refresh document data immediately after upload
     if (document?.id) {
@@ -117,6 +147,52 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
     setTimeout(() => {
       handleDocumentUpdate();
     }, 500);
+  };
+
+  const handleDownload = async () => {
+    if (!document.file_path) {
+      toast({
+        title: "Erreur",
+        description: "Aucun fichier associé à ce document.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsDownloading(true);
+    
+    try {
+      // Use our improved download method
+      const fileData = await fileStorage.downloadFile('marches', document.file_path);
+      
+      if (!fileData) {
+        throw new Error("Impossible de télécharger le fichier");
+      }
+      
+      // Create a download link
+      const url = URL.createObjectURL(fileData);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = document.nom || "document";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Succès",
+        description: "Téléchargement du document réussi",
+      });
+    } catch (error: any) {
+      console.error("Error downloading file:", error);
+      toast({
+        title: "Erreur",
+        description: `Échec du téléchargement: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
@@ -140,7 +216,12 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
               </TabsList>
               
               <TabsContent value="apercu" className="mt-4">
-                {fileUrl ? (
+                {isFileChecking ? (
+                  <div className="flex flex-col items-center justify-center h-[70vh] bg-gray-50 rounded">
+                    <Loader2 className="h-12 w-12 text-gray-400 animate-spin mb-4" />
+                    <p className="text-gray-600">Vérification du fichier...</p>
+                  </div>
+                ) : fileUrl && !fileError ? (
                   <div className="space-y-4">
                     <div className="flex justify-between">
                       <Button 
@@ -154,32 +235,44 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                       
                       <Button 
                         variant="outline"
-                        onClick={() => {
-                          const link = window.document.createElement('a');
-                          link.href = fileUrl;
-                          link.setAttribute('download', document.nom);
-                          window.document.body.appendChild(link);
-                          link.click();
-                          window.document.body.removeChild(link);
-                        }}
+                        onClick={handleDownload}
+                        disabled={isDownloading}
                         className="flex items-center gap-2"
                       >
-                        <Download className="h-4 w-4" />
-                        Télécharger
+                        {isDownloading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Téléchargement...
+                          </>
+                        ) : (
+                          <>
+                            <Download className="h-4 w-4" />
+                            Télécharger
+                          </>
+                        )}
                       </Button>
                     </div>
+                    
+                    {fileError ? (
+                      <Alert variant="destructive" className="mb-4">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>{fileError}</AlertDescription>
+                      </Alert>
+                    ) : null}
                     
                     {document.file_path && document.file_path.toLowerCase().endsWith('.pdf') ? (
                       <iframe 
                         src={`${fileUrl}#view=FitH`} 
                         className="w-full h-[70vh] border rounded"
                         title={document.nom}
+                        onError={() => setFileError("Impossible d'afficher le fichier PDF.")}
                       />
                     ) : document.file_path && /\.(jpe?g|png|gif|bmp)$/i.test(document.file_path) ? (
                       <img 
                         src={fileUrl || ''} 
                         alt={document.nom} 
                         className="max-w-full mx-auto max-h-[70vh] object-contain"
+                        onError={() => setFileError("Impossible d'afficher l'image.")}
                       />
                     ) : (
                       <div className="flex flex-col items-center justify-center h-[70vh] bg-gray-100 rounded">
@@ -192,9 +285,13 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                 ) : (
                   <div className="flex flex-col items-center justify-center p-8 bg-gray-50 rounded border border-dashed">
                     <AlertCircle className="h-12 w-12 text-amber-500 mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Aucun fichier associé</h3>
+                    <h3 className="text-lg font-semibold mb-2">
+                      {fileError || "Aucun fichier associé"}
+                    </h3>
                     <p className="text-gray-500 text-center mb-4">
-                      Ce document n'a pas de fichier associé. Vous pouvez en télécharger un maintenant.
+                      {fileError 
+                        ? "Un problème est survenu avec le fichier associé à ce document."
+                        : "Ce document n'a pas de fichier associé. Vous pouvez en télécharger un maintenant."}
                     </p>
                     
                     {canEdit && (
@@ -204,7 +301,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                         className="flex items-center gap-2"
                       >
                         <Upload className="h-4 w-4" />
-                        Télécharger un fichier
+                        {fileError ? "Remplacer le fichier" : "Télécharger un fichier"}
                       </Button>
                     )}
                   </div>
@@ -234,7 +331,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
           
           {canEdit && (
             <div className="flex justify-end gap-2 mt-4">
-              {document.file_path && (
+              {(document.file_path || fileError) && (
                 <Button 
                   variant="outline"
                   onClick={() => setIsUploaderOpen(true)}

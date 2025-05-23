@@ -6,6 +6,8 @@ import { MultiFileUpload } from '@/components/ui/multi-file-upload';
 import { fileStorage } from '@/services/storage/fileStorage';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { supabase } from '@/lib/supabase';
+import { AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface DocumentUploaderProps {
   documentId: string;
@@ -23,6 +25,7 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState<Record<string, number>>({});
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   
   useEffect(() => {
@@ -30,6 +33,7 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
       // Reset state when dialog is closed
       setFiles([]);
       setProgress({});
+      setError(null);
     }
   }, [open]);
 
@@ -44,13 +48,18 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
     }
 
     setUploading(true);
+    setError(null);
     let successCount = 0;
     let errorCount = 0;
 
     try {
       // Create bucket if it doesn't exist
-      await fileStorage.ensureBucketExists('marches', true);
-      console.log('Bucket marches existe déjà - continuons.');
+      const bucketExists = await fileStorage.ensureBucketExists('marches', true);
+      if (!bucketExists) {
+        throw new Error("Impossible de créer ou d'accéder au bucket 'marches'");
+      }
+      
+      console.log('Bucket marches existe déjà ou a été créé - continuons.');
       
       // Process each file
       for (const file of files) {
@@ -58,7 +67,7 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
         setProgress(prev => ({ ...prev, [file.name]: 10 }));
         
         try {
-          // Upload file
+          // Upload file using our improved service
           const uploadResult = await fileStorage.uploadFile('marches', documentId, file);
           setProgress(prev => ({ ...prev, [file.name]: 50 }));
           
@@ -84,7 +93,7 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
           // Complete progress
           setProgress(prev => ({ ...prev, [file.name]: 100 }));
           successCount++;
-        } catch (error) {
+        } catch (error: any) {
           console.error(`Erreur lors du téléchargement de ${file.name}:`, error);
           errorCount++;
           setProgress(prev => ({ ...prev, [file.name]: 0 }));
@@ -108,17 +117,19 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
           }, 1000);
         }
       } else {
+        setError("Tous les téléchargements ont échoué. Vérifiez votre connexion et les permissions de stockage.");
         toast({
           title: "Erreur",
           description: "Tous les téléchargements ont échoué",
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur lors du téléchargement des fichiers:", error);
+      setError(`Une erreur s'est produite: ${error.message}`);
       toast({
         title: "Erreur",
-        description: "Une erreur s'est produite lors du téléchargement des fichiers",
+        description: `Une erreur s'est produite lors du téléchargement des fichiers: ${error.message}`,
         variant: "destructive",
       });
     } finally {
@@ -135,6 +146,13 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
             Sélectionnez un fichier pour l'associer à ce document.
           </DialogDescription>
         </DialogHeader>
+        
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
         
         <div className="space-y-4">
           <MultiFileUpload
