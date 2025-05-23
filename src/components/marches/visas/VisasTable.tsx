@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
   Table, 
@@ -141,10 +142,16 @@ export const VisasTable: React.FC<VisasTableProps> = ({
 
   // Helper function to convert Document from visas/types to services/types format if needed
   const enrichDocumentIfNeeded = (document: Document) => {
-    if (document && openDiffusionDialog && !('marche_id' in document)) {
+    // Fix: Check if document is an object before trying to spread it
+    if (!document) {
+      return document;
+    }
+    
+    // Now safely add marche_id if needed
+    if (openDiffusionDialog && !('marche_id' in document) && marcheId) {
       return {
         ...document,
-        marche_id: marcheId || '',
+        marche_id: marcheId,
       };
     }
     return document;
