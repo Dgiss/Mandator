@@ -15,6 +15,7 @@ interface ModifyDocumentButtonProps {
 const ModifyDocumentButton: React.FC<ModifyDocumentButtonProps> = ({ document, onDocumentUpdated }) => {
   const [isOpen, setIsOpen] = React.useState(false);
   const [editingDoc, setEditingDoc] = React.useState<Document | null>(null);
+  // Using isMandataire check to control visibility and access
   const { isMandataire } = useUserRole(document.marche_id);
 
   const handleClick = () => {
@@ -33,6 +34,7 @@ const ModifyDocumentButton: React.FC<ModifyDocumentButtonProps> = ({ document, o
     }
   };
 
+  // Only render the button if user is a MANDATAIRE
   if (!isMandataire) {
     return null;
   }

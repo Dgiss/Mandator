@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -440,6 +439,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
             </Tabs>
           </div>
           
+          {/* The critical part that controls button visibility - only show if isMandataire is true */}
           {isMandataire && (
             <div className="flex justify-end gap-2 mt-4">
               {(document.file_path || fileError) && (
@@ -475,4 +475,3 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 };
 
 export default DocumentViewer;
-

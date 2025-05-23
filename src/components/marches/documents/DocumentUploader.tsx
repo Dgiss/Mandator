@@ -61,7 +61,7 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
     getDocumentMarcheId();
   }, [documentId]);
 
-  // Check if user has permission to upload
+  // Check if user has permission to upload - only MANDATAIRE can upload
   const hasUploadPermission = isMandataire;
 
   const resetState = () => {
