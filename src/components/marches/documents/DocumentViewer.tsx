@@ -5,7 +5,6 @@ import { Document as ProjectDocument } from '@/services/types';
 import { fileStorage } from '@/services/storage/fileStorage.ts';
 import { Download, FileText, ExternalLink, Upload, AlertCircle, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useUserRole } from '@/hooks/userRole';
 import DocumentDetails from './DocumentDetails';
 import DocumentActivities from './DocumentActivities';
 import DocumentVersions from './DocumentVersions';
@@ -22,17 +21,18 @@ interface DocumentViewerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDocumentUpdated?: () => void;
+  isMandataire: boolean; // Add prop to receive isMandataire from parent
 }
 
 const DocumentViewer: React.FC<DocumentViewerProps> = ({
   document: initialDocument,
   open,
   onOpenChange,
-  onDocumentUpdated
+  onDocumentUpdated,
+  isMandataire // Use prop instead of useUserRole hook
 }) => {
   const [activeTab, setActiveTab] = useState('apercu');
   const [isUploaderOpen, setIsUploaderOpen] = useState(false);
-  const { canEdit, isMandataire } = useUserRole(initialDocument?.marche_id || '');
   const [document, setDocument] = useState<ProjectDocument | null>(initialDocument);
   const [fileError, setFileError] = useState<string | null>(null);
   const [isFileChecking, setIsFileChecking] = useState(false);
@@ -456,6 +456,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
               <ModifyDocumentButton 
                 document={document}
                 onDocumentUpdated={handleDocumentUpdate}
+                isMandataire={isMandataire} // Pass down to ModifyDocumentButton
               />
             </div>
           )}
@@ -468,6 +469,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
           open={isUploaderOpen}
           onOpenChange={setIsUploaderOpen}
           onSuccess={handleUploadSuccess}
+          isMandataire={isMandataire} // Pass down to DocumentUploader
         />
       )}
     </>

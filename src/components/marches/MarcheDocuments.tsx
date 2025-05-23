@@ -33,7 +33,7 @@ export default function MarcheDocuments({
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const { canEdit } = useUserRole(marcheId);
+  const { canEdit, isMandataire } = useUserRole(marcheId);
 
   // Collect unique document numbers for filtering
   const uniqueNumeros = Array.from(new Set(documents.filter(doc => doc.numero).map(doc => doc.numero))).sort() as string[];
@@ -491,12 +491,13 @@ export default function MarcheDocuments({
         />
       )}
       
-      {/* Document viewer */}
+      {/* Document viewer - Pass isMandataire as a prop */}
       <DocumentViewer 
         document={viewingDocument}
         open={!!viewingDocument}
         onOpenChange={open => !open && setViewingDocument(null)}
         onDocumentUpdated={handleDocumentUpdated}
+        isMandataire={isMandataire}
       />
     </div>
   );

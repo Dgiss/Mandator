@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -6,7 +7,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { fileStorage } from '@/services/storage/fileStorage.ts';
-import { useUserRole } from '@/hooks/userRole';
 import { sanitizeFileName } from '@/utils/storage-setup';
 
 interface DocumentUploaderProps {
@@ -14,13 +14,15 @@ interface DocumentUploaderProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  isMandataire: boolean; // Add prop to receive isMandataire from parent
 }
 
 const DocumentUploader: React.FC<DocumentUploaderProps> = ({
   documentId,
   open,
   onOpenChange,
-  onSuccess
+  onSuccess,
+  isMandataire // Use prop instead of useUserRole hook
 }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -29,11 +31,10 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   
-  // Get document market ID to check permissions
+  // Get document market ID for reference
   const [marcheId, setMarcheId] = useState<string | null>(null);
-  const { isMandataire } = useUserRole(marcheId || undefined);
   
-  // Effect to fetch document's marché ID for permission check
+  // Effect to fetch document's marché ID for reference
   useEffect(() => {
     const getDocumentMarcheId = async () => {
       if (documentId) {
@@ -61,7 +62,7 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
     getDocumentMarcheId();
   }, [documentId]);
 
-  // Check if user has permission to upload - only MANDATAIRE can upload
+  // Check if user has permission to upload - using the prop
   const hasUploadPermission = isMandataire;
 
   const resetState = () => {

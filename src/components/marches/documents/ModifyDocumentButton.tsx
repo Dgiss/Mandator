@@ -5,18 +5,20 @@ import { PencilLine } from 'lucide-react';
 import { Document } from '@/services/types';
 import MarcheDocumentForm from '../MarcheDocumentForm';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useUserRole } from '@/hooks/userRole';
 
 interface ModifyDocumentButtonProps {
   document: Document;
   onDocumentUpdated?: () => void;
+  isMandataire: boolean; // Add prop to receive isMandataire from parent
 }
 
-const ModifyDocumentButton: React.FC<ModifyDocumentButtonProps> = ({ document, onDocumentUpdated }) => {
+const ModifyDocumentButton: React.FC<ModifyDocumentButtonProps> = ({ 
+  document, 
+  onDocumentUpdated,
+  isMandataire // Use prop instead of useUserRole hook
+}) => {
   const [isOpen, setIsOpen] = React.useState(false);
   const [editingDoc, setEditingDoc] = React.useState<Document | null>(null);
-  // Using isMandataire check to control visibility and access
-  const { isMandataire } = useUserRole(document.marche_id);
 
   const handleClick = () => {
     if (!isMandataire) {
