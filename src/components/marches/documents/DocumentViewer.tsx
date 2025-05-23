@@ -169,14 +169,14 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
         throw new Error("Impossible de télécharger le fichier");
       }
       
-      // Create a download link
+      // Create a download link using the global window.document
       const url = URL.createObjectURL(fileData);
-      const link = document.createElement('a');
+      const link = window.document.createElement('a');
       link.href = url;
       link.download = document.nom || "document";
-      document.body.appendChild(link);
+      window.document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      window.document.body.removeChild(link);
       URL.revokeObjectURL(url);
       
       toast({
