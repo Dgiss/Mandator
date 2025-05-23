@@ -13,11 +13,12 @@ import {
   TableCell 
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Download, Eye } from 'lucide-react';
+import { Download, Eye, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { fileStorage } from '@/services/storage/fileStorage.ts';
 import VersionViewer from './VersionViewer';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface DocumentVersionsProps {
   document: Document;
@@ -165,7 +166,23 @@ const DocumentVersions: React.FC<DocumentVersionsProps> = ({
           <TableBody>
             {versions.map((version) => (
               <TableRow key={version.id}>
-                <TableCell className="font-medium">{version.version}</TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-1.5">
+                    <span>{version.version}</span>
+                    {version.commentaire && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <MessageSquare className="h-3.5 w-3.5 text-amber-500" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="max-w-xs whitespace-normal break-words">{version.commentaire}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell>{formatDate(version.date_creation)}</TableCell>
                 <TableCell>{version.cree_par}</TableCell>
                 <TableCell>
@@ -175,26 +192,50 @@ const DocumentVersions: React.FC<DocumentVersionsProps> = ({
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end space-x-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => handleViewVersion(version)}
-                      title="Visualiser la version"
-                    >
-                      <Eye className="h-4 w-4" />
-                      <span className="sr-only">Visualiser</span>
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => handleDownloadVersion(version)}
-                      title="Télécharger la version"
-                    >
-                      <Download className="h-4 w-4" />
-                      <span className="sr-only">Télécharger</span>
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => handleViewVersion(version)}
+                          >
+                            <Eye className="h-4 w-4" />
+                            <span className="sr-only">Visualiser</span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Visualiser la version {version.version}</p>
+                          {version.commentaire && (
+                            <p className="text-xs text-gray-500 max-w-xs">{version.commentaire.length > 50 
+                              ? version.commentaire.slice(0, 50) + '...' 
+                              : version.commentaire}
+                            </p>
+                          )}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => handleDownloadVersion(version)}
+                            title="Télécharger la version"
+                          >
+                            <Download className="h-4 w-4" />
+                            <span className="sr-only">Télécharger</span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          Télécharger la version {version.version}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </TableCell>
               </TableRow>

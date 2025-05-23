@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Document, Version } from '@/services/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Download, FileText, ExternalLink, AlertCircle, Loader2 } from 'lucide-react';
+import { Download, FileText, ExternalLink, AlertCircle, Loader2, MessageSquare } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { fileStorage } from '@/services/storage/fileStorage.ts';
@@ -11,6 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface VersionViewerProps {
   version: Version | null;
@@ -220,6 +222,21 @@ const VersionViewer: React.FC<VersionViewerProps> = ({
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Version comment if available - Highlighted section */}
+          {version.commentaire && (
+            <Card className="border-amber-200 bg-amber-50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-md flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  Commentaire
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm whitespace-pre-wrap">{version.commentaire}</p>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Version details */}
           <div className="space-y-3">
             <h3 className="text-lg font-medium">Informations de la version</h3>
@@ -249,51 +266,63 @@ const VersionViewer: React.FC<VersionViewerProps> = ({
                   <TableCell className="font-medium">Taille</TableCell>
                   <TableCell>{version.taille || '—'}</TableCell>
                 </TableRow>
-                {version.commentaire && (
-                  <TableRow>
-                    <TableCell className="font-medium">Commentaire</TableCell>
-                    <TableCell>{version.commentaire}</TableCell>
-                  </TableRow>
-                )}
               </TableBody>
             </Table>
           </div>
 
           {/* Document preview */}
           <div className="space-y-3">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center flex-wrap gap-2">
               <h3 className="text-lg font-medium">Aperçu du document</h3>
               
               <div className="flex gap-2">
                 {fileUrl && !fileError && (
-                  <Button 
-                    variant="outline"
-                    onClick={() => window.open(fileUrl, '_blank')}
-                    className="flex items-center gap-2"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    Ouvrir dans un nouvel onglet
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="outline"
+                          onClick={() => window.open(fileUrl, '_blank')}
+                          className="flex items-center gap-2"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          <span className="hidden sm:inline">Ouvrir</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Ouvrir dans un nouvel onglet
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
                 
-                <Button 
-                  variant="outline"
-                  onClick={handleDownload}
-                  disabled={isDownloading || !version.file_path}
-                  className="flex items-center gap-2"
-                >
-                  {isDownloading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Téléchargement...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="h-4 w-4" />
-                      Télécharger
-                    </>
-                  )}
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="outline"
+                        onClick={handleDownload}
+                        disabled={isDownloading || !version.file_path}
+                        className="flex items-center gap-2"
+                      >
+                        {isDownloading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            <span className="hidden sm:inline">Téléchargement...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Download className="h-4 w-4" />
+                            <span className="hidden sm:inline">Télécharger</span>
+                          </>
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Télécharger le fichier
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </div>
 
