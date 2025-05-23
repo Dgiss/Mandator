@@ -10,6 +10,7 @@ import { MultiFileUpload } from '@/components/ui/multi-file-upload';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/lib/supabase';
 import { versionsService } from '@/services/versionsService';
+import { fileStorage } from '@/services/storage/fileStorage.ts';
 
 interface FasciculesTableProps {
   fascicules: Fascicule[];
@@ -81,7 +82,7 @@ const FasciculesTable: React.FC<FasciculesTableProps> = ({
         setUploadProgress(prev => ({ ...prev, [file.name]: 0 }));
         
         // Simuler la progression
-        for (let progress = 0; progress <= 90; progress += 10) {
+        for (let progress = 0; progress <= 40; progress += 10) {
           setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
           await new Promise(resolve => setTimeout(resolve, 100));
         }
@@ -89,6 +90,23 @@ const FasciculesTable: React.FC<FasciculesTableProps> = ({
         // Récupérer l'utilisateur actuel pour l'utiliser comme émetteur
         const { data: { user } } = await supabase.auth.getUser();
         const emetteur = user ? user.email || 'Utilisateur' : 'Utilisateur';
+        
+        // Définir le chemin de destination dans le bucket
+        const prefix = `fascicules/${uploadingFascicule.id}`;
+        
+        // Marquer la progression à 50%
+        setUploadProgress(prev => ({ ...prev, [file.name]: 50 }));
+        
+        // Utiliser notre service fileStorage pour l'upload
+        console.log(`Uploading file ${file.name} to prefix ${prefix}`);
+        const uploadResult = await fileStorage.uploadFile('marches', prefix, file);
+        
+        if (!uploadResult) {
+          throw new Error(`Échec de l'upload du fichier ${file.name}`);
+        }
+        
+        // Marquer la progression à 70%
+        setUploadProgress(prev => ({ ...prev, [file.name]: 70 }));
         
         // Obtenir l'extension pour déterminer le type
         const fileType = file.name.split('.').pop()?.toUpperCase() || 'DOC';
@@ -104,9 +122,12 @@ const FasciculesTable: React.FC<FasciculesTableProps> = ({
           version: 'A', // Indice A pour tous les nouveaux documents
           taille: fileSize,
           dateupload: new Date().toISOString(),
-          emetteur: emetteur
+          emetteur: emetteur,
+          file_path: uploadResult.path // Ajouter le chemin du fichier uploadé
         };
 
+        console.log('Creating document with data:', documentData);
+        
         // Créer le document dans la base de données
         const { data, error } = await supabase
           .from('documents')
@@ -123,6 +144,9 @@ const FasciculesTable: React.FC<FasciculesTableProps> = ({
           continue;
         }
 
+        // Marquer la progression à 90%
+        setUploadProgress(prev => ({ ...prev, [file.name]: 90 }));
+
         // Créer automatiquement une version initiale pour le document
         if (data && data[0]) {
           try {
@@ -136,7 +160,7 @@ const FasciculesTable: React.FC<FasciculesTableProps> = ({
                 type: data[0].type,
                 marche_id: data[0].marche_id
               },
-              null, // Pas de filePath pour l'instant
+              uploadResult.path, // Utiliser le chemin du fichier uploadé
               fileSize
             );
             
