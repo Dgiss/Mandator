@@ -95,6 +95,7 @@ export const fileStorage = {
   async uploadFile(bucketName: string, prefix: string, file: File): Promise<{ path: string; url: string } | null> {
     try {
       console.log(`Starting uploadFile for ${file.name} (${file.size} bytes) to ${bucketName}/${prefix}`);
+      console.log(`File type: ${file.type}`); // Log the file's MIME type
       
       // Ensure bucket exists before uploading
       const bucketReady = await this.ensureBucketExists(bucketName, true);
@@ -112,13 +113,14 @@ export const fileStorage = {
       const { data: authData } = await supabase.auth.getSession();
       console.log(`Upload authorization check: ${authData.session ? 'User is authenticated' : 'No active session'}`);
       
-      // Upload the file
-      console.log(`Attempting to upload file to ${bucketName}/${filePath}`);
+      // Upload the file with explicit content type from the file object
+      console.log(`Attempting to upload file to ${bucketName}/${filePath} with MIME type: ${file.type}`);
       const { data, error } = await supabase.storage
         .from(bucketName)
         .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: true
+          upsert: true,
+          contentType: file.type // Explicitly set the content type based on the file's type
         });
       
       if (error) {
@@ -171,6 +173,14 @@ export const fileStorage = {
       const { data: authData } = await supabase.auth.getSession();
       console.log(`Download authorization check: ${authData.session ? 'User is authenticated' : 'No active session'}`);
       
+      // First, get the file metadata to determine its content type
+      const { data: fileInfo } = await supabase.storage
+        .from(bucketName)
+        .getPublicUrl(filePath);
+        
+      console.log(`File public URL: ${fileInfo ? fileInfo.publicUrl : 'Not available'}`);
+      
+      // Now download the file with proper content type
       const { data, error } = await supabase.storage
         .from(bucketName)
         .download(filePath);
@@ -185,7 +195,37 @@ export const fileStorage = {
         return null;
       }
       
-      console.log(`File downloaded successfully, size: ${data.size} bytes`);
+      console.log(`File downloaded successfully, size: ${data.size} bytes, type: ${data.type}`);
+      
+      // If the blob doesn't have the correct type (often generic "application/octet-stream"),
+      // we create a new one with the right type based on the file extension
+      if (data.type === 'application/octet-stream' || data.type === 'application/json') {
+        const fileExtension = filePath.split('.').pop()?.toLowerCase() || '';
+        let mimeType = data.type;
+        
+        // Map common file extensions to proper MIME types
+        switch (fileExtension) {
+          case 'pdf': mimeType = 'application/pdf'; break;
+          case 'jpg':
+          case 'jpeg': mimeType = 'image/jpeg'; break;
+          case 'png': mimeType = 'image/png'; break;
+          case 'gif': mimeType = 'image/gif'; break;
+          case 'doc': mimeType = 'application/msword'; break;
+          case 'docx': mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'; break;
+          case 'xls': mimeType = 'application/vnd.ms-excel'; break;
+          case 'xlsx': mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'; break;
+          case 'ppt': mimeType = 'application/vnd.ms-powerpoint'; break;
+          case 'pptx': mimeType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation'; break;
+          case 'txt': mimeType = 'text/plain'; break;
+          // Add more file types as needed
+        }
+        
+        console.log(`Correcting file MIME type from ${data.type} to ${mimeType} based on extension .${fileExtension}`);
+        
+        // Create a new blob with the correct MIME type
+        return new Blob([data], { type: mimeType });
+      }
+      
       return data;
     } catch (error: any) {
       console.error(`Error in downloadFile: ${error.message || JSON.stringify(error)}`);

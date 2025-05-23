@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Download, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { fileStorage } from '@/services/storage/fileStorage.ts';
 
 interface DocumentVersionsProps {
   document: Document;
@@ -90,28 +91,35 @@ const DocumentVersions: React.FC<DocumentVersionsProps> = ({ document, onVersion
       if (!version.file_path) {
         throw new Error('Le chemin du fichier est introuvable');
       }
+
+      // Determine bucket to use - versions might be in a different bucket
+      const bucket = version.bucket || 'marches';
       
-      // Get download URL
-      const { data: fileData, error: fileError } = await supabase.storage
-        .from('documents')
-        .download(version.file_path);
+      // Use our improved download method with MIME type handling
+      const fileData = await fileStorage.downloadFile(bucket, version.file_path);
       
-      if (fileError) {
-        throw fileError;
+      if (!fileData) {
+        throw new Error("Impossible de télécharger la version");
       }
       
-      // Create a download link - using window.document instead of the parameter named document
+      // Extract original filename from path or use fallback
+      const originalFilename = version.file_path.split('/').pop() || 
+                              `${document.nom} - v${version.version}.pdf`;
+      
+      // Create download link with proper MIME type
       const url = URL.createObjectURL(fileData);
       const link = window.document.createElement('a');
       link.href = url;
-      link.download = `${document.nom} - ${version.version}`;
+      link.download = originalFilename;
       window.document.body.appendChild(link);
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
-    } catch (error) {
+      
+      toast.success(`Version ${version.version} téléchargée avec succès`);
+    } catch (error: any) {
       console.error('Error downloading version:', error);
-      toast.error('Impossible de télécharger la version');
+      toast.error(`Impossible de télécharger la version: ${error.message}`);
     }
   };
 
