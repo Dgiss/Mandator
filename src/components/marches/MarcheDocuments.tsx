@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -230,7 +229,7 @@ export default function MarcheDocuments({
     }
   };
 
-  // Manual reload function with debounce protection
+  // Manual reload function with fixed debounce protection
   const handleManualReload = useCallback(() => {
     if (reloadDisabledRef.current || isReloading) {
       return;
@@ -242,7 +241,12 @@ export default function MarcheDocuments({
     
     setLoadAttempt(prev => prev + 1);
     
-    // Minimum visual feedback time + prevention of rapid consecutive clicks
+    // Clear any existing timeout first
+    if (reloadTimeoutRef.current) {
+      clearTimeout(reloadTimeoutRef.current);
+    }
+    
+    // Set a new timeout for visual feedback
     reloadTimeoutRef.current = setTimeout(() => {
       setIsReloading(false);
       

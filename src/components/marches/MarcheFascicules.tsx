@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertTriangle, Plus } from 'lucide-react';
@@ -26,7 +25,7 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
   const [editingDocument, setEditingDocument] = useState<Document | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const { canCreateFascicule, isAdmin } = useUserRole(marcheId);
+  const { canCreateFascicule, isAdmin, isMandataire } = useUserRole(marcheId);
   const [loadAttempt, setLoadAttempt] = useState<number>(0);
   const loadingRef = useRef<boolean>(false);
   const lastFetched = useRef<number>(0);
@@ -197,6 +196,9 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
 
   // Determine if user can create or modify fascicules
   const userCanCreateOrEdit = isAdmin || canCreateFascicule(marcheId);
+  
+  // Check if user has MANDATAIRE role for this market
+  const userIsMandataire = isMandataire(marcheId);
 
   return (
     <div>
@@ -255,6 +257,7 @@ const MarcheFascicules: React.FC<MarcheFasciculesProps> = ({ marcheId }) => {
           loading={loading}
           onViewDetails={handleViewDetails}
           onOpenDocumentForm={handleOpenDocumentForm}
+          isMandataire={userIsMandataire} // Pass the MANDATAIRE permission
         />
       )}
 

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
@@ -17,13 +18,15 @@ interface FasciculesTableProps {
   loading: boolean;
   onViewDetails: (fascicule: Fascicule) => void;
   onOpenDocumentForm?: (fascicule: Fascicule) => void;
+  isMandataire?: boolean; // Add permission prop to restrict actions
 }
 
 const FasciculesTable: React.FC<FasciculesTableProps> = ({
   fascicules,
   loading,
   onViewDetails,
-  onOpenDocumentForm
+  onOpenDocumentForm,
+  isMandataire = false // Default to false for safety
 }) => {
   const [societeFilter, setSocieteFilter] = useState<string>('all');
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
@@ -51,6 +54,16 @@ const FasciculesTable: React.FC<FasciculesTableProps> = ({
 
   // Gérer l'upload multiple de fichiers
   const handleMultipleUpload = (fascicule: Fascicule) => {
+    // Only allow if user has MANDATAIRE role
+    if (!isMandataire) {
+      toast({
+        title: "Accès refusé",
+        description: "Seuls les utilisateurs avec le rôle MANDATAIRE peuvent ajouter des documents.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setUploadingFascicule(fascicule);
     setShowUploadModal(true);
     setUploadFiles([]);
@@ -58,6 +71,16 @@ const FasciculesTable: React.FC<FasciculesTableProps> = ({
 
   // Gérer l'ajout unitaire
   const handleUnitaryAdd = (fascicule: Fascicule) => {
+    // Only allow if user has MANDATAIRE role
+    if (!isMandataire) {
+      toast({
+        title: "Accès refusé",
+        description: "Seuls les utilisateurs avec le rôle MANDATAIRE peuvent ajouter des documents.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (onOpenDocumentForm) {
       onOpenDocumentForm(fascicule);
     } else {
@@ -246,28 +269,34 @@ const FasciculesTable: React.FC<FasciculesTableProps> = ({
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 p-0" 
-                        onClick={() => handleMultipleUpload(fascicule)}
-                        title="Upload multiple"
-                      >
-                        <Files className="h-4 w-4" />
-                        <span className="sr-only">Upload multiple</span>
-                      </Button>
+                      {/* Only show document upload buttons to MANDATAIRE role */}
+                      {isMandataire && (
+                        <>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 p-0" 
+                            onClick={() => handleMultipleUpload(fascicule)}
+                            title="Upload multiple"
+                          >
+                            <Files className="h-4 w-4" />
+                            <span className="sr-only">Upload multiple</span>
+                          </Button>
+                          
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 p-0" 
+                            onClick={() => handleUnitaryAdd(fascicule)}
+                            title="Ajout unitaire"
+                          >
+                            <File className="h-4 w-4" />
+                            <span className="sr-only">Ajout unitaire</span>
+                          </Button>
+                        </>
+                      )}
                       
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 p-0" 
-                        onClick={() => handleUnitaryAdd(fascicule)}
-                        title="Ajout unitaire"
-                      >
-                        <File className="h-4 w-4" />
-                        <span className="sr-only">Ajout unitaire</span>
-                      </Button>
-                      
+                      {/* Always show view details button */}
                       <Button 
                         variant="ghost" 
                         size="icon" 
@@ -285,8 +314,8 @@ const FasciculesTable: React.FC<FasciculesTableProps> = ({
         </Table>
       </div>
 
-      {/* Modal d'upload multiple */}
-      <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
+      {/* Modal d'upload multiple - Only process if user is MANDATAIRE */}
+      <Dialog open={showUploadModal && isMandataire} onOpenChange={setShowUploadModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Upload multiple pour {uploadingFascicule?.nom}</DialogTitle>

@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Upload, Loader2, AlertCircle, X } from 'lucide-react';
@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { fileStorage } from '@/services/storage/fileStorage.ts';
+import { useUserRole } from '@/hooks/userRole';
 
 interface DocumentUploaderProps {
   documentId: string;
@@ -27,6 +28,41 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  
+  // Get document market ID to check permissions
+  const [marcheId, setMarcheId] = useState<string | null>(null);
+  const { isMandataire } = useUserRole(marcheId || undefined);
+  
+  // Effect to fetch document's marché ID for permission check
+  useEffect(() => {
+    const getDocumentMarcheId = async () => {
+      if (documentId) {
+        try {
+          const { data, error } = await supabase
+            .from('documents')
+            .select('marche_id')
+            .eq('id', documentId)
+            .single();
+            
+          if (error) {
+            console.error('Error fetching document marche_id:', error);
+            return;
+          }
+          
+          if (data?.marche_id) {
+            setMarcheId(data.marche_id);
+          }
+        } catch (err) {
+          console.error('Error in getDocumentMarcheId:', err);
+        }
+      }
+    };
+    
+    getDocumentMarcheId();
+  }, [documentId]);
+
+  // Check if user has permission to upload
+  const hasUploadPermission = isMandataire;
 
   const resetState = () => {
     setSelectedFile(null);
@@ -54,6 +90,11 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
   const handleUpload = async () => {
     if (!selectedFile) {
       setError("Veuillez sélectionner un fichier");
+      return;
+    }
+    
+    if (!hasUploadPermission) {
+      setError("Vous n'avez pas les droits nécessaires pour effectuer cette action (rôle MANDATAIRE requis)");
       return;
     }
 
@@ -141,6 +182,15 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
         </DialogHeader>
         
         <div className="space-y-4 py-4">
+          {!hasUploadPermission && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Seuls les utilisateurs avec le rôle MANDATAIRE peuvent télécharger des fichiers.
+              </AlertDescription>
+            </Alert>
+          )}
+        
           {error && (
             <Alert variant="destructive" className="mb-4">
               <AlertCircle className="h-4 w-4" />
@@ -174,18 +224,26 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
                 </div>
               ) : (
                 <div className="flex items-center justify-center w-full">
-                  <label htmlFor="file-upload" className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                  <label 
+                    htmlFor="file-upload" 
+                    className={`flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg ${hasUploadPermission ? 'cursor-pointer bg-gray-50 hover:bg-gray-100' : 'bg-gray-100 cursor-not-allowed'}`}
+                  >
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <Upload className="w-8 h-8 mb-3 text-gray-500" />
-                      <p className="mb-2 text-sm text-gray-500"><span className="font-semibold">Cliquez pour télécharger</span> ou glissez-déposez</p>
-                      <p className="text-xs text-gray-500">PDF, DOC, DOCX, XLS, XLSX, etc. (MAX. 10Mo)</p>
+                      <Upload className={`w-8 h-8 mb-3 ${hasUploadPermission ? 'text-gray-500' : 'text-gray-400'}`} />
+                      <p className={`mb-2 text-sm ${hasUploadPermission ? 'text-gray-500' : 'text-gray-400'}`}>
+                        <span className="font-semibold">Cliquez pour télécharger</span> ou glissez-déposez
+                      </p>
+                      <p className={`text-xs ${hasUploadPermission ? 'text-gray-500' : 'text-gray-400'}`}>
+                        PDF, DOC, DOCX, XLS, XLSX, etc. (MAX. 10Mo)
+                      </p>
                     </div>
                     <input 
                       id="file-upload" 
                       type="file" 
                       className="hidden"
                       ref={fileInputRef}
-                      onChange={handleFileChange} 
+                      onChange={handleFileChange}
+                      disabled={!hasUploadPermission}
                     />
                   </label>
                 </div>
@@ -219,7 +277,7 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
             <Button 
               type="button"
               onClick={handleUpload}
-              disabled={!selectedFile || uploading}
+              disabled={!selectedFile || uploading || !hasUploadPermission}
               className="relative"
             >
               {uploading ? (
