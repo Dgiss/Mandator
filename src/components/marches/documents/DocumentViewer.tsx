@@ -39,6 +39,8 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
   const [isFileChecking, setIsFileChecking] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [fileType, setFileType] = useState<string | null>(null);
+  const [pdfDataUrl, setPdfDataUrl] = useState<string | null>(null);
+  const [isLoadingPdf, setIsLoadingPdf] = useState(false);
   const { toast } = useToast();
 
   // To prevent infinite loop, use a flag to track if an update has been made
@@ -57,6 +59,8 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
   // Effect to update the document state when the initialDocument prop changes
   useEffect(() => {
     setDocument(initialDocument);
+    // Reset PDF data URL when document changes
+    setPdfDataUrl(null);
   }, [initialDocument]);
   
   // Effect to fetch the latest document data when needed
@@ -66,19 +70,21 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
     }
   }, [open, document?.id]);
   
-  // Effect to check if the file exists when viewing the document
+  // Effect to check if the file exists and prepare PDF if needed
   useEffect(() => {
     const checkFileExists = async () => {
       if (open && document?.file_path) {
         setIsFileChecking(true);
         setFileError(null);
         setFileType(null);
+        setPdfDataUrl(null);
         
         try {
           const exists = await fileStorage.fileExists('marches', document.file_path);
           
           if (!exists) {
             setFileError("Le fichier associé à ce document n'existe pas ou n'est pas accessible.");
+            setIsFileChecking(false);
             return;
           }
           
@@ -90,17 +96,18 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
           
           if (mimeType.startsWith('image/')) {
             setFileType('image');
+            setIsFileChecking(false);
           } else if (mimeType === 'application/pdf') {
             setFileType('pdf');
+            // For PDFs, we'll create a data URL to avoid MIME type issues
+            await loadPdfAsDataUrl(document.file_path);
           } else {
             setFileType('other');
+            setIsFileChecking(false);
           }
-          
-          console.log(`File type determined as: ${fileType} based on MIME type: ${mimeType}`);
         } catch (error) {
           console.error("Error checking if file exists:", error);
           setFileError("Erreur lors de la vérification du fichier.");
-        } finally {
           setIsFileChecking(false);
         }
       }
@@ -108,6 +115,43 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
     
     checkFileExists();
   }, [open, document?.file_path]);
+  
+  // Function to load PDF as data URL
+  const loadPdfAsDataUrl = async (filePath: string) => {
+    setIsLoadingPdf(true);
+    try {
+      // Download the file content as blob
+      const fileBlob = await fileStorage.downloadFile('marches', filePath);
+      
+      if (!fileBlob) {
+        throw new Error("Impossible de télécharger le fichier PDF");
+      }
+      
+      // Create a new blob with the correct PDF MIME type
+      const pdfBlob = new Blob([fileBlob], { type: 'application/pdf' });
+      
+      // Convert blob to base64 data URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64data = reader.result as string;
+        setPdfDataUrl(base64data);
+        setIsLoadingPdf(false);
+        setIsFileChecking(false);
+      };
+      reader.onerror = () => {
+        console.error("Error reading file as data URL");
+        setFileError("Erreur lors de la lecture du fichier PDF");
+        setIsLoadingPdf(false);
+        setIsFileChecking(false);
+      };
+      reader.readAsDataURL(pdfBlob);
+    } catch (error) {
+      console.error("Error creating PDF data URL:", error);
+      setFileError("Erreur lors de la préparation du fichier PDF");
+      setIsLoadingPdf(false);
+      setIsFileChecking(false);
+    }
+  };
   
   // Function to refresh document data
   const refreshDocumentData = async (documentId: string) => {
@@ -158,6 +202,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
   const handleUploadSuccess = async () => {
     setIsUploaderOpen(false);
     setFileError(null);
+    setPdfDataUrl(null); // Reset PDF data URL
     
     // Refresh document data immediately after upload
     if (document?.id) {
@@ -246,10 +291,12 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
               </TabsList>
               
               <TabsContent value="apercu" className="mt-4">
-                {isFileChecking ? (
+                {isFileChecking || isLoadingPdf ? (
                   <div className="flex flex-col items-center justify-center h-[70vh] bg-gray-50 rounded">
                     <Loader2 className="h-12 w-12 text-gray-400 animate-spin mb-4" />
-                    <p className="text-gray-600">Vérification du fichier...</p>
+                    <p className="text-gray-600">
+                      {isLoadingPdf ? "Préparation du fichier PDF..." : "Vérification du fichier..."}
+                    </p>
                   </div>
                 ) : fileUrl && !fileError ? (
                   <div className="space-y-4">
@@ -292,15 +339,29 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                     
                     {fileType === 'pdf' ? (
                       <>
-                        <iframe 
-                          src={`${fileUrl}#view=FitH`} 
-                          className="w-full h-[70vh] border rounded"
-                          title={document.nom}
-                          onError={(e) => {
-                            console.error("Error loading PDF in iframe:", e);
-                            setFileError("Impossible d'afficher le fichier PDF. Essayez de le télécharger.");
-                          }}
-                        />
+                        {pdfDataUrl ? (
+                          // Use the data URL for displaying PDF
+                          <iframe 
+                            src={pdfDataUrl}
+                            className="w-full h-[70vh] border rounded"
+                            title={document.nom}
+                            onError={(e) => {
+                              console.error("Error loading PDF in iframe:", e);
+                              setFileError("Impossible d'afficher le fichier PDF. Essayez de le télécharger.");
+                            }}
+                          />
+                        ) : (
+                          // Fallback to regular iframe with URL
+                          <iframe 
+                            src={`${fileUrl}#view=FitH`}
+                            className="w-full h-[70vh] border rounded"
+                            title={document.nom}
+                            onError={(e) => {
+                              console.error("Error loading PDF in iframe:", e);
+                              setFileError("Impossible d'afficher le fichier PDF. Essayez de le télécharger.");
+                            }}
+                          />
+                        )}
                         {/* Fallback if iframe doesn't display correctly */}
                         <p className="text-center text-sm text-gray-500 mt-2">
                           Si le PDF ne s'affiche pas correctement, utilisez les boutons ci-dessus pour l'ouvrir ou le télécharger.

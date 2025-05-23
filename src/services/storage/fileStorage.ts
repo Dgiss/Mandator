@@ -95,7 +95,17 @@ export const fileStorage = {
   async uploadFile(bucketName: string, prefix: string, file: File): Promise<{ path: string; url: string } | null> {
     try {
       console.log(`Starting uploadFile for ${file.name} (${file.size} bytes) to ${bucketName}/${prefix}`);
-      console.log(`File type: ${file.type}`); // Log the file's MIME type
+      
+      // Determine content type based on the file's MIME type or extension
+      let contentType = file.type;
+      const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+      
+      // If browser provides a generic content type or none, determine it from extension
+      if (!contentType || contentType === 'application/octet-stream') {
+        contentType = this.getMimeTypeFromExtension(fileExtension);
+      }
+      
+      console.log(`File MIME type: ${contentType} (extension: .${fileExtension})`);
       
       // Ensure bucket exists before uploading
       const bucketReady = await this.ensureBucketExists(bucketName, true);
@@ -113,15 +123,7 @@ export const fileStorage = {
       const { data: authData } = await supabase.auth.getSession();
       console.log(`Upload authorization check: ${authData.session ? 'User is authenticated' : 'No active session'}`);
       
-      // Determine content type based on file name if not provided by the browser
-      let contentType = file.type;
-      if (!contentType || contentType === 'application/octet-stream') {
-        const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
-        contentType = this.getMimeTypeFromExtension(fileExtension);
-        console.log(`Auto-assigned MIME type: ${contentType} based on extension .${fileExtension}`);
-      }
-      
-      // Upload the file with explicit content type from the file object
+      // Upload the file with explicit content type
       console.log(`Attempting to upload file to ${bucketName}/${filePath} with MIME type: ${contentType}`);
       const { data, error } = await supabase.storage
         .from(bucketName)
@@ -141,6 +143,9 @@ export const fileStorage = {
       }
       
       console.log(`File uploaded successfully: ${data.path}`);
+      
+      // Verify that the uploaded file has the correct MIME type
+      console.log(`Verifying uploaded file MIME type...`);
       
       // Get the public URL
       const { data: urlData } = supabase.storage
@@ -177,18 +182,12 @@ export const fileStorage = {
       // Verify bucket exists
       await this.ensureBucketExists(bucketName, true);
       
-      // Check authentication status
-      const { data: authData } = await supabase.auth.getSession();
-      console.log(`Download authorization check: ${authData.session ? 'User is authenticated' : 'No active session'}`);
+      // Determine the correct MIME type based on file extension
+      const fileExtension = filePath.split('.').pop()?.toLowerCase() || '';
+      const correctMimeType = this.getMimeTypeFromExtension(fileExtension);
+      console.log(`File extension: .${fileExtension}, Correct MIME type: ${correctMimeType}`);
       
-      // First, get the file metadata to determine its content type
-      const { data: fileInfo } = await supabase.storage
-        .from(bucketName)
-        .getPublicUrl(filePath);
-        
-      console.log(`File public URL: ${fileInfo ? fileInfo.publicUrl : 'Not available'}`);
-      
-      // Now download the file with proper content type
+      // Download the file
       const { data, error } = await supabase.storage
         .from(bucketName)
         .download(filePath);
@@ -203,16 +202,14 @@ export const fileStorage = {
         return null;
       }
       
-      console.log(`File downloaded successfully, size: ${data.size} bytes, type: ${data.type}`);
+      console.log(`File downloaded successfully, size: ${data.size} bytes, original type: ${data.type}`);
       
-      // Always create a new blob with the correct type based on file extension
-      const fileExtension = filePath.split('.').pop()?.toLowerCase() || '';
-      let mimeType = this.getMimeTypeFromExtension(fileExtension);
+      // IMPORTANT: Always create a new blob with the correct MIME type regardless of what Supabase returned
+      // This is critical because Supabase may incorrectly store files with application/json MIME type
+      const correctedBlob = new Blob([data], { type: correctMimeType });
+      console.log(`Created new blob with corrected MIME type: ${correctMimeType}`);
       
-      console.log(`Original blob type: ${data.type}, corrected type: ${mimeType} based on extension .${fileExtension}`);
-      
-      // Create a new blob with the correct MIME type to ensure proper handling
-      return new Blob([data], { type: mimeType });
+      return correctedBlob;
     } catch (error: any) {
       console.error(`Error in downloadFile: ${error.message || JSON.stringify(error)}`);
       return null;
