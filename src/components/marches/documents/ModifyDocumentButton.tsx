@@ -9,19 +9,26 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 interface ModifyDocumentButtonProps {
   document: Document;
   onDocumentUpdated?: () => void;
-  isMandataire: boolean; // Add prop to receive isMandataire from parent
+  isMandataire: boolean;
 }
 
 const ModifyDocumentButton: React.FC<ModifyDocumentButtonProps> = ({ 
   document, 
   onDocumentUpdated,
-  isMandataire // Use prop instead of useUserRole hook
+  isMandataire
 }) => {
   const [isOpen, setIsOpen] = React.useState(false);
   const [editingDoc, setEditingDoc] = React.useState<Document | null>(null);
 
+  // Check if document is editable (not released/approved)
+  const isDocumentEditable = (doc: Document): boolean => {
+    const nonEditableStatuses = ['BPE', 'Approuvé', 'Diffusé'];
+    return !nonEditableStatuses.includes(doc.statut || '');
+  };
+
   const handleClick = () => {
-    if (!isMandataire) {
+    // Don't allow editing if user is not mandataire or document is not editable
+    if (!isMandataire || !isDocumentEditable(document)) {
       return;
     }
     setEditingDoc(document);
@@ -36,8 +43,8 @@ const ModifyDocumentButton: React.FC<ModifyDocumentButtonProps> = ({
     }
   };
 
-  // Only render the button if user is a MANDATAIRE
-  if (!isMandataire) {
+  // Only render the button if user is a MANDATAIRE and document is editable
+  if (!isMandataire || !isDocumentEditable(document)) {
     return null;
   }
 

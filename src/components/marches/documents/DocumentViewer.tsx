@@ -171,6 +171,13 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
     }
   };
   
+  // Check if document is editable (not released/approved)
+  const isDocumentEditable = (doc: ProjectDocument | null): boolean => {
+    if (!doc) return false;
+    const nonEditableStatuses = ['BPE', 'Approuvé', 'Diffusé'];
+    return !nonEditableStatuses.includes(doc.statut || '');
+  };
+  
   if (!document) return null;
   
   const fileUrl = document.file_path 
@@ -441,8 +448,8 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
             </Tabs>
           </div>
           
-          {/* The critical part that controls button visibility - only show if isMandataire is true */}
-          {isMandataire && (
+          {/* Only show modification buttons if user is mandataire AND document is editable */}
+          {isMandataire && isDocumentEditable(document) && (
             <div className="flex justify-end gap-2 mt-4">
               {(document.file_path || fileError) && (
                 <Button 
@@ -458,7 +465,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
               <ModifyDocumentButton 
                 document={document}
                 onDocumentUpdated={handleDocumentUpdate}
-                isMandataire={isMandataire} // Pass down to ModifyDocumentButton
+                isMandataire={isMandataire}
               />
             </div>
           )}
@@ -471,7 +478,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
           open={isUploaderOpen}
           onOpenChange={setIsUploaderOpen}
           onSuccess={handleUploadSuccess}
-          isMandataire={isMandataire} // Pass isMandataire to DocumentUploader
+          isMandataire={isMandataire}
         />
       )}
     </>

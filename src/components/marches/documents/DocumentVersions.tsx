@@ -93,6 +93,12 @@ const DocumentVersions: React.FC<DocumentVersionsProps> = ({
     }
   };
 
+  // Check if version is editable (not released/approved)
+  const isVersionEditable = (version: Version): boolean => {
+    const nonEditableStatuses = ['BPE', 'Approuvé', 'Diffusé'];
+    return !nonEditableStatuses.includes(version.statut || '');
+  };
+
   const handleDownloadVersion = async (version: Version) => {
     try {
       if (!version.file_path) {
