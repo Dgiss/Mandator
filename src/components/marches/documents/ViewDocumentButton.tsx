@@ -7,9 +7,13 @@ import DocumentViewer from './DocumentViewer';
 
 interface ViewDocumentButtonProps {
   document: Document;
+  isMandataire: boolean; // Add isMandataire prop
 }
 
-const ViewDocumentButton: React.FC<ViewDocumentButtonProps> = ({ document }) => {
+const ViewDocumentButton: React.FC<ViewDocumentButtonProps> = ({ 
+  document,
+  isMandataire // Use the new prop 
+}) => {
   const [open, setOpen] = React.useState(false);
 
   return (
@@ -30,6 +34,7 @@ const ViewDocumentButton: React.FC<ViewDocumentButtonProps> = ({ document }) => 
         open={open}
         onOpenChange={setOpen}
         onDocumentUpdated={() => {}}
+        isMandataire={isMandataire} // Pass the prop to DocumentViewer
       />
     </>
   );

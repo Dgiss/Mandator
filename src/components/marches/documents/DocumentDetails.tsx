@@ -9,18 +9,24 @@ interface DocumentDetailsProps {
   document: Document;
   formatDate: (date: string | undefined | null) => string;
   onDocumentUpdated?: () => void;
+  isMandataire: boolean; // Add isMandataire prop
 }
 
 const DocumentDetails: React.FC<DocumentDetailsProps> = ({ 
   document, 
   formatDate,
-  onDocumentUpdated
+  onDocumentUpdated,
+  isMandataire // Use the new prop
 }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-medium">Informations générales</h3>
-        <ModifyDocumentButton document={document} onDocumentUpdated={onDocumentUpdated} />
+        <ModifyDocumentButton 
+          document={document} 
+          onDocumentUpdated={onDocumentUpdated}
+          isMandataire={isMandataire} // Pass the prop down
+        />
       </div>
       
       <Table>

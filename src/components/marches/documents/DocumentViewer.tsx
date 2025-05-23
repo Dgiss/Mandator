@@ -423,6 +423,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                   document={document}
                   formatDate={formatDate}
                   onDocumentUpdated={handleDocumentUpdate}
+                  isMandataire={isMandataire} // Pass isMandataire to DocumentDetails
                 />
               </TabsContent>
               
@@ -469,7 +470,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
           open={isUploaderOpen}
           onOpenChange={setIsUploaderOpen}
           onSuccess={handleUploadSuccess}
-          isMandataire={isMandataire} // Pass down to DocumentUploader
+          isMandataire={isMandataire} // Pass isMandataire to DocumentUploader
         />
       )}
     </>

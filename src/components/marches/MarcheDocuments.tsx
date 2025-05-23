@@ -33,7 +33,8 @@ export default function MarcheDocuments({
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const { canEdit, isMandataire } = useUserRole(marcheId);
+  const { canEdit, isMandataire: isMandataireFunc } = useUserRole(marcheId);
+  const isMandataire = isMandataireFunc();
 
   // Collect unique document numbers for filtering
   const uniqueNumeros = Array.from(new Set(documents.filter(doc => doc.numero).map(doc => doc.numero))).sort() as string[];
