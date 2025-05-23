@@ -1,6 +1,5 @@
 
-// This file doesn't exist yet, we need to create it to make sure our imports work
-import { fileStorage } from './fileStorage';
+// fileStorage.js - re-export the TypeScript implementation for backwards compatibility
+import { fileStorage } from './fileStorage.ts';
 
-// Re-export for backward compatibility
 export default fileStorage;
