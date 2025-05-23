@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/userRole';
 import { generateDocumentReference } from '@/utils/documentFormatters';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { fileStorage } from '@/services/storage/fileStorage.ts';
 
 interface MarcheDocumentsProps {
   marcheId: string;
@@ -147,7 +148,7 @@ export default function MarcheDocuments({
     });
   }, [toast]);
 
-  // Function to download a document
+  // Function to download a document - Updated to use fileStorage
   const downloadDocument = (document: ProjectDocument) => {
     if (!document.file_path) {
       toast({
@@ -160,18 +161,27 @@ export default function MarcheDocuments({
     
     const downloadFile = async () => {
       try {
-        const { data, error } = await supabase.storage
-          .from('marches')
-          .download(document.file_path);
+        // Using fileStorage instead of direct Supabase storage access
+        const fileBlob = await fileStorage.downloadFile('marches', document.file_path);
         
-        if (error) {
-          throw new Error(error.message);
+        if (!fileBlob) {
+          throw new Error("Impossible de télécharger le fichier");
         }
-
-        const url = window.URL.createObjectURL(data);
+        
+        // Extract the original filename from the path
+        const originalFilename = document.file_path.split('/').pop()?.split('_').slice(1).join('_') || document.nom || "document";
+        
+        // Get file extension and ensure filename has correct extension
+        const fileExtension = document.file_path.split('.').pop()?.toLowerCase() || '';
+        const finalFilename = originalFilename.includes(`.${fileExtension}`) 
+          ? originalFilename 
+          : `${originalFilename}.${fileExtension}`;
+        
+        // Create a download link using the global window.document
+        const url = URL.createObjectURL(fileBlob);
         const link = window.document.createElement('a');
         link.href = url;
-        link.setAttribute('download', document.nom);
+        link.download = finalFilename;
         window.document.body.appendChild(link);
         link.click();
         window.document.body.removeChild(link);
@@ -179,9 +189,10 @@ export default function MarcheDocuments({
         
         toast({
           title: "Téléchargement",
-          description: "Le téléchargement du document a commencé."
+          description: `Téléchargement de "${finalFilename}" réussi.`
         });
       } catch (error: any) {
+        console.error("Error downloading file:", error);
         toast({
           title: "Erreur",
           description: `Erreur lors du téléchargement du document: ${error.message}`,
