@@ -12,3 +12,6 @@ export interface VisaWithDocument extends VisaType {
     nom: string;
   };
 }
+
+// Helper to differentiate between browser Document and our Document type
+export type BrowserDocument = typeof document;

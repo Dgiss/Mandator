@@ -7,7 +7,7 @@ import {
   TableBody, 
   TableCell 
 } from '@/components/ui/table';
-import { Document, Version, Visa } from '@/components/marches/visas/types';
+import { Document, Version, Visa, VisaWithDocument } from '@/components/marches/visas/types';
 import { useUserRole } from '@/hooks/userRole';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -279,9 +279,12 @@ export const VisasTable: React.FC<VisasTableProps> = ({
                 }
                 
                 // Get document name safely
-                const documentName = visa.documents && typeof visa.documents === 'object' && 'nom' in visa.documents 
-                  ? visa.documents.nom 
-                  : 'Document inconnu';
+                const visaWithDoc = visa as unknown as VisaWithDocument;
+                const documentName = visaWithDoc.documents && 
+                  typeof visaWithDoc.documents === 'object' && 
+                  'nom' in visaWithDoc.documents 
+                    ? visaWithDoc.documents.nom 
+                    : 'Document inconnu';
                 
                 return (
                   <TableRow key={visa.id}>

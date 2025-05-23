@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Visa, Document } from '@/services/types';
+import { Visa, Document, BrowserDocument } from '@/components/marches/visas/types';
 import { Eye, Download, FileText, MessageSquare, Calendar, User } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -119,12 +119,12 @@ export const VisaViewDialog: React.FC<VisaViewDialogProps> = ({ visa, open, onOp
       
       // Create download link
       const url = URL.createObjectURL(fileData);
-      const link = document.createElement('a');
+      const link = window.document.createElement('a');
       link.href = url;
       link.download = fileName;
-      document.body.appendChild(link);
+      window.document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      window.document.body.removeChild(link);
       URL.revokeObjectURL(url);
       
       toast.success('Pièce jointe téléchargée');
