@@ -5,6 +5,7 @@ import { PencilLine } from 'lucide-react';
 import { Document } from '@/services/types';
 import MarcheDocumentForm from '../MarcheDocumentForm';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useUserRole } from '@/hooks/userRole';
 
 interface ModifyDocumentButtonProps {
   document: Document;
@@ -14,8 +15,12 @@ interface ModifyDocumentButtonProps {
 const ModifyDocumentButton: React.FC<ModifyDocumentButtonProps> = ({ document, onDocumentUpdated }) => {
   const [isOpen, setIsOpen] = React.useState(false);
   const [editingDoc, setEditingDoc] = React.useState<Document | null>(null);
+  const { isMandataire } = useUserRole(document.marche_id);
 
   const handleClick = () => {
+    if (!isMandataire) {
+      return;
+    }
     setEditingDoc(document);
     setIsOpen(true);
   };
@@ -27,6 +32,10 @@ const ModifyDocumentButton: React.FC<ModifyDocumentButtonProps> = ({ document, o
       onDocumentUpdated();
     }
   };
+
+  if (!isMandataire) {
+    return null;
+  }
 
   return (
     <>

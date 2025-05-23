@@ -29,6 +29,7 @@ const ViewDocumentButton: React.FC<ViewDocumentButtonProps> = ({ document }) => 
         document={document}
         open={open}
         onOpenChange={setOpen}
+        onDocumentUpdated={() => {}}
       />
     </>
   );

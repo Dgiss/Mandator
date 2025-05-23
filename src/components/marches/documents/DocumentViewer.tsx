@@ -33,7 +33,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState('apercu');
   const [isUploaderOpen, setIsUploaderOpen] = useState(false);
-  const { canEdit } = useUserRole(initialDocument?.marche_id || '');
+  const { canEdit, isMandataire } = useUserRole(initialDocument?.marche_id || '');
   const [document, setDocument] = useState<ProjectDocument | null>(initialDocument);
   const [fileError, setFileError] = useState<string | null>(null);
   const [isFileChecking, setIsFileChecking] = useState(false);
@@ -405,7 +405,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                         : "Ce document n'a pas de fichier associé. Vous pouvez en télécharger un maintenant."}
                     </p>
                     
-                    {canEdit && (
+                    {isMandataire && (
                       <Button 
                         variant="outline"
                         onClick={() => setIsUploaderOpen(true)}
@@ -440,7 +440,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
             </Tabs>
           </div>
           
-          {canEdit && (
+          {isMandataire && (
             <div className="flex justify-end gap-2 mt-4">
               {(document.file_path || fileError) && (
                 <Button 
@@ -475,3 +475,4 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 };
 
 export default DocumentViewer;
+
